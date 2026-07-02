@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ROMULUS — Tedjo 2026 Intelligence</title>
+<style>
+  :root{
+    --bg:#0a0e14; --panel:#111823; --panel2:#0d141d; --line:#1e2a3a;
+    --gold:#e0b84c; --gold-dim:#a8863250; --text:#d7dee8; --muted:#8b98a9; --faint:#5c6b7d;
+    --red:#e5534b; --red-dim:#e5534b22; --green:#3fb950; --blue:#58a6ff;
+    --t-very:#e0b84c; --t-strong:#e5843b; --t-medium:#d0d64c; --t-adequate:#6b7c8f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--text);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;display:flex}
+  a{color:var(--blue);text-decoration:none} a:hover{text-decoration:underline}
+  ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#22303f;border-radius:5px}
+
+  /* Sidebar */
+  .sidebar{width:230px;min-width:230px;height:100vh;background:linear-gradient(180deg,#0c1219,#0a0e14);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0}
+  .brand{padding:20px 18px 14px;border-bottom:1px solid var(--line)}
+  .brand .logo{font-weight:800;letter-spacing:3px;font-size:20px;color:var(--gold)}
+  .brand .logo:after{content:"●";color:var(--red);font-size:10px;vertical-align:middle;margin-left:6px;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .brand .sub{font-size:11px;color:var(--muted);margin-top:4px;letter-spacing:.5px}
+  .nav{padding:10px 8px;flex:1;overflow:auto}
+  .nav button{display:flex;align-items:center;gap:10px;width:100%;background:none;border:none;color:var(--muted);
+    padding:10px 12px;border-radius:7px;cursor:pointer;font-size:13.5px;text-align:left;margin-bottom:2px;font-weight:500}
+  .nav button:hover{background:#131c27;color:var(--text)}
+  .nav button.active{background:var(--gold-dim);color:var(--gold);box-shadow:inset 2px 0 0 var(--gold)}
+  .nav .ico{width:18px;text-align:center;opacity:.9}
+  .nav .ct{margin-left:auto;font-size:11px;color:var(--faint);background:#0e1620;padding:1px 7px;border-radius:10px}
+  .side-foot{padding:12px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--faint)}
+  .side-foot b{color:var(--muted)}
+
+  /* Main */
+  .main{flex:1;height:100vh;overflow:auto;padding:0}
+  .topbar{position:sticky;top:0;z-index:5;background:#0a0e14ee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+    padding:16px 30px;display:flex;align-items:center;justify-content:space-between}
+  .topbar h2{margin:0;font-size:17px;font-weight:700;letter-spacing:.3px}
+  .topbar .crumb{color:var(--faint);font-size:12px;margin-top:2px}
+  .countdown{font-size:12px;color:var(--muted);text-align:right}
+  .countdown b{color:var(--gold);font-size:15px}
+  .view{padding:26px 30px;animation:fade .4s ease both}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .hidden{display:none!important}
+
+  /* Bits */
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:24px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+  .tile .n{font-size:30px;font-weight:800;color:var(--gold);line-height:1}
+  .tile .l{font-size:12px;color:var(--muted);margin-top:6px;letter-spacing:.3px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:18px 20px;margin-bottom:14px}
+  .pitch{background:linear-gradient(135deg,#111823,#0d1a17);border:1px solid var(--line);border-left:3px solid var(--gold);
+    border-radius:10px;padding:18px 22px;margin-bottom:22px;color:var(--text)}
+  .pitch h3{margin:0 0 8px;color:var(--gold);font-size:15px}
+  .pitch p{margin:6px 0;color:var(--muted)}
+  .sect-title{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--faint);margin:8px 0 14px}
+
+  /* tier badges */
+  .tier{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+    padding:3px 9px;border-radius:20px;border:1px solid currentColor}
+  .tier.very{color:var(--t-very)} .tier.strong{color:var(--t-strong)}
+  .tier.medium{color:var(--t-medium)} .tier.adequate{color:var(--t-adequate)}
+  .vbadge{font-size:10.5px;padding:2px 8px;border-radius:5px;font-weight:600}
+  .vbadge.CONFIRMED{background:#1b3a2422;color:var(--green);border:1px solid #2ea04333}
+  .vbadge.PARTIAL{background:#3a2f1b22;color:var(--gold);border:1px solid #a8863233}
+  .vbadge.CONTEXT{background:#2a303a;color:var(--muted);border:1px solid var(--line)}
+
+  /* attack card */
+  .atk{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:0;margin-bottom:16px;overflow:hidden}
+  .atk .hd{display:flex;align-items:flex-start;gap:12px;padding:16px 20px 12px;border-bottom:1px solid var(--line)}
+  .atk .hd h3{margin:0;font-size:16px;flex:1;line-height:1.35}
+  .atk .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+  .atk .bd{padding:14px 20px;color:var(--text)}
+  .atk .bd .lbl{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--faint);margin:14px 0 4px}
+  .atk .ev{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--muted)}
+  .atk .quote{border-left:2px solid var(--gold-dim);padding:4px 0 4px 12px;color:var(--muted);font-style:italic;margin:8px 0}
+  .atk .foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:12px 20px;background:var(--panel2);border-top:1px solid var(--line);font-size:12px;color:var(--faint)}
+  .srcbtn{background:var(--gold-dim);color:var(--gold)!important;border:1px solid var(--gold-dim);padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px}
+  .srcbtn:hover{background:#a886321f;text-decoration:none}
+  .chip{font-size:11px;color:var(--muted);background:#0e1620;border:1px solid var(--line);padding:2px 9px;border-radius:12px}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:var(--faint);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg)}
+  td{padding:9px 10px;border-bottom:1px solid #141d28;vertical-align:top}
+  tr:hover td{background:#0e1620}
+  .vote-NO{color:var(--red);font-weight:700}
+  .vote-YES{color:var(--muted)}
+  .searchbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+  .searchbar input,.searchbar select{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px}
+  .searchbar input{flex:1;min-width:220px}
+  .loading{padding:60px;text-align:center;color:var(--muted)}
+  .spinner{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 14px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .cand{display:flex;gap:16px;align-items:center}
+  .cand .av{width:52px;height:52px;border-radius:50%;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;border:1px solid var(--gold-dim)}
+  .muted{color:var(--muted)} .faint{color:var(--faint)}
+  /* candidate profile */
+  .profile{border-top:1px solid var(--line);margin-top:14px;padding-top:12px;font-size:13.5px;color:var(--text);line-height:1.6}
+  .profile b{color:var(--gold);font-weight:700} .profile ul{margin:6px 0 10px;padding-left:18px} .profile li{margin:3px 0;color:var(--muted)}
+  .profile i{color:var(--faint);font-style:italic} .profile a{color:var(--blue)}
+  .vidrow{display:flex;gap:10px;overflow-x:auto;padding-bottom:6px}
+  .vid{flex:0 0 160px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;overflow:hidden;text-decoration:none;color:var(--text)}
+  .vid:hover{border-color:var(--gold-dim);text-decoration:none}
+  .vid img{width:100%;height:90px;object-fit:cover;display:block}
+  .vid .vt{font-size:11.5px;padding:6px 8px 2px;line-height:1.3}
+  .vid .vm{font-size:10.5px;color:var(--faint);padding:0 8px 7px}
+  /* chat */
+  .chatlog{display:flex;flex-direction:column;gap:12px;margin-bottom:14px;min-height:120px}
+  .msg{max-width:80%;padding:11px 15px;border-radius:12px;font-size:14px;line-height:1.6}
+  .msg.user{align-self:flex-end;background:var(--gold-dim);color:var(--text);border:1px solid var(--gold-dim)}
+  .msg.bot{align-self:flex-start;background:var(--panel);border:1px solid var(--line)}
+  .msg.bot a{color:var(--blue)} .msg.bot h4{margin:10px 0 4px;color:var(--gold);font-size:14px}
+  .msg.bot ul{margin:6px 0;padding-left:18px} .msg.bot code{background:#0d141d;padding:1px 5px;border-radius:4px}
+  .msg.think{color:var(--faint);font-style:italic}
+  .chatbar{display:flex;gap:10px;position:sticky;bottom:0;background:var(--bg);padding-top:6px}
+  .chatbar textarea{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:11px 14px;font:14px inherit;resize:none;max-height:140px}
+  .chatbar button{background:var(--gold);color:#0a0e14;border:none;border-radius:9px;padding:0 22px;font-weight:700;cursor:pointer}
+  .chatbar button:disabled{opacity:.5;cursor:default}
+  .chatsug{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .chatsug button{background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:16px;padding:6px 13px;font-size:12.5px;cursor:pointer}
+  .chatsug button:hover{border-color:var(--gold-dim);color:var(--gold)}
+  /* splash */
+  #splash{position:fixed;inset:0;z-index:1000;background:radial-gradient(circle at 50% 38%,#0e1622,#04060a 72%);
+    display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #splash.gone{opacity:0;pointer-events:none;transition:opacity .6s ease}
+  #splash-vid{display:none} #splash.has-video #splash-vid{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  #splash.has-video #splash-inner{display:none}
+  #splash-skip{position:absolute;top:18px;right:22px;z-index:3;background:#0a0e14aa;border:1px solid var(--line);
+    color:var(--muted);padding:7px 15px;border-radius:6px;cursor:pointer;font-size:12px}
+  #splash-skip:hover{color:var(--gold);border-color:var(--gold-dim)}
+  #splash-inner{text-align:center;padding:20px;display:none}
+  #splash-gate{display:none;position:absolute;inset:0;z-index:2;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(circle at 50% 50%,transparent,rgba(5,7,11,.45))}
+  #splash-gate button{background:var(--gold);color:#05070b;border:none;padding:14px 38px;border-radius:11px;font-weight:800;font-size:16px;letter-spacing:1.5px;cursor:pointer;box-shadow:0 0 34px rgba(224,184,76,.45);transition:transform .15s}
+  #splash-gate button:hover{transform:scale(1.04)}
+  #splash-gate label{color:#d7dee8;font-size:12px;cursor:pointer;background:rgba(5,7,11,.55);padding:6px 12px;border-radius:6px}
+  .rs-logo{font-size:clamp(42px,8vw,72px);font-weight:800;letter-spacing:12px;color:var(--gold);
+    text-shadow:0 0 34px rgba(224,184,76,.45);animation:rsGlitch 3s infinite}
+  .rs-logo:after{content:"●";color:var(--red);font-size:14px;vertical-align:super;margin-left:8px;animation:pulse 1.6s infinite}
+  .rs-tag{color:var(--muted);letter-spacing:4px;font-size:12px;margin-top:10px}
+  .rs-boot{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--green);font-size:13px;
+    margin:30px auto 18px;min-height:120px;text-align:left;width:min(460px,84vw)}
+  .rs-boot .ln{opacity:0;animation:rsIn .35s forwards;padding:2px 0}
+  .rs-enter{opacity:0;transition:opacity .5s ease}
+  .rs-enter button{background:var(--gold);color:#05070b;border:none;padding:11px 30px;border-radius:9px;font-weight:700;cursor:pointer;font-size:14px}
+  .rs-enter label{display:block;margin-top:14px;color:var(--faint);font-size:12px;cursor:pointer}
+  @keyframes rsIn{to{opacity:1}}
+  @keyframes rsGlitch{0%,92%,100%{text-shadow:0 0 34px rgba(224,184,76,.45)}
+    93%{text-shadow:-2px 0 var(--red),2px 0 var(--blue)}95%{text-shadow:2px 0 var(--red),-2px 0 var(--blue)}}
+  @media (prefers-reduced-motion:reduce){.rs-logo{animation:none}.rs-boot .ln{animation:none;opacity:1}}
+</style>
+</head>
+<body>
+  <div id="splash">
+    <video id="splash-vid" playsinline preload="auto"><source src="opener.mp4" type="video/mp4"></video>
+    <button id="splash-skip">⏭ Skip Intro</button>
+    <div id="splash-gate">
+      <button id="splash-play">▶ Enter ROMULUS</button>
+      <label><input type="checkbox" id="rs-skip-cb"> Don't show this again</label>
+    </div>
+    <div id="splash-inner">
+      <div class="rs-logo">ROMULUS</div>
+      <div class="rs-tag">CAMPAIGN INTELLIGENCE · MISSISSAUGA 2026</div>
+      <div class="rs-boot" id="rs-boot"></div>
+      <div class="rs-enter" id="rs-enter"><button id="splash-enter">▶ Enter Terminal</button></div>
+    </div>
+  </div>
+  <script>(function(){
+    var sp=document.getElementById('splash');
+    if(localStorage.getItem('romulus_skip_intro')==='1'){ sp.parentNode.removeChild(sp); return; }
+    var v=document.getElementById('splash-vid'), gate=document.getElementById('splash-gate'), inner=document.getElementById('splash-inner');
+    var haveVideo=false, animStarted=false;
+    function persist(){ var cb=document.getElementById('rs-skip-cb'); if(cb&&cb.checked) localStorage.setItem('romulus_skip_intro','1'); }
+    function dismiss(){ persist(); sp.classList.add('gone'); setTimeout(function(){ if(sp.parentNode) sp.parentNode.removeChild(sp); },650); }
+    document.getElementById('splash-skip').onclick=dismiss;
+    // ── video path: show first frame + Enter gate, play WITH sound on click ──
+    v.addEventListener('loadeddata',function(){ if(v.duration>0.4 && !haveVideo){ haveVideo=true;
+      sp.classList.add('has-video'); gate.style.display='flex'; } });
+    v.addEventListener('ended',dismiss);
+    v.addEventListener('error',startAnimation);
+    document.getElementById('splash-play').onclick=function(){ persist(); gate.style.display='none';
+      try{ v.currentTime=0; }catch(e){} v.muted=false;
+      v.play().catch(function(){ v.muted=true; v.play().catch(function(){}); }); };
+    // ── fallback: animated boot if no video within 2.5s ──
+    setTimeout(function(){ if(!haveVideo) startAnimation(); },2500);
+    function startAnimation(){ if(haveVideo||animStarted) return; animStarted=true;
+      inner.style.display='block';
+      var boot=document.getElementById('rs-boot'), enter=document.getElementById('rs-enter');
+      var lines=["▸ Establishing secure session…","▸ Loading council record … 73 meetings · 1,004 votes",
+        "▸ Cross-checking primary sources … 998 confirmed","▸ Ranking vulnerabilities … 11 OPPO findings","▸ ROMULUS online."];
+      var i=0;(function tick(){ if(i<lines.length){ var d=document.createElement('div'); d.className='ln';
+        d.textContent=lines[i]; boot.appendChild(d); i++; setTimeout(tick,430);} else { enter.style.opacity='1'; } })();
+      document.getElementById('splash-enter').onclick=dismiss;
+    }
+  })();</script>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">ROMULUS</div>
+      <div class="sub">CAMPAIGN INTELLIGENCE</div>
+    </div>
+    <nav class="nav" id="nav">
+      <button data-tab="home" class="active"><span class="ico">◆</span> Overview</button>
+      <button data-tab="romulus"><span class="ico">✦</span> ROMULUS Chat</button>
+      <button data-tab="message"><span class="ico">★</span> My Message <span class="ct" id="ct-message"></span></button>
+      <button data-tab="attacks"><span class="ico">⚑</span> OPPO <span class="ct" id="ct-attacks"></span></button>
+      <button data-tab="promises"><span class="ico">◎</span> Promises <span class="ct" id="ct-promises"></span></button>
+      <button data-tab="council"><span class="ico">▤</span> Council Record <span class="ct" id="ct-council"></span></button>
+      <button data-tab="evidence"><span class="ico">◈</span> Evidence <span class="ct" id="ct-evidence"></span></button>
+      <button data-tab="candidates"><span class="ico">☰</span> Candidates <span class="ct" id="ct-cand"></span></button>
+      <button data-tab="news"><span class="ico">◰</span> News <span class="ct" id="ct-news"></span></button>
+      <button data-tab="web"><span class="ico">◱</span> Web Presence <span class="ct" id="ct-web"></span></button>
+      <button data-tab="ads"><span class="ico">◲</span> Political Ads <span class="ct" id="ct-ads"></span></button>
+    </nav>
+    <div class="side-foot">
+      Target: <b>Alvin Tedjo</b><br>Mayor of Mississauga · 2026<br>
+      <span id="conn" class="faint">connecting…</span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div><h2 id="viewTitle">Overview</h2><div class="crumb" id="viewCrumb">Demo intelligence dossier · primary-source verified</div></div>
+      <div class="countdown" id="countdown"></div>
+    </div>
+    <section class="view" id="view-home"></section>
+    <section class="view hidden" id="view-romulus">
+      <div class="pitch" style="margin-bottom:14px"><p style="margin:0">Ask ROMULUS about the intelligence. It answers <b>only</b> from the loaded dossier and cites a source link for every claim — no fabrication.</p></div>
+      <div id="chatlog" class="chatlog"></div>
+      <div class="chatsug" id="chatsug"></div>
+      <div class="chatbar">
+        <textarea id="chatinput" rows="1" placeholder="Ask about Tedjo's record, vulnerabilities, the strongest attack lines…"></textarea>
+        <button id="chatsend">Send</button>
+      </div>
+    </section>
+    <section class="view hidden" id="view-message"></section>
+    <section class="view hidden" id="view-promises"></section>
+    <section class="view hidden" id="view-attacks"></section>
+    <section class="view hidden" id="view-council"></section>
+    <section class="view hidden" id="view-evidence"></section>
+    <section class="view hidden" id="view-candidates"></section>
+    <section class="view hidden" id="view-news"></section>
+    <section class="view hidden" id="view-web"></section>
+    <section class="view hidden" id="view-ads"></section>
+  </main>
+
+<script>
+const SUPABASE_URL = "https://lblxjbomfusfhsnwehez.supabase.co";
+const SUPABASE_KEY = "sb_publishable_aDVuWrjpxpn1Zo4Dyix3mw_nkTtxipb";
+const REST = SUPABASE_URL + "/rest/v1";
+const ROMULUS_FN = SUPABASE_URL + "/functions/v1/romulus";
+const ELECTION = new Date("2026-10-26T00:00:00-04:00");
+const FILING_DEADLINE = new Date("2026-08-21T14:00:00-04:00");
+
+const esc = s => (s==null?"":String(s)).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const isUrl = u => typeof u==="string" && /^https?:\/\//i.test(u);
+const tierClass = t => ({"very strong":"very","strong":"strong","medium":"medium","adequate":"adequate"}[(t||"").toLowerCase()]||"adequate");
+const fmtD = s => { if(!s) return ""; const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s)); const d=m?new Date(+m[1],+m[2]-1,+m[3]):new Date(s); return isNaN(d)?String(s).slice(0,10):d.toLocaleDateString("en-CA",{year:"numeric",month:"short",day:"numeric"}); };
+async function api(path){ const r=await fetch(REST+path,{headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY}}); if(!r.ok) throw new Error("HTTP "+r.status+" "+path+" — "+(await r.text()).slice(0,160)); return r.json(); }
+async function count(t,q=""){ const r=await fetch(REST+"/"+t+"?select=id"+(q?"&"+q:""),{headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,Prefer:"count=exact",Range:"0-0"}}); const cr=r.headers.get("content-range"); return cr?parseInt(cr.split("/")[1]):0; }
+
+const S = { attacks:[], evidence:[], candidates:[], dissents:[], web:[], message:[], promises:[], news:[], newsLinks:[], sources:[], ads:[], videos:[], counts:{} };
+const CAND_ORDER = {"alvin-tedjo":0,"carolyn-parrish":1};
+
+async function init(){
+  try{
+    const [attacks, evidence, candidates, dissents, web, message, promises, news, newsLinks, sources, ads, vids, meetings, votes] = await Promise.all([
+      api("/attack_messaging?select=*&is_active=eq.true"),
+      api("/council_evidence?select=*&order=political_utility_score.desc.nullslast"),
+      api("/candidates?select=*"),
+      api("/council_votes?select=vote,councillor_label,source_url,council_motions(motion_date,topic,motion_text,outcome)&vote=ilike.*NO*"),
+      api("/web_snapshots?select=*&order=retrieved_at.desc"),
+      api("/candidate_messaging?select=*&is_active=eq.true&order=priority_order.asc"),
+      api("/candidate_promises?select=*&is_active=eq.true"),
+      api("/news_items?select=*&order=published_at.desc.nullslast&limit=120"),
+      api("/news_item_candidates?select=news_item_id,candidate_id"),
+      api("/sources?select=id,publisher"),
+      api("/political_ads?select=*&order=ad_delivery_start_time.desc.nullslast&limit=200"),
+      api("/candidate_videos?select=candidate_id,title,published_at,view_count,thumbnail_url,video_url&order=published_at.desc.nullslast&limit=300"),
+      count("council_meetings"),
+      count("council_votes"),
+    ]);
+    S.attacks=attacks; S.evidence=evidence; S.web=web; S.message=message; S.promises=promises;
+    S.news=news; S.newsLinks=newsLinks; S.sources=sources; S.ads=ads; S.videos=vids;
+    S.candidates=candidates.sort((a,b)=>(CAND_ORDER[a.slug]??5)-(CAND_ORDER[b.slug]??5)||(a.name||"").localeCompare(b.name||""));
+    S.dissents=dissents;
+    S.counts={meetings, votes, dissents:dissents.length, attacks:attacks.length, evidence:evidence.length, candidates:candidates.length,
+              vulns:evidence.filter(e=>e.source_type&&e.source_type.includes("vulnerability")).length};
+    document.getElementById("conn").innerHTML='<span style="color:var(--green)">● live</span>';
+    document.getElementById("ct-attacks").textContent=attacks.length;
+    document.getElementById("ct-council").textContent=votes;
+    document.getElementById("ct-evidence").textContent=evidence.length;
+    document.getElementById("ct-cand").textContent=candidates.length;
+    document.getElementById("ct-web").textContent=web.filter(w=>w.platform==="campaign_website"&&w.http_status).length||"";
+    document.getElementById("ct-message").textContent=message.length;
+    document.getElementById("ct-promises").textContent=promises.length;
+    document.getElementById("ct-news").textContent=news.length;
+    document.getElementById("ct-ads").textContent=ads.length||"";
+    renderHome(); renderAttacks(); renderCouncil(); renderEvidence(); renderCandidates(); renderWeb(); renderMessage(); renderPromises(); renderNews(); renderAds();
+  }catch(e){
+    document.getElementById("view-home").innerHTML='<div class="loading"><h2>Could not load data</h2><p class="muted">'+esc(e.message)+'</p></div>';
+    document.getElementById("conn").innerHTML='<span style="color:var(--red)">● error</span>';
+  }
+}
+
+function renderHome(){
+  const c=S.counts;
+  document.getElementById("view-home").innerHTML=`
+    <div class="pitch">
+      <h3>Every claim traces to the official record.</h3>
+      <p>This dossier was assembled automatically from the City of Mississauga's official eSCRIBE council minutes —
+      <b>${c.meetings} meetings</b>, <b>${c.votes.toLocaleString()} recorded votes</b> — then cross-checked vote-by-vote against the primary source.</p>
+      <p>Nothing here is fabricated: where the minutes don't record an individual position, we say so. Where a circulating claim
+      isn't in the record (e.g. a "6-6 tie"), it's flagged, not repeated.</p>
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="n">${c.meetings}</div><div class="l">Council meetings</div></div>
+      <div class="tile"><div class="n">${c.votes.toLocaleString()}</div><div class="l">Recorded votes</div></div>
+      <div class="tile"><div class="n">${c.dissents}</div><div class="l">Tedjo dissents (NO)</div></div>
+      <div class="tile"><div class="n">${c.attacks}</div><div class="l">OPPO findings</div></div>
+      <div class="tile"><div class="n">${c.evidence}</div><div class="l">Evidence items</div></div>
+    </div>
+    <div class="sect-title">Top vulnerabilities</div>
+    ${S.attacks.filter(a=>["Very Strong","Strong"].includes(a.tier)).slice(0,4).map(a=>`
+      <div class="card"><div style="display:flex;gap:10px;align-items:center;margin-bottom:6px">
+        <span class="tier ${tierClass(a.tier)}">${esc(a.tier)}</span>
+        <b>${esc(a.headline)}</b></div>
+        <div class="muted" style="font-size:13px">${esc(a.body||"").slice(0,170)}…</div></div>`).join("")}
+  `;
+}
+
+function renderAttacks(){
+  const order={"Very Strong":0,"Strong":1,"Medium":2,"Adequate":3};
+  const cards=[...S.attacks].sort((a,b)=>(order[a.tier]??9)-(order[b.tier]??9));
+  document.getElementById("view-attacks").innerHTML=`
+    <div class="pitch"><p style="margin:0">${cards.length} tiered opposition findings · each backed by a specific council resolution and a clickable primary source. Verification status shown per card.</p></div>
+    ${cards.map(a=>{
+      const src=(a.source_citations||[]).find(isUrl);
+      const ver=(a.notes_verification||"").toUpperCase();
+      const vclass=/CONFIRM/.test(a.supporting_evidence||"")?"" : "";
+      return `<div class="atk">
+        <div class="hd"><div style="flex:1">
+          <h3>${esc(a.headline)}</h3>
+          <div class="meta"><span class="tier ${tierClass(a.tier)}">${esc(a.tier)}</span>
+          <span class="chip">${esc(a.issue_area||"")}</span></div>
+        </div></div>
+        <div class="bd">
+          <div>${esc(a.body||"")}</div>
+          ${a.supporting_evidence?`<div class="lbl">Primary-source record</div><div class="ev">${esc(a.supporting_evidence)}</div>`:""}
+          ${a.key_quote?`<div class="quote">"${esc(a.key_quote).slice(0,260)}…"</div>`:""}
+          ${a.recommended_use?`<div class="lbl">Suggested use</div><div class="muted">${esc(a.recommended_use)}</div>`:""}
+        </div>
+        <div class="foot">
+          <span>Audience: ${esc(a.audience||"—")} · Tone: ${esc(a.delivery_tone||"—")}</span>
+          ${src?`<a class="srcbtn" href="${esc(src)}" target="_blank" rel="noopener">View official minutes ↗</a>`:'<span class="chip">no direct link</span>'}
+        </div>
+      </div>`;}).join("")}
+  `;
+}
+
+function renderCouncil(){
+  const rows=S.dissents.map(d=>{
+    const m=d.council_motions||{};
+    return {date:m.motion_date, topic:m.topic||m.motion_text||"", outcome:m.outcome||"", vote:d.vote, src:d.source_url};
+  }).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  document.getElementById("view-council").innerHTML=`
+    <div class="pitch"><p style="margin:0">Tedjo's <b>${rows.length}</b> recorded NO / dissenting votes across his term — the politically significant divisions. Search all ${S.counts.votes.toLocaleString()} votes below.</p></div>
+    <div class="searchbar"><input id="csearch" placeholder="Filter dissents by topic…"></div>
+    <table><thead><tr><th>Date</th><th>Agenda item</th><th>Vote</th><th>Outcome</th><th>Source</th></tr></thead>
+    <tbody id="ctbody">${rows.map(r=>rowHtml(r)).join("")}</tbody></table>`;
+  const inp=document.getElementById("csearch");
+  inp.oninput=()=>{ const q=inp.value.toLowerCase();
+    document.getElementById("ctbody").innerHTML=rows.filter(r=>(r.topic||"").toLowerCase().includes(q)).map(rowHtml).join(""); };
+}
+function rowHtml(r){ return `<tr><td class="muted">${fmtD(r.date)}</td><td>${esc((r.topic||"").slice(0,120))}</td>
+  <td class="vote-NO">NO</td><td class="muted">${esc(r.outcome)}</td>
+  <td>${isUrl(r.src)?`<a href="${esc(r.src)}" target="_blank" rel="noopener">minutes ↗</a>`:""}</td></tr>`; }
+
+function renderEvidence(){
+  document.getElementById("view-evidence").innerHTML=`
+    <div class="sect-title">${S.evidence.length} scored evidence items (highest political utility first)</div>
+    ${S.evidence.slice(0,60).map(e=>`
+      <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+          ${e.political_utility_score!=null?`<span class="chip" style="color:var(--gold)">${e.political_utility_score}</span>`:""}
+          <b>${esc(e.agenda_topic||e.hypocrisy_angle||"(item)")}</b>
+          ${(e.issue_areas||[]).map(i=>`<span class="chip">${esc(i)}</span>`).join("")}
+        </div>
+        ${e.position_text?`<div class="muted" style="font-size:13px">${esc(e.position_text).slice(0,220)}</div>`:""}
+        <div class="faint" style="font-size:12px;margin-top:6px">${fmtD(e.date_parsed||e.date_text)} · ${esc(e.source_type||"")}
+        ${isUrl(e.source_url)?` · <a href="${esc(e.source_url)}" target="_blank" rel="noopener">source ↗</a>`:""}</div>
+      </div>`).join("")}`;
+}
+
+function badge(c){
+  if(c.slug==="alvin-tedjo") return '<span class="chip" style="color:var(--red)">● TARGET</span>';
+  if(c.is_incumbent) return '<span class="chip" style="color:var(--gold)">INCUMBENT</span>';
+  return '<span class="chip">CANDIDATE</span>';
+}
+function social(url,label){ return isUrl(url)?`<a href="${esc(url)}" target="_blank" rel="noopener" class="chip" style="color:var(--blue)">${label} ↗</a>`:""; }
+function fmtViews(n){ if(n==null) return ""; n=+n; return n>=1000?(n/1000).toFixed(n>=10000?0:1)+"K views":n+" views"; }
+function videoStrip(vids){ return `<div class="sect-title" style="margin:14px 0 8px">▶ Recent videos · YouTube</div><div class="vidrow">`+
+  vids.slice(0,8).map(v=>`<a class="vid" href="${esc(v.video_url)}" target="_blank" rel="noopener">${v.thumbnail_url?`<img loading="lazy" src="${esc(v.thumbnail_url)}">`:""}<div class="vt">${esc((v.title||"").slice(0,58))}</div><div class="vm">${fmtViews(v.view_count)}${v.published_at?" · "+fmtD(v.published_at):""}</div></a>`).join("")+`</div>`; }
+function renderCandidates(){
+  const vidsBy={}; S.videos.forEach(v=>{(vidsBy[v.candidate_id]=vidsBy[v.candidate_id]||[]).push(v);});
+  document.getElementById("view-candidates").innerHTML=`
+    <div class="pitch"><p style="margin:0">${S.candidates.length} declared mayoral candidates · profiles auto-built from each campaign's own website + council record, refreshed as sites change. <span class="faint">Watchlist: Bonnie Crombie (not yet filed).</span></p></div>
+    ${S.candidates.map(c=>`
+    <div class="card">
+      <div class="cand" style="align-items:flex-start">
+        <div class="av">${esc((c.name||"?").split(" ").map(x=>x[0]).join("").slice(0,2))}</div>
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${esc(c.name)} ${badge(c)}</div>
+          <div class="muted">${esc(c.office||"")}${c.ward?" · "+esc(c.ward):""}${c.filing_date?" · filed "+fmtD(c.filing_date):""}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+            ${c.campaign_website?`<a href="${esc(c.campaign_website)}" target="_blank" rel="noopener" class="chip" style="color:var(--gold)">🌐 ${esc(c.campaign_website.replace(/^https?:\/\//,''))} ↗</a>`:'<span class="chip faint">no website yet</span>'}
+            ${social(c.facebook_url,"Facebook")}${social(c.instagram_url,"Instagram")}${social(c.twitter_url,"X")}
+          </div>
+          <div class="faint" style="font-size:12px;margin-top:8px">
+            ${c.email?`✉ ${esc(c.email)}`:""}${c.phone?" · ☎ "+esc(c.phone):""}
+          </div>
+        </div>
+      </div>
+      ${c.manual_research_brief?`<div class="profile">${md(c.manual_research_brief)}</div>`:""}
+      ${vidsBy[c.id]&&vidsBy[c.id].length?videoStrip(vidsBy[c.id]):""}
+    </div>`).join("")}`;
+}
+
+function renderWeb(){
+  const sites=S.web.filter(w=>w.platform==="campaign_website");
+  const byUrl={}; sites.forEach(w=>{ if(!byUrl[w.url]||w.retrieved_at>byUrl[w.url].retrieved_at) byUrl[w.url]=w; });
+  const latest=Object.values(byUrl);
+  const candByWeb={}; S.candidates.forEach(c=>{ if(c.campaign_website) candByWeb[c.campaign_website.replace(/\/+$/,'')]=c.name; });
+  document.getElementById("view-web").innerHTML=`
+    <div class="pitch"><p style="margin:0">Campaign websites are snapshotted from a residential IP each morning; text is hashed and any change surfaces to the Evidence queue. ${latest.length} sites currently monitored.</p></div>
+    <table><thead><tr><th>Candidate</th><th>Website</th><th>Status</th><th>Size</th><th>Last checked</th></tr></thead><tbody>
+    ${latest.sort((a,b)=>(b.content_length||0)-(a.content_length||0)).map(w=>{
+      const nm=candByWeb[String(w.url).replace(/\/+$/,'')]||"—";
+      const ok=w.http_status===200;
+      return `<tr><td>${esc(nm)}</td>
+        <td><a href="${esc(w.url)}" target="_blank" rel="noopener">${esc(String(w.url).replace(/^https?:\/\//,''))} ↗</a></td>
+        <td style="color:${ok?'var(--green)':'var(--red)'}">${w.http_status||'—'}</td>
+        <td class="muted">${w.content_length?w.content_length.toLocaleString()+' ch':'—'}</td>
+        <td class="muted">${fmtDT(w.retrieved_at)}</td></tr>`;}).join("")}
+    </tbody></table>
+    <div class="faint" style="font-size:12px;margin-top:12px">Monitoring uses official channels only: campaign sites (daily), news RSS (daily), paid political ads via the <b>Meta Ad Library</b> (Political Ads tab · free Meta developer account), and video via the <b>YouTube Data API</b>. Organic Facebook/Instagram/X posts are restricted by those platforms and aren't collectable within their terms.</div>`;
+}
+const fmtDT = s => { if(!s) return ""; const d=new Date(s); return isNaN(d)?String(s).slice(0,16):d.toLocaleString("en-CA",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}); };
+
+function renderMessage(){
+  document.getElementById("view-message").innerHTML=`
+    <div class="pitch"><h3>The affirmative case for Alvin Tedjo</h3>
+      <p>Credibility content built from his real, verifiable record — accomplishments, leadership, and experience, each linked to the council minutes or campaign material. This is the message side of the platform: what a candidate should lead with.</p></div>
+    <div class="tiles">
+      ${S.message.filter(m=>m.stat_value).slice(0,4).map(m=>`
+        <div class="tile"><div class="n" style="font-size:22px">${esc(m.stat_value)}</div><div class="l">${esc(m.stat_label||"")}</div></div>`).join("")}
+    </div>
+    ${S.message.map(m=>`
+      <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+          <span class="chip" style="color:var(--gold)">${esc(m.category||"")}</span>
+          <b style="font-size:15px">${esc(m.title)}</b>
+        </div>
+        <div class="muted">${esc(m.body||"")}</div>
+        <div class="faint" style="font-size:12px;margin-top:8px">
+          ${m.notes?esc(m.notes)+" · ":""}
+          ${isUrl(m.source_url)?`<a href="${esc(m.source_url)}" target="_blank" rel="noopener">${esc(m.source_label||"source")} ↗</a>`:esc(m.source_label||"")}
+        </div>
+      </div>`).join("")}`;
+}
+
+function promiseCard(p){
+  const sc={kept:"var(--green)",broken:"var(--red)",in_progress:"var(--gold)",pending:"var(--muted)"}[p.status]||"var(--muted)";
+  return `<div class="card">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+      <span class="chip" style="color:${sc}">${esc((p.status||"pending").replace("_"," "))}</span>
+      <span class="chip">${esc(p.issue_area||"")}</span>
+      <b>${esc(p.promise_text)}</b></div>
+    ${p.status_notes?`<div class="muted" style="font-size:13px">${esc(p.status_notes)}</div>`:""}
+    <div class="faint" style="font-size:12px;margin-top:6px">${p.promise_date?fmtD(p.promise_date)+" · ":""}
+      ${isUrl(p.source_url)?`<a href="${esc(p.source_url)}" target="_blank" rel="noopener">${esc(p.source_label||"source")} ↗</a>`:esc(p.source_label||"")}</div>
+  </div>`;
+}
+function renderPromises(){
+  const now=new Date(), locked=now<FILING_DEADLINE;
+  const box=document.getElementById("view-promises");
+  if(!locked){
+    box.innerHTML=`<div class="pitch"><p style="margin:0">Live promise tracking is active. ${S.promises.length} tracked.</p></div>`+S.promises.map(promiseCard).join("");
+    return;
+  }
+  box.innerHTML=`
+    <div class="card" style="text-align:center;border-color:var(--gold-dim)">
+      <div style="font-size:13px;letter-spacing:1px;color:var(--faint)">PROMISE TRACKER UNLOCKS AT NOMINATION DEADLINE</div>
+      <div id="pcd" style="font-size:34px;font-weight:800;color:var(--gold);margin:10px 0">—</div>
+      <div class="muted">Aug 21, 2026 · 2:00 PM ET — once campaigning is official, every candidate promise (from news + campaign channels) is auto-captured here, attributed, sourced, and tracked kept / broken / in-progress.</div>
+      <button id="pprev" class="srcbtn" style="margin-top:14px;cursor:pointer">▸ Preview ${S.promises.length} staged records</button>
+    </div>
+    <div id="pstaged" class="hidden"></div>`;
+  const cd=()=>{ const ms=FILING_DEADLINE-new Date(); if(ms<=0){renderPromises();return;}
+    const d=Math.floor(ms/86400000),h=Math.floor(ms/3600000)%24,m=Math.floor(ms/60000)%60,s=Math.floor(ms/1000)%60;
+    const el=document.getElementById("pcd"); if(el) el.textContent=`${d}d ${h}h ${m}m ${s}s`; };
+  cd(); if(window._pcd) clearInterval(window._pcd); window._pcd=setInterval(cd,1000);
+  document.getElementById("pprev").onclick=()=>{
+    const st=document.getElementById("pstaged");
+    st.classList.remove("hidden");
+    st.innerHTML=`<div class="sect-title" style="margin-top:20px">Staged records (pre-writ documented positions)</div>`+S.promises.map(promiseCard).join("");
+    document.getElementById("pprev").style.display="none";
+  };
+}
+
+function renderNews(){
+  const idn={}; S.candidates.forEach(c=>idn[c.id]=c.name);
+  const src={}; S.sources.forEach(s=>src[s.id]=s.publisher);
+  const mby={}; S.newsLinks.forEach(l=>{ (mby[l.news_item_id]=mby[l.news_item_id]||[]).push(l.candidate_id); });
+  document.getElementById("view-news").innerHTML=`
+    <div class="pitch"><p style="margin:0">${S.news.length} recent articles from Mississauga outlets + Google News, auto-filtered for council/election relevance and linked to candidates. <span class="faint">Ambiguous names require political context to match.</span></p></div>
+    <div class="searchbar"><input id="nsearch" placeholder="Filter headlines…"><select id="nfilter"><option value="">All candidates</option>${S.candidates.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select></div>
+    <div id="nlist"></div>`;
+  const draw=()=>{
+    const q=(document.getElementById("nsearch").value||"").toLowerCase();
+    const cf=document.getElementById("nfilter").value;
+    const list=S.news.filter(n=>(!q||(n.headline||"").toLowerCase().includes(q))&&(!cf||(mby[n.id]||[]).includes(cf)));
+    document.getElementById("nlist").innerHTML=list.map(n=>{
+      const cands=(mby[n.id]||[]).map(id=>idn[id]).filter(Boolean);
+      return `<div class="card" style="padding:12px 16px">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
+          <a href="${esc(n.url)}" target="_blank" rel="noopener" style="font-weight:600;font-size:14px;flex:1">${esc(n.headline||"(untitled)")} ↗</a>
+          <span class="faint" style="font-size:12px;white-space:nowrap">${fmtD(n.published_at)}</span></div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span class="chip faint">${esc(src[n.source_id]||"news")}</span>
+          ${cands.map(nm=>`<span class="chip" style="color:var(--gold)">${esc(nm)}</span>`).join("")}</div>
+        ${n.summary?`<div class="muted" style="font-size:12.5px;margin-top:6px">${esc(String(n.summary).slice(0,180))}…</div>`:""}
+      </div>`;}).join("")||'<div class="loading muted">No matching articles.</div>';
+  };
+  document.getElementById("nsearch").oninput=draw;
+  document.getElementById("nfilter").onchange=draw;
+  draw();
+}
+
+function renderAds(){
+  const ads=S.ads||[]; const box=document.getElementById("view-ads");
+  if(!ads.length){
+    box.innerHTML=`<div class="card" style="border-color:var(--gold-dim)">
+      <h3 style="margin:0 0 8px;color:var(--gold)">Political Ads — pipeline ready, awaiting Meta access</h3>
+      <p class="muted">The Meta Ad Library tracker is built (<code>fetch_meta_ads.py</code>) and reads Meta's official political-ads API (ToS-compliant). To light it up:</p>
+      <ul class="muted" style="line-height:1.9">
+        <li>Add a <b>Meta user access token</b> from an identity-confirmed account to <code>.env</code> (META_ACCESS_TOKEN)</li>
+        <li>Resolve each candidate's <b>numeric Facebook Page ID</b> into <code>candidates.facebook_page_id</code></li>
+        <li>Run <code>python fetch_meta_ads.py</code> — spend, impressions, targeting & creative copy populate here</li>
+      </ul>
+      <p class="faint" style="font-size:12px">Then: summary tiles + a table of every ad with spend range, impressions, targeting, copy, and an Ad Library link.</p>
+    </div>`;
+    return;
+  }
+  const running=ads.filter(a=>!a.ad_delivery_stop_time).length;
+  const pages=new Set(ads.map(a=>a.page_name||a.page_id)).size;
+  const rng=v=>{ if(!v) return "—"; try{const o=typeof v==='string'?JSON.parse(v):v;return (o.lower_bound||"?")+"–"+(o.upper_bound||"?");}catch(e){return "—";} };
+  const body=a=>{ try{const b=a.ad_creative_bodies;const arr=typeof b==='string'?JSON.parse(b):b;return Array.isArray(arr)?(arr[0]||""):(b||"");}catch(e){return "";} };
+  box.innerHTML=`
+    <div class="tiles">
+      <div class="tile"><div class="n">${ads.length}</div><div class="l">Ads tracked</div></div>
+      <div class="tile"><div class="n">${pages}</div><div class="l">Pages</div></div>
+      <div class="tile"><div class="n">${running}</div><div class="l">Currently running</div></div>
+    </div>
+    <table><thead><tr><th>Page</th><th>Start</th><th>End</th><th>Spend</th><th>Impressions</th><th>Copy</th><th></th></tr></thead><tbody>
+    ${ads.map(a=>`<tr><td>${esc(a.page_name||a.page_id||"")}</td><td class="muted">${fmtD(a.ad_delivery_start_time)}</td>
+      <td class="muted">${a.ad_delivery_stop_time?fmtD(a.ad_delivery_stop_time):'<span style="color:var(--green)">running</span>'}</td>
+      <td class="muted">${rng(a.spend)}</td><td class="muted">${rng(a.impressions)}</td>
+      <td>${esc(String(body(a)).slice(0,90))}</td>
+      <td><a href="https://www.facebook.com/ads/library/?id=${esc(a.id)}" target="_blank" rel="noopener">view ↗</a></td></tr>`).join("")}
+    </tbody></table>`;
+}
+
+// ── ROMULUS chat ──
+const chatHistory=[];
+function md(t){
+  let h=esc(t);
+  // [label](url) -> link
+  h=h.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1 ↗</a>');
+  // [bare-url] -> link
+  h=h.replace(/\[(https?:\/\/[^\]\s]+)\]/g,'<a href="$1" target="_blank" rel="noopener">source ↗</a>');
+  // remaining bare urls (not already inside an attribute/tag)
+  h=h.replace(/(^|[^"=>\]])(https?:\/\/[^\s<)\]]+)/g,'$1<a href="$2" target="_blank" rel="noopener">source ↗</a>');
+  h=h.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+  h=h.replace(/(^|[\s>(])_([^_\n]{1,140}?)_(?=[\s<.,;:)]|$)/g,'$1<i>$2</i>');
+  h=h.replace(/^###\s?(.+)$/gm,'<h4>$1</h4>');
+  h=h.replace(/(?:^|\n)\s*[-*]\s+(.+)/g,'\n<li>$1</li>');
+  h=h.replace(/(<li>[\s\S]*?<\/li>)/g,m=>'<ul>'+m.replace(/\n/g,'')+'</ul>');
+  return h.replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>');
+}
+function addMsg(cls,html){ const d=document.createElement('div'); d.className='msg '+cls; d.innerHTML=html;
+  document.getElementById('chatlog').appendChild(d); d.scrollIntoView({behavior:'smooth',block:'end'}); return d; }
+async function askRomulus(){
+  const inp=document.getElementById('chatinput'); const q=inp.value.trim(); if(!q) return;
+  inp.value=''; inp.style.height='auto'; document.getElementById('chatsend').disabled=true;
+  addMsg('user',esc(q)); chatHistory.push({role:'user',content:q});
+  const think=addMsg('bot think','ROMULUS is analysing the dossier…');
+  try{
+    const r=await fetch(ROMULUS_FN,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY,'apikey':SUPABASE_KEY},body:JSON.stringify({messages:chatHistory.slice(-8)})});
+    const data=await r.json();
+    if(!r.ok||data.error){ think.className='msg bot'; think.innerHTML='<span style="color:var(--red)">Error: '+esc(data.error||('HTTP '+r.status))+'</span>'; }
+    else { think.className='msg bot'; think.innerHTML=md(data.reply||'(no reply)'); chatHistory.push({role:'assistant',content:data.reply||''}); }
+  }catch(e){ think.className='msg bot'; think.innerHTML='<span style="color:var(--red)">'+esc(String(e))+'</span><br><span class="faint">Is the romulus function deployed?</span>'; }
+  document.getElementById('chatsend').disabled=false; inp.focus();
+}
+function wireChat(){
+  const sug=["What are Tedjo's strongest vulnerabilities?","Summarize the housing contradiction, with sources.","What should Tedjo lead his OWN campaign with?","Which circulating claims are NOT verifiable in the record?"];
+  document.getElementById('chatsug').innerHTML=sug.map(s=>`<button>${esc(s)}</button>`).join('');
+  document.getElementById('chatsug').onclick=e=>{ const b=e.target.closest('button'); if(!b)return; document.getElementById('chatinput').value=b.textContent; askRomulus(); };
+  document.getElementById('chatsend').onclick=askRomulus;
+  const inp=document.getElementById('chatinput');
+  inp.addEventListener('input',()=>{ inp.style.height='auto'; inp.style.height=Math.min(inp.scrollHeight,140)+'px'; });
+  inp.addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();askRomulus();} });
+}
+wireChat();
+
+// nav + countdown
+document.getElementById("nav").addEventListener("click",e=>{
+  const b=e.target.closest("button[data-tab]"); if(!b) return;
+  document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));
+  document.querySelectorAll(".view").forEach(x=>x.classList.add("hidden"));
+  b.classList.add("active");
+  document.getElementById("view-"+b.dataset.tab).classList.remove("hidden");
+  const titles={home:["Overview","Demo intelligence dossier · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message","Alvin Tedjo's affirmative case — sourced"],promises:["Promises","Auto-tracked once campaigning is official"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],council:["Council Record","Every dissent, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","The full declared mayoral field"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"]};
+  document.getElementById("viewTitle").textContent=titles[b.dataset.tab][0];
+  document.getElementById("viewCrumb").textContent=titles[b.dataset.tab][1];
+});
+function tick(){ const d=Math.ceil((ELECTION-new Date())/86400000);
+  document.getElementById("countdown").innerHTML=`<b>${d}</b> days to election<br><span class="faint">Oct 26, 2026</span>`; }
+tick(); setInterval(tick,60000);
+init();
+</script>
+</body>
+</html>
