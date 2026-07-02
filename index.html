@@ -129,8 +129,17 @@
   #splash.gone{opacity:0;pointer-events:none;transition:opacity .6s ease}
   #splash-vid{display:none} #splash.has-video #splash-vid{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
   #splash.has-video #splash-inner{display:none}
-  #splash-skip{position:absolute;top:18px;right:22px;z-index:3;background:#0a0e14aa;border:1px solid var(--line);
+  #splash-skip{display:none;position:absolute;top:18px;right:22px;z-index:3;background:#0a0e14aa;border:1px solid var(--line);
     color:var(--muted);padding:7px 15px;border-radius:6px;cursor:pointer;font-size:12px}
+  #pwgate{text-align:center;padding:20px;position:relative;z-index:2}
+  .pw-row{display:flex;gap:10px;justify-content:center;margin-top:6px}
+  #pw-input{background:#0a0e14;border:1px solid var(--gold-dim);color:var(--gold);font-family:ui-monospace,Menlo,Consolas,monospace;
+    padding:12px 18px;border-radius:9px;font-size:15px;letter-spacing:3px;width:min(300px,68vw);text-align:center}
+  #pw-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 18px rgba(224,184,76,.3)}
+  .pw-row button{background:var(--gold);color:#05070b;border:none;padding:0 22px;border-radius:9px;font-weight:800;cursor:pointer;font-size:14px}
+  #pw-err{color:var(--red);font-family:ui-monospace,monospace;font-size:13px;margin-top:16px;height:16px;letter-spacing:2px}
+  #splash.shake{animation:rsShake .4s}
+  @keyframes rsShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
   #splash-skip:hover{color:var(--gold);border-color:var(--gold-dim)}
   #splash-inner{text-align:center;padding:20px;display:none}
   #splash-gate{display:none;position:absolute;inset:0;z-index:2;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(circle at 50% 50%,transparent,rgba(5,7,11,.45))}
@@ -157,44 +166,43 @@
   <div id="splash">
     <video id="splash-vid" playsinline preload="auto"><source src="opener.mp4" type="video/mp4"></video>
     <button id="splash-skip">⏭ Skip Intro</button>
-    <div id="splash-gate">
-      <button id="splash-play">▶ Enter ROMULUS</button>
-      <label><input type="checkbox" id="rs-skip-cb"> Don't show this again</label>
-    </div>
-    <div id="splash-inner">
+    <div id="pwgate">
       <div class="rs-logo">ROMULUS</div>
       <div class="rs-tag">CAMPAIGN INTELLIGENCE · MISSISSAUGA 2026</div>
-      <div class="rs-boot" id="rs-boot"></div>
-      <div class="rs-enter" id="rs-enter"><button id="splash-enter">▶ Enter Terminal</button></div>
+      <div class="rs-boot" id="pw-boot"></div>
+      <div class="pw-row">
+        <input id="pw-input" type="password" placeholder="ACCESS CODE" autocomplete="off" spellcheck="false">
+        <button id="pw-enter">Enter ▸</button>
+      </div>
+      <div id="pw-err"></div>
     </div>
   </div>
   <script>(function(){
-    var sp=document.getElementById('splash');
-    if(localStorage.getItem('romulus_skip_intro')==='1'){ sp.parentNode.removeChild(sp); return; }
-    var v=document.getElementById('splash-vid'), gate=document.getElementById('splash-gate'), inner=document.getElementById('splash-inner');
-    var haveVideo=false, animStarted=false;
-    function persist(){ var cb=document.getElementById('rs-skip-cb'); if(cb&&cb.checked) localStorage.setItem('romulus_skip_intro','1'); }
-    function dismiss(){ persist(); sp.classList.add('gone'); setTimeout(function(){ if(sp.parentNode) sp.parentNode.removeChild(sp); },650); }
-    document.getElementById('splash-skip').onclick=dismiss;
-    // ── video path: show first frame + Enter gate, play WITH sound on click ──
-    v.addEventListener('loadeddata',function(){ if(v.duration>0.4 && !haveVideo){ haveVideo=true;
-      sp.classList.add('has-video'); gate.style.display='flex'; } });
+    var PW="Satorus2026";
+    var sp=document.getElementById('splash'), gate=document.getElementById('pwgate'),
+        v=document.getElementById('splash-vid'), skip=document.getElementById('splash-skip'),
+        boot=document.getElementById('pw-boot'), inp=document.getElementById('pw-input');
+    var lines=["▸ SECURE SESSION ......... established",
+      "▸ COUNCIL RECORD ......... 73 meetings · 1,004 votes",
+      "▸ PRIMARY SOURCES ........ 998 verified",
+      "▸ OPPO FINDINGS .......... 11 ranked",
+      "▸ CANDIDATE PROFILES ..... 6 loaded",
+      "▸ VIDEO INTEL ............ 95 clips",
+      "▸ NEWS FEED .............. live",
+      "▸ AWAITING ACCESS CODE_"];
+    var i=0;(function tick(){ if(i<lines.length){ var d=document.createElement('div'); d.className='ln';
+      d.textContent=lines[i]; boot.appendChild(d); i++; setTimeout(tick,260);} else { try{inp.focus();}catch(e){} } })();
+    function dismiss(){ sp.classList.add('gone'); setTimeout(function(){ if(sp.parentNode) sp.parentNode.removeChild(sp); },650); }
+    function playVideo(){ gate.style.display='none'; sp.classList.add('has-video'); skip.style.display='block';
+      v.muted=false; v.play().catch(function(){ v.muted=true; v.play().catch(dismiss); }); }
     v.addEventListener('ended',dismiss);
-    v.addEventListener('error',startAnimation);
-    document.getElementById('splash-play').onclick=function(){ persist(); gate.style.display='none';
-      try{ v.currentTime=0; }catch(e){} v.muted=false;
-      v.play().catch(function(){ v.muted=true; v.play().catch(function(){}); }); };
-    // ── fallback: animated boot if no video within 2.5s ──
-    setTimeout(function(){ if(!haveVideo) startAnimation(); },2500);
-    function startAnimation(){ if(haveVideo||animStarted) return; animStarted=true;
-      inner.style.display='block';
-      var boot=document.getElementById('rs-boot'), enter=document.getElementById('rs-enter');
-      var lines=["▸ Establishing secure session…","▸ Loading council record … 73 meetings · 1,004 votes",
-        "▸ Cross-checking primary sources … 998 confirmed","▸ Ranking vulnerabilities … 11 OPPO findings","▸ ROMULUS online."];
-      var i=0;(function tick(){ if(i<lines.length){ var d=document.createElement('div'); d.className='ln';
-        d.textContent=lines[i]; boot.appendChild(d); i++; setTimeout(tick,430);} else { enter.style.opacity='1'; } })();
-      document.getElementById('splash-enter').onclick=dismiss;
-    }
+    v.addEventListener('error',function(){ if(sp.classList.contains('has-video')) dismiss(); });
+    skip.onclick=dismiss;
+    function submit(){ if(inp.value===PW){ playVideo(); }
+      else { document.getElementById('pw-err').textContent='✖ ACCESS DENIED'; inp.value='';
+        sp.classList.add('shake'); setTimeout(function(){ sp.classList.remove('shake'); },420); try{inp.focus();}catch(e){} } }
+    document.getElementById('pw-enter').onclick=submit;
+    inp.addEventListener('keydown',function(e){ if(e.key==='Enter') submit(); });
   })();</script>
   <aside class="sidebar">
     <div class="brand">
