@@ -132,6 +132,49 @@
   .hq-av{width:42px;height:42px;border-radius:50%;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:800;border:1px solid var(--gold-dim)}
   .hq-status{font-size:10.5px;font-weight:700;letter-spacing:.5px;color:var(--faint);white-space:nowrap}
   .hq-status.on{color:var(--green)}
+  /* ── public marketing landing ── */
+  #landing{position:fixed;inset:0;z-index:1100;overflow-y:auto;background:radial-gradient(1200px 600px at 70% -10%,#141d2b,#0a0e14 60%);color:var(--text);font-size:16px;line-height:1.6}
+  .ld-nav{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:15px 6vw;background:#0a0e14cc;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .ld-logo{font-weight:800;letter-spacing:3px;font-size:20px;color:var(--gold)} .ld-logo span{color:var(--red);font-size:11px;margin-left:5px}
+  .ld-navlinks{display:flex;align-items:center;gap:22px}
+  .ld-navlinks a{color:var(--muted);font-size:14px} .ld-navlinks a:hover{color:var(--text);text-decoration:none}
+  .ld-navlinks .ld-cta-sm{color:var(--gold)}
+  #ld-access{background:none;border:1px solid var(--gold-dim);color:var(--gold);padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px}
+  #ld-access:hover{background:var(--gold-dim)}
+  .ld-hero{max-width:900px;margin:0 auto;padding:78px 6vw 56px;text-align:center}
+  .ld-eyebrow{color:var(--gold);letter-spacing:3px;font-size:12px;font-weight:700;margin-bottom:18px}
+  .ld-hero h1{font-size:clamp(38px,7vw,66px);font-weight:800;line-height:1.05;margin:0 0 20px;letter-spacing:-1px}
+  .ld-sub{font-size:clamp(16px,2.4vw,20px);color:var(--muted);max-width:720px;margin:0 auto 30px}
+  .ld-herocta{display:flex;flex-direction:column;align-items:center;gap:15px}
+  .ld-btn{display:inline-block;background:var(--gold);color:#05070b;font-weight:800;padding:15px 34px;border-radius:11px;font-size:16px;border:none;cursor:pointer;box-shadow:0 8px 30px rgba(224,184,76,.25);letter-spacing:.3px}
+  .ld-btn:hover{text-decoration:none;transform:translateY(-1px)}
+  .ld-proof{color:var(--faint);font-size:13px;font-family:ui-monospace,monospace} .ld-proof b{color:var(--green)}
+  .ld-band{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 32px;padding:20px 6vw;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#0c1219;color:var(--muted);font-size:12.5px;letter-spacing:1px;text-transform:uppercase}
+  .ld-band div:last-child{color:var(--gold);font-weight:700}
+  .ld-section{max-width:1080px;margin:0 auto;padding:66px 6vw}
+  .ld-section h2{font-size:clamp(26px,4vw,37px);font-weight:800;margin:0 0 10px;text-align:center}
+  .ld-lead{color:var(--muted);text-align:center;max-width:660px;margin:0 auto 38px;font-size:17px}
+  .ld-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+  .ld-feat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 24px;transition:border-color .18s,transform .18s}
+  .ld-feat:hover{border-color:var(--gold-dim);transform:translateY(-3px)}
+  .ld-ico{font-size:24px;color:var(--gold);margin-bottom:12px}
+  .ld-feat h3{margin:0 0 8px;font-size:18px} .ld-feat p{margin:0;color:var(--muted);font-size:14.5px}
+  .ld-why{background:#0c1219;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .ld-why-list{max-width:820px;margin:32px auto 0;list-style:none;padding:0;display:grid;gap:14px}
+  .ld-why-list li{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:10px;padding:16px 20px;color:var(--muted)}
+  .ld-why-list li b{color:var(--text)}
+  .ld-demo-wrap{display:grid;grid-template-columns:1fr 1.1fr;gap:40px;align-items:start}
+  .ld-demo-copy h2{text-align:left}  .ld-demo-copy p{color:var(--muted)}
+  .ld-contact{margin-top:16px;color:var(--faint);font-size:14px}
+  .ld-form{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px}
+  .ld-form label{display:block;font-size:13px;color:var(--muted);margin-bottom:14px}
+  .ld-form input,.ld-form select,.ld-form textarea{width:100%;margin-top:5px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:11px 13px;font:14px inherit}
+  .ld-form input:focus,.ld-form select:focus,.ld-form textarea:focus{outline:none;border-color:var(--gold-dim)}
+  .ld-row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .ld-form .ld-btn{width:100%;margin-top:6px}
+  .ld-msg{margin-top:14px;font-size:14px;color:var(--muted);min-height:18px} .ld-msg.ok{color:var(--green)}
+  .ld-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center;padding:26px 6vw;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+  @media (max-width:760px){ .ld-navlinks a:not(.ld-cta-sm){display:none} .ld-demo-wrap{grid-template-columns:1fr} .ld-row2{grid-template-columns:1fr} .ld-hero{padding:48px 6vw 38px} .ld-section{padding:48px 6vw} }
   .searchbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
   .searchbar input,.searchbar select{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px}
   .searchbar input{flex:1;min-width:220px}
@@ -206,6 +249,120 @@
 </style>
 </head>
 <body>
+  <div id="landing">
+    <header class="ld-nav">
+      <div class="ld-logo">ROMULUS<span>●</span></div>
+      <nav class="ld-navlinks">
+        <a href="#ld-what">What it does</a>
+        <a href="#ld-why">Why it wins</a>
+        <a href="#ld-demo" class="ld-cta-sm">Book a Demo</a>
+        <button id="ld-access" type="button">Operator Access →</button>
+      </nav>
+    </header>
+
+    <section class="ld-hero">
+      <div class="ld-eyebrow">CAMPAIGN INTELLIGENCE · MUNICIPAL ELECTIONS</div>
+      <h1>Win with the receipts.</h1>
+      <p class="ld-sub">ROMULUS turns the public record into a decisive, court-ready advantage — every vote, every contradiction, every opponent move, traced to its primary source and refreshed every single day.</p>
+      <div class="ld-herocta">
+        <a href="#ld-demo" class="ld-btn">▶ Book a Demo</a>
+        <div class="ld-proof">1,004 votes analyzed · 998 primary-source-confirmed · <b>0</b> fabrications</div>
+      </div>
+    </section>
+
+    <section class="ld-band">
+      <div>Every council vote</div><div>Every contradiction</div><div>Every opponent ad</div><div>Every promise</div><div>Sourced · Verified · Daily</div>
+    </section>
+
+    <section class="ld-section" id="ld-what">
+      <h2>What ROMULUS does</h2>
+      <p class="ld-lead">A full opposition-research war room — automated, verifiable, and running while you sleep.</p>
+      <div class="ld-grid">
+        <div class="ld-feat"><div class="ld-ico">▤</div><h3>Total record capture</h3><p>Every council vote, motion, dissent, and absence — pulled straight from official minutes and cross-checked line by line. Nothing missed, nothing spun.</p></div>
+        <div class="ld-feat"><div class="ld-ico">⚑</div><h3>Court-ready OPPO</h3><p>Tiered opposition findings — Very Strong to Adequate — each contradiction traced to a clickable primary source. Ready to drop into an ad or mailer without fear.</p></div>
+        <div class="ld-feat"><div class="ld-ico">★</div><h3>Your affirmative case</h3><p>Build your own candidate's message from real, sourced accomplishments — not talking points. Every line backed by the record.</p></div>
+        <div class="ld-feat"><div class="ld-ico">◱</div><h3>Always-on monitoring</h3><p>Opponents' campaign sites, local news, YouTube, and paid political ads — tracked automatically every morning. You're never blindsided.</p></div>
+        <div class="ld-feat"><div class="ld-ico">✦</div><h3>Grounded AI analyst</h3><p>Ask it anything. ROMULUS answers only from the record and cites every claim — and flatly refuses to fabricate.</p></div>
+        <div class="ld-feat"><div class="ld-ico">▦</div><h3>Sealed client silos</h3><p>Every campaign lives in its own secure, isolated vault. Your intelligence is yours alone — it can never cross to another client.</p></div>
+      </div>
+    </section>
+
+    <section class="ld-section ld-why" id="ld-why">
+      <h2>Why it's a game-changer</h2>
+      <ul class="ld-why-list">
+        <li><b>Court-ready, not clickbait.</b> Every claim links to the official source. Put it in front of voters — or a reporter — with total confidence.</li>
+        <li><b>A research team's month, done overnight.</b> What used to take a war room weeks now runs continuously and automatically, for a fraction of the cost.</li>
+        <li><b>It levels the field.</b> Challengers get incumbent-grade research; incumbents get an early-warning radar on every rival.</li>
+        <li><b>It kills misinformation.</b> Circulating claims are cross-checked against the official record — you know what's real versus rumor before it spreads.</li>
+        <li><b>Purpose-built for municipal races.</b> Wired around council minutes, local outlets, and the Meta political-ad library — the exact terrain of a local campaign.</li>
+      </ul>
+    </section>
+
+    <section class="ld-section ld-demo" id="ld-demo">
+      <div class="ld-demo-wrap">
+        <div class="ld-demo-copy">
+          <h2>Book your demo</h2>
+          <p>Tell us about your campaign. We'll show you your opponent's record — live, sourced, and unforgettable.</p>
+          <div class="ld-contact">Prefer email? <a href="mailto:a.m.smith31.as@gmail.com">a.m.smith31.as@gmail.com</a></div>
+        </div>
+        <form id="ld-form" class="ld-form">
+          <label>Your name*<input id="lf-name" required autocomplete="name"></label>
+          <div class="ld-row2">
+            <label>Email*<input id="lf-email" type="email" required autocomplete="email"></label>
+            <label>Phone<input id="lf-phone" type="tel" autocomplete="tel"></label>
+          </div>
+          <div class="ld-row2">
+            <label>Your role on the campaign
+              <select id="lf-role"><option value="">Select…</option><option>Candidate</option><option>Campaign Manager</option><option>Staff</option><option>Volunteer</option><option>Consultant</option><option>Other</option></select>
+            </label>
+            <label>Are you the candidate?
+              <select id="lf-iscand"><option value="">Select…</option><option>Yes, I'm the candidate</option><option>No — I represent the candidate</option></select>
+            </label>
+          </div>
+          <label>Who is the candidate? (name)<input id="lf-cand"></label>
+          <label>Municipality / office you're running for<input id="lf-office" placeholder="e.g. Mayor of Mississauga · Council Ward 3, Oakville"></label>
+          <label>Your brand — the issues you want to run on<textarea id="lf-brand" rows="3" placeholder="What's your message? What do you want to be known for?"></textarea></label>
+          <button type="submit" class="ld-btn" id="lf-submit">Request my demo →</button>
+          <div id="lf-msg" class="ld-msg"></div>
+        </form>
+      </div>
+    </section>
+
+    <footer class="ld-foot">
+      <div class="ld-logo" style="font-size:16px">ROMULUS</div>
+      <div>Campaign Intelligence · Municipal Elections</div>
+      <div>Contact: <a href="mailto:a.m.smith31.as@gmail.com">a.m.smith31.as@gmail.com</a></div>
+    </footer>
+  </div>
+  <script>
+  (function(){
+    var LEADS_URL="https://lblxjbomfusfhsnwehez.supabase.co/rest/v1/leads";
+    var LEADS_KEY="sb_publishable_aDVuWrjpxpn1Zo4Dyix3mw_nkTtxipb";
+    var ld=document.getElementById('landing');
+    document.getElementById('ld-access').onclick=function(){ ld.style.display='none'; };
+    var f=document.getElementById('ld-form');
+    f.onsubmit=function(e){
+      e.preventDefault();
+      var v=function(id){ return (document.getElementById(id).value||'').trim(); };
+      var lead={ name:v('lf-name'), email:v('lf-email'), phone:v('lf-phone'), role:v('lf-role'),
+        is_candidate:v('lf-iscand'), candidate_name:v('lf-cand'), office:v('lf-office'), brand:v('lf-brand') };
+      var msg=document.getElementById('lf-msg'), btn=document.getElementById('lf-submit');
+      btn.disabled=true; msg.className='ld-msg'; msg.textContent='Sending…';
+      fetch(LEADS_URL,{method:'POST',headers:{apikey:LEADS_KEY,Authorization:'Bearer '+LEADS_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(lead)})
+      .then(function(r){
+        if(!r.ok) throw new Error('http '+r.status);
+        f.reset(); msg.className='ld-msg ok';
+        msg.textContent='✓ Thank you, '+(lead.name.split(' ')[0]||'')+' — your request is in. We\'ll be in touch shortly at '+lead.email+'.';
+      })
+      .catch(function(){
+        var body='Name: '+lead.name+'\nEmail: '+lead.email+'\nPhone: '+lead.phone+'\nRole: '+lead.role+'\nAre you the candidate: '+lead.is_candidate+'\nCandidate: '+lead.candidate_name+'\nOffice: '+lead.office+'\nBrand/issues: '+lead.brand;
+        msg.className='ld-msg';
+        msg.innerHTML='Couldn\'t reach the server — <a href="mailto:a.m.smith31.as@gmail.com?subject='+encodeURIComponent('ROMULUS demo request — '+lead.name)+'&body='+encodeURIComponent(body)+'">click here to email your request instead</a>.';
+        btn.disabled=false;
+      });
+    };
+  })();
+  </script>
   <div id="splash">
     <video id="splash-vid" playsinline preload="auto"><source src="opener.mp4" type="video/mp4"></video>
     <button id="splash-skip">⏭ Skip Intro</button>
