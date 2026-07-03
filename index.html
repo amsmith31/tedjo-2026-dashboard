@@ -122,6 +122,16 @@
   .fbtn{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:6px 13px;border-radius:16px;font-size:12.5px;cursor:pointer}
   .fbtn:hover{border-color:var(--gold-dim);color:var(--text)}
   .fbtn.on{background:var(--gold-dim);color:var(--gold);border-color:var(--gold-dim);font-weight:600}
+  /* HQ (multi-tenant selector) */
+  .hq-muni-h{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin:18px 0 8px;font-weight:700}
+  .hq-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+  .hq-card{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:14px 16px;cursor:pointer;transition:border-color .15s,transform .15s}
+  .hq-card:hover{border-color:var(--gold-dim);transform:translateY(-2px)}
+  .hq-card.pending{opacity:.55;cursor:not-allowed}
+  .hq-card.pending:hover{transform:none;border-color:var(--line)}
+  .hq-av{width:42px;height:42px;border-radius:50%;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:800;border:1px solid var(--gold-dim)}
+  .hq-status{font-size:10.5px;font-weight:700;letter-spacing:.5px;color:var(--faint);white-space:nowrap}
+  .hq-status.on{color:var(--green)}
   .searchbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
   .searchbar input,.searchbar select{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px}
   .searchbar input{flex:1;min-width:220px}
@@ -244,7 +254,8 @@
       <div class="sub">CAMPAIGN INTELLIGENCE</div>
     </div>
     <nav class="nav" id="nav">
-      <button data-tab="home" class="active"><span class="ico">◆</span> Overview</button>
+      <button data-tab="hq" class="active"><span class="ico">⌂</span> Municipality</button>
+      <button data-tab="home"><span class="ico">◆</span> Overview</button>
       <button data-tab="romulus"><span class="ico">✦</span> ROMULUS Chat</button>
       <button data-tab="message"><span class="ico">★</span> My Message <span class="ct" id="ct-message"></span></button>
       <button data-tab="attacks"><span class="ico">⚑</span> OPPO <span class="ct" id="ct-attacks"></span></button>
@@ -257,8 +268,8 @@
       <button data-tab="ads"><span class="ico">◲</span> Political Ads <span class="ct" id="ct-ads"></span></button>
     </nav>
     <div class="side-foot">
-      Target: <b>Alvin Tedjo</b><br>Mayor of Mississauga · 2026<br>
-      <span id="conn" class="faint">connecting…</span>
+      <div id="activeClient" style="color:var(--muted)">No client selected</div>
+      <span id="conn" class="faint">—</span>
     </div>
   </aside>
 
@@ -268,7 +279,8 @@
       <div style="flex:1"><h2 id="viewTitle">Overview</h2><div class="crumb" id="viewCrumb">Demo intelligence dossier · primary-source verified</div></div>
       <div class="countdown" id="countdown"></div>
     </div>
-    <section class="view" id="view-home"></section>
+    <section class="view" id="view-hq"></section>
+    <section class="view hidden" id="view-home"></section>
     <section class="view hidden" id="view-romulus">
       <div class="pitch" style="margin-bottom:14px"><p style="margin:0">Ask ROMULUS about the intelligence. It answers <b>only</b> from the loaded dossier and cites a source link for every claim — no fabrication.</p></div>
       <div id="chatlog" class="chatlog"></div>
@@ -290,10 +302,25 @@
   </main>
 
 <script>
-const SUPABASE_URL = "https://lblxjbomfusfhsnwehez.supabase.co";
-const SUPABASE_KEY = "sb_publishable_aDVuWrjpxpn1Zo4Dyix3mw_nkTtxipb";
-const REST = SUPABASE_URL + "/rest/v1";
-const ROMULUS_FN = SUPABASE_URL + "/functions/v1/romulus";
+// ── Multi-tenant client registry. Each client is its own isolated Supabase
+//    project (hard silo — data cannot cross between clients). Only the
+//    publishable (anon) key goes here; it's safe in the browser (RLS read-only).
+const CLIENTS = {
+  "Mississauga": { candidates: {
+    "Alvin Tedjo": { office:"Mayor · 2026", status:"live",
+      url:"https://lblxjbomfusfhsnwehez.supabase.co",
+      key:"sb_publishable_aDVuWrjpxpn1Zo4Dyix3mw_nkTtxipb" }
+  }},
+  "Oakville": { candidates: {
+    "Rob Burton": { office:"Mayor · 2026", status:"pending", url:"", key:"",
+      note:"Burton runs in its own Supabase project — provide its URL + publishable key to connect this silo." }
+  }},
+  "Etobicoke-Lakeshore": { candidates: {
+    "Ted Opitz": { office:"City Council · 2026", status:"pending", url:"", key:"",
+      note:"No ROMULUS instance stood up for this client yet — create its Supabase project + load data, then add its URL + key here." }
+  }}
+};
+let SUPABASE_URL="", SUPABASE_KEY="", REST="", ROMULUS_FN="", ACTIVE=null;
 const ELECTION = new Date("2026-10-26T00:00:00-04:00");
 const FILING_DEADLINE = new Date("2026-08-21T14:00:00-04:00");
 
@@ -678,7 +705,7 @@ document.getElementById("nav").addEventListener("click",e=>{
   document.querySelectorAll(".view").forEach(x=>x.classList.add("hidden"));
   b.classList.add("active");
   document.getElementById("view-"+b.dataset.tab).classList.remove("hidden");
-  const titles={home:["Overview","Demo intelligence dossier · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message","Alvin Tedjo's affirmative case — sourced"],promises:["Promises","Auto-tracked once campaigning is official"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],council:["Council Record","Every dissent, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","The full declared mayoral field"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"]};
+  const titles={hq:["Municipality","Select a municipality → candidate silo"],home:["Overview","Demo intelligence dossier · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message","Alvin Tedjo's affirmative case — sourced"],promises:["Promises","Auto-tracked once campaigning is official"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],council:["Council Record","Every dissent, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","The full declared mayoral field"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"]};
   document.getElementById("viewTitle").textContent=titles[b.dataset.tab][0];
   document.getElementById("viewCrumb").textContent=titles[b.dataset.tab][1];
   closeNav();   // close drawer after picking a tab (mobile)
@@ -695,7 +722,44 @@ document.getElementById("scrim").onclick=closeNav;
 function tick(){ const d=Math.ceil((ELECTION-new Date())/86400000);
   document.getElementById("countdown").innerHTML=`<b>${d}</b> days to election<br><span class="faint">Oct 26, 2026</span>`; }
 tick(); setInterval(tick,60000);
-init();
+
+// ── Multi-tenant HQ (Municipality → Candidate selector) ──
+function renderHQ(){
+  const box=document.getElementById("view-hq");
+  box.innerHTML=`
+    <div class="pitch"><h3 style="margin:0 0 6px;color:var(--gold)">ROMULUS HQ</h3>
+      <p style="margin:0">Select a municipality, then a candidate. Each client runs in its own isolated Supabase silo — data never crosses between clients.</p></div>
+    ${Object.keys(CLIENTS).map(m=>`
+      <div class="hq-muni-h">⌂ ${esc(m)}</div>
+      <div class="hq-cards">
+        ${Object.keys(CLIENTS[m].candidates).map(name=>{ const c=CLIENTS[m].candidates[name];
+          const live=c.status==="live"&&c.url;
+          return `<div class="hq-card ${live?'':'pending'}" data-muni="${esc(m)}" data-cand="${esc(name)}">
+            <div class="hq-av">${esc(name.split(" ").map(x=>x[0]).join("").slice(0,2))}</div>
+            <div style="flex:1"><div style="font-weight:700">${esc(name)}</div>
+              <div class="muted" style="font-size:12.5px">${esc(c.office||"")}</div></div>
+            <span class="hq-status ${live?'on':''}">${live?'● LIVE':'○ not connected'}</span></div>`;}).join("")}
+      </div>`).join("")}
+    <div class="faint" style="font-size:12px;margin-top:14px">Developer view. To add a client: create its Supabase project, load its data, then register its URL + publishable key in <code>CLIENTS</code>.</div>`;
+  box.querySelectorAll(".hq-card").forEach(el=>el.onclick=()=>{
+    const c=CLIENTS[el.dataset.muni].candidates[el.dataset.cand];
+    if(c.status==="live"&&c.url) connectClient(el.dataset.muni, el.dataset.cand);
+    else alert(c.note||"This client isn't connected yet.");
+  });
+}
+function connectClient(muni, cand){
+  const c=CLIENTS[muni].candidates[cand];
+  SUPABASE_URL=c.url.replace(/\/+$/,""); SUPABASE_KEY=c.key;
+  REST=SUPABASE_URL+"/rest/v1"; ROMULUS_FN=SUPABASE_URL+"/functions/v1/romulus";
+  ACTIVE={muni,cand,office:c.office};
+  document.getElementById("activeClient").innerHTML="Target: <b>"+esc(cand)+"</b><br>"+esc(muni)+" · "+esc(c.office||"");
+  document.getElementById("conn").textContent="connecting…";
+  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={};
+  chatHistory.length=0; const cl=document.getElementById("chatlog"); if(cl) cl.innerHTML="";
+  document.querySelector('button[data-tab="home"]').click();
+  init();
+}
+renderHQ();
 </script>
 </body>
 </html>
