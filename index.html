@@ -175,6 +175,40 @@
   .ld-msg{margin-top:14px;font-size:14px;color:var(--muted);min-height:18px} .ld-msg.ok{color:var(--green)}
   .ld-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center;padding:26px 6vw;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
   @media (max-width:760px){ .ld-navlinks a:not(.ld-cta-sm){display:none} .ld-demo-wrap{grid-template-columns:1fr} .ld-row2{grid-template-columns:1fr} .ld-hero{padding:48px 6vw 38px} .ld-section{padding:48px 6vw} }
+  /* landing animations */
+  .ld-hero .ld-eyebrow,.ld-hero h1,.ld-hero .ld-sub,.ld-hero .ld-herocta{opacity:0;animation:ldUp .8s cubic-bezier(.2,.7,.2,1) forwards}
+  .ld-hero h1{animation-delay:.12s} .ld-hero .ld-sub{animation-delay:.24s} .ld-hero .ld-herocta{animation-delay:.36s}
+  @keyframes ldUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  .ld-grid .ld-feat.reveal{transition-delay:calc(var(--i,0)*70ms)}
+  .ld-band div{animation:ldGlow 3s ease-in-out infinite}
+  @keyframes ldGlow{0%,100%{opacity:.6}50%{opacity:1}}
+  /* explainer */
+  .ld-explainer{position:relative;max-width:840px;margin:0 auto;aspect-ratio:16/9;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:radial-gradient(900px 500px at 50% 0%,#16202f,#080c12 70%);box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .lx-scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:6%;opacity:0;transform:translateY(14px) scale(.985);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
+  .lx-scene.on{opacity:1;transform:none}
+  .lx-ico{font-size:44px;color:var(--gold);margin-bottom:16px;filter:drop-shadow(0 0 18px rgba(224,184,76,.4))}
+  .lx-big{font-size:clamp(20px,3.4vw,30px);font-weight:800;line-height:1.15;max-width:640px;margin:0 0 10px}
+  .lx-sub{color:var(--muted);font-size:clamp(13px,1.8vw,16px);max-width:520px;margin:0}
+  .lx-kicker{position:absolute;top:16px;left:18px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:2px;color:var(--gold);opacity:.8;z-index:2}
+  .lx-bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:#ffffff14}
+  .lx-fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),#f0d98a);box-shadow:0 0 12px var(--gold)}
+  .lx-replay{position:absolute;bottom:14px;right:14px;background:#0a0e14cc;border:1px solid var(--gold-dim);color:var(--gold);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:12px;z-index:2}
+  .lx-note{text-align:center;color:var(--faint);font-size:12.5px;margin-top:12px}
+  /* client-entry cinematic intro */
+  #client-intro{position:fixed;inset:0;z-index:1050;background:#04060a;display:none;align-items:center;justify-content:center;overflow:hidden}
+  #client-intro.show{display:flex}
+  #ci-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#04060a;opacity:0;transition:opacity .5s}
+  #client-intro.playing #ci-vid{opacity:1}
+  .ci-boot{position:relative;text-align:center;transition:opacity .5s;z-index:1;padding:20px}
+  #client-intro.playing .ci-boot{opacity:0}
+  .ci-logo{font-size:clamp(40px,8vw,70px);font-weight:800;letter-spacing:12px;color:var(--gold)}
+  .ci-tag{color:var(--muted);letter-spacing:4px;font-size:12px;margin:8px 0 18px}
+  .ci-lines{font-family:ui-monospace,monospace;color:var(--green);font-size:13px;text-align:left;display:inline-block;min-height:150px}
+  .ci-lines .ln{opacity:0;animation:rsIn .35s forwards;padding:2px 0}
+  #ci-skip{position:absolute;bottom:16px;right:16px;z-index:3;background:#0a0e14cc;border:1px solid var(--gold-dim);color:var(--gold);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;display:none}
+  @media (prefers-reduced-motion:reduce){.ld-hero *{animation:none!important;opacity:1!important} .reveal{opacity:1;transform:none}}
   .searchbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
   .searchbar input,.searchbar select{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px}
   .searchbar input{flex:1;min-width:220px}
@@ -298,6 +332,18 @@
       </ul>
     </section>
 
+    <section class="ld-section" id="ld-video">
+      <h2>See it in 40 seconds</h2>
+      <p class="ld-lead">How ROMULUS turns the public record into an electoral edge.</p>
+      <div class="ld-explainer" id="ld-explainer">
+        <div class="lx-kicker">ROMULUS ▸ CAMPAIGN INTELLIGENCE</div>
+        <div class="lx-stage" id="lx-stage"></div>
+        <div class="lx-bar"><div class="lx-fill" id="lx-fill"></div></div>
+        <button class="lx-replay" id="lx-replay">▶ Replay</button>
+      </div>
+      <div class="lx-note">Prefer a narrated cut? A produced voiceover video can drop right into this frame.</div>
+    </section>
+
     <section class="ld-section ld-demo" id="ld-demo">
       <div class="ld-demo-wrap">
         <div class="ld-demo-copy">
@@ -348,19 +394,71 @@
         is_candidate:v('lf-iscand'), candidate_name:v('lf-cand'), office:v('lf-office'), brand:v('lf-brand') };
       var msg=document.getElementById('lf-msg'), btn=document.getElementById('lf-submit');
       btn.disabled=true; msg.className='ld-msg'; msg.textContent='Sending…';
-      fetch(LEADS_URL,{method:'POST',headers:{apikey:LEADS_KEY,Authorization:'Bearer '+LEADS_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(lead)})
-      .then(function(r){
-        if(!r.ok) throw new Error('http '+r.status);
-        f.reset(); msg.className='ld-msg ok';
-        msg.textContent='✓ Thank you, '+(lead.name.split(' ')[0]||'')+' — your request is in. We\'ll be in touch shortly at '+lead.email+'.';
-      })
-      .catch(function(){
+      // 1) email the submission straight to the operator's inbox (FormSubmit -> a.m.smith31.as@gmail.com)
+      var pMail=fetch('https://formsubmit.co/ajax/a.m.smith31.as@gmail.com',{
+        method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},
+        body:JSON.stringify({ _subject:'ROMULUS demo request — '+(lead.name||'new lead'), _template:'table',
+          Name:lead.name, Email:lead.email, Phone:lead.phone, 'Campaign role':lead.role,
+          'Are you the candidate':lead.is_candidate, Candidate:lead.candidate_name,
+          'Office sought':lead.office, 'Brand / issues to run on':lead.brand, Source:'romulus.vote' })
+      }).then(function(r){return r.ok;}).catch(function(){return false;});
+      // 2) also keep a durable copy in the private leads database
+      var pDb=fetch(LEADS_URL,{method:'POST',headers:{apikey:LEADS_KEY,Authorization:'Bearer '+LEADS_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(lead)})
+        .then(function(r){return r.ok;}).catch(function(){return false;});
+      Promise.all([pMail,pDb]).then(function(res){
+        if(res[0]||res[1]){
+          f.reset(); msg.className='ld-msg ok';
+          msg.textContent='✓ Thank you, '+(lead.name.split(' ')[0]||'')+' — your request is in. We\'ll reach out shortly at '+lead.email+' to set up your demo.';
+        } else { throw new Error('both failed'); }
+      }).catch(function(){
         var body='Name: '+lead.name+'\nEmail: '+lead.email+'\nPhone: '+lead.phone+'\nRole: '+lead.role+'\nAre you the candidate: '+lead.is_candidate+'\nCandidate: '+lead.candidate_name+'\nOffice: '+lead.office+'\nBrand/issues: '+lead.brand;
         msg.className='ld-msg';
         msg.innerHTML='Couldn\'t reach the server — <a href="mailto:a.m.smith31.as@gmail.com?subject='+encodeURIComponent('ROMULUS demo request — '+lead.name)+'&body='+encodeURIComponent(body)+'">click here to email your request instead</a>.';
         btn.disabled=false;
       });
     };
+
+    // scroll-reveal animations
+    try{
+      var rev=[].slice.call(document.querySelectorAll('#ld-what h2,#ld-what .ld-lead,.ld-feat,#ld-why h2,.ld-why-list li,#ld-video h2,#ld-video .ld-lead,.ld-explainer,#ld-demo .ld-demo-copy,#ld-demo .ld-form'));
+      rev.forEach(function(el,n){ el.classList.add('reveal'); if(el.classList.contains('ld-feat')) el.style.setProperty('--i', n%3); });
+      function revScan(){ for(var k=rev.length-1;k>=0;k--){ var el=rev[k], r=el.getBoundingClientRect();
+        if(r.top < (window.innerHeight*0.9) && r.bottom > 0){ el.classList.add('in'); rev.splice(k,1); } } }
+      window.addEventListener('scroll', revScan, {passive:true});
+      window.addEventListener('resize', revScan);
+      revScan();
+    }catch(e){}
+
+    // 40-second animated explainer
+    (function(){
+      var stage=document.getElementById('lx-stage'), fill=document.getElementById('lx-fill'), replay=document.getElementById('lx-replay');
+      if(!stage) return;
+      var SCENES=[
+        {ico:'◎',big:'Your opponent’s entire public record — captured.',sub:'Every council meeting, every motion, every vote — pulled straight from the official source.'},
+        {ico:'✓',big:'Cross-verified. Nothing spun, nothing missed.',sub:'998 of 1,004 votes confirmed to a primary source in the demo model alone.'},
+        {ico:'⚑',big:'Contradictions surfaced, ranked, and sourced.',sub:'Court-ready opposition findings you can put in an ad or mailer without fear.'},
+        {ico:'◱',big:'Opponents watched — every single morning.',sub:'Websites, local news, YouTube and paid political ads, tracked automatically.'},
+        {ico:'✦',big:'Ask anything. It answers with receipts.',sub:'A grounded AI analyst that cites every claim — and refuses to fabricate.'},
+        {ico:'▲',big:'ROMULUS — close the gap.',sub:'Challenger or incumbent, you walk in knowing more than anyone in the room. Book a demo below.'}
+      ];
+      var DUR=6600, els=SCENES.map(function(s){ var d=document.createElement('div'); d.className='lx-scene';
+        d.innerHTML='<div class="lx-ico">'+s.ico+'</div><div class="lx-big">'+s.big+'</div><p class="lx-sub">'+s.sub+'</p>'; stage.appendChild(d); return d; });
+      if(els[0]) els[0].classList.add('on');   // never show an empty frame before autostart
+      var idx=-1, timer=null, started=false;
+      function show(n){ els.forEach(function(e){e.classList.remove('on');}); if(els[n]) els[n].classList.add('on'); }
+      function step(){ idx++; if(idx>=els.length){ idx=els.length-1; show(idx); return; }
+        show(idx); var pct=Math.round(((idx+1)/els.length)*100); fill.style.transition='width '+DUR+'ms linear'; fill.style.width=pct+'%';
+        timer=setTimeout(step,DUR); }
+      function play(){ started=true; clearTimeout(timer); idx=-1; fill.style.transition='none'; fill.style.width='0%'; void fill.offsetWidth; step(); }
+      replay.onclick=play;
+      var box=document.getElementById('ld-explainer');
+      function maybeStart(){ if(started) return; var r=box.getBoundingClientRect();
+        if(r.top < (window.innerHeight*0.75) && r.bottom > 0){ play(); } }
+      try{ var io2=new IntersectionObserver(function(en){ en.forEach(function(e){ if(e.isIntersecting && !started){ play(); } }); },{threshold:.35});
+        io2.observe(box); }catch(e){}
+      window.addEventListener('scroll', maybeStart, {passive:true});   // fallback if IO is slow
+      maybeStart();
+    })();
   })();
   </script>
   <div id="splash">
@@ -368,7 +466,7 @@
     <button id="splash-skip">⏭ Skip Intro</button>
     <div id="pwgate">
       <div class="rs-logo">ROMULUS</div>
-      <div class="rs-tag">CAMPAIGN INTELLIGENCE · MISSISSAUGA 2026</div>
+      <div class="rs-tag">Campaign Intelligence Tool</div>
       <div class="rs-boot" id="pw-boot"></div>
       <div class="pw-row">
         <input id="pw-input" type="password" placeholder="ACCESS CODE" autocomplete="off" spellcheck="false">
@@ -383,12 +481,14 @@
         v=document.getElementById('splash-vid'), skip=document.getElementById('splash-skip'),
         boot=document.getElementById('pw-boot'), inp=document.getElementById('pw-input');
     var lines=["▸ SECURE SESSION ......... established",
-      "▸ COUNCIL RECORD ......... 73 meetings · 1,004 votes",
-      "▸ PRIMARY SOURCES ........ 998 verified",
-      "▸ OPPO FINDINGS .......... 11 ranked",
-      "▸ CANDIDATE PROFILES ..... 6 loaded",
-      "▸ VIDEO INTEL ............ 95 clips",
-      "▸ NEWS FEED .............. live",
+      "▸ COUNCIL RECORDS ........ indexed",
+      "▸ VOTING RECORD .......... cross-verified",
+      "▸ OPPO FINDINGS .......... ranked",
+      "▸ CANDIDATE PROFILES ..... compiled",
+      "▸ NEWS MONITORING ........ live",
+      "▸ VIDEO INTEL ............ live",
+      "▸ POLITICAL ADS .......... tracked",
+      "▸ SOCIAL MEDIA ........... pending",
       "▸ AWAITING ACCESS CODE_"];
     var i=0;(function tick(){ if(i<lines.length){ var d=document.createElement('div'); d.className='ln';
       d.textContent=lines[i]; boot.appendChild(d); i++; setTimeout(tick,260);} else { try{inp.focus();}catch(e){} } })();
@@ -405,6 +505,11 @@
     inp.addEventListener('keydown',function(e){ if(e.key==='Enter') submit(); });
   })();</script>
   <div id="scrim"></div>
+  <div id="client-intro">
+    <video id="ci-vid" playsinline preload="auto"><source src="opener.mp4" type="video/mp4"></video>
+    <button id="ci-skip">Skip ▸</button>
+    <div class="ci-boot" id="ci-boot"></div>
+  </div>
   <aside class="sidebar">
     <div class="brand">
       <div class="logo">ROMULUS</div>
@@ -904,6 +1009,34 @@ function renderHQ(){
     else alert(c.note||"This client isn't connected yet.");
   });
 }
+function playClientIntro(cand, muni){
+  return new Promise(function(resolve){
+    var wrap=document.getElementById('client-intro'), v=document.getElementById('ci-vid'),
+        skip=document.getElementById('ci-skip'), bootEl=document.getElementById('ci-boot');
+    if(!wrap){ resolve(); return; }
+    var done=false;
+    function finish(){ if(done) return; done=true; wrap.classList.remove('show','playing'); try{v.pause();}catch(e){} resolve(); }
+    var lines=["▸ COUNCIL RECORDS ........ loading",
+      "▸ VOTING RECORD .......... loading",
+      "▸ OPPO FINDINGS .......... loading",
+      "▸ CANDIDATE PROFILES ..... loading",
+      "▸ NEWS + VIDEO INTEL ..... loading",
+      "▸ SOCIAL MEDIA ........... pending"];
+    bootEl.innerHTML='<div class="ci-logo">ROMULUS</div><div class="ci-tag">Campaign Intelligence Tool</div>'+
+      '<div style="color:var(--gold);letter-spacing:2px;font-size:12px;margin-bottom:14px">▸ '+esc(cand.toUpperCase())+' · '+esc(muni.toUpperCase())+'</div>'+
+      '<div class="ci-lines" id="ci-lines"></div>';
+    wrap.classList.remove('playing'); wrap.classList.add('show'); skip.style.display='none';
+    var ci=document.getElementById('ci-lines'), i=0;
+    (function tick(){ if(i<lines.length){ var d=document.createElement('div'); d.className='ln'; d.textContent=lines[i]; ci.appendChild(d); i++; setTimeout(tick,220); }
+      else { setTimeout(startVid,550); } })();
+    function startVid(){ if(done) return; wrap.classList.add('playing'); skip.style.display='block';
+      try{ v.currentTime=0; }catch(e){}
+      v.muted=false; v.play().catch(function(){ v.muted=true; v.play().catch(finish); }); }
+    v.onended=finish;
+    v.onerror=function(){ if(wrap.classList.contains('playing')) finish(); };
+    skip.onclick=finish;
+  });
+}
 function connectClient(muni, cand){
   const c=CLIENTS[muni].candidates[cand];
   SUPABASE_URL=c.url.replace(/\/+$/,""); SUPABASE_KEY=c.key;
@@ -914,7 +1047,8 @@ function connectClient(muni, cand){
   for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={};
   chatHistory.length=0; const cl=document.getElementById("chatlog"); if(cl) cl.innerHTML="";
   document.querySelector('button[data-tab="home"]').click();
-  init();
+  init();                          // load the client's data behind the intro
+  playClientIntro(cand, muni);     // black ROMULUS page -> launch video -> reveal populated dashboard
 }
 renderHQ();
 </script>
