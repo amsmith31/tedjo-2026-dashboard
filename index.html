@@ -70,6 +70,9 @@
     .vid{flex:0 0 140px}
     .chatbar{flex-wrap:wrap} .chatbar button{padding:10px 18px}
     .rs-logo{letter-spacing:6px}
+    /* show the whole launch video (no crop) on portrait phones */
+    #splash.has-video #splash-vid{object-fit:contain;background:#04060a}
+    #splash-skip{top:12px;right:12px}
   }
 
   /* Bits */
@@ -114,7 +117,12 @@
   td{padding:9px 10px;border-bottom:1px solid #141d28;vertical-align:top}
   tr:hover td{background:#0e1620}
   .vote-NO{color:var(--red);font-weight:700}
+  .vote-ABSENT{color:var(--gold);font-weight:700}
   .vote-YES{color:var(--muted)}
+  .fbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .fbtn{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:6px 13px;border-radius:16px;font-size:12.5px;cursor:pointer}
+  .fbtn:hover{border-color:var(--gold-dim);color:var(--text)}
+  .fbtn.on{background:var(--gold-dim);color:var(--gold);border-color:var(--gold-dim);font-weight:600}
   .searchbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
   .searchbar input,.searchbar select{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px}
   .searchbar input{flex:1;min-width:220px}
@@ -304,7 +312,7 @@ async function init(){
       api("/attack_messaging?select=*&is_active=eq.true"),
       api("/council_evidence?select=*&order=political_utility_score.desc.nullslast"),
       api("/candidates?select=*"),
-      api("/council_votes?select=vote,councillor_label,source_url,council_motions(motion_date,topic,motion_text,outcome)&vote=ilike.*NO*"),
+      api("/council_votes?select=vote,source_url,council_motions(motion_date,topic,outcome)&limit=1200"),
       api("/web_snapshots?select=*&order=retrieved_at.desc"),
       api("/candidate_messaging?select=*&is_active=eq.true&order=priority_order.asc"),
       api("/candidate_promises?select=*&is_active=eq.true"),
@@ -394,22 +402,34 @@ function renderAttacks(){
   `;
 }
 
+function posCat(v){ v=(v||"").toUpperCase(); if(v.includes("NO")) return "NO"; if(v.includes("ABSENT")) return "ABSENT";
+  if(v.includes("YES")) return "YES"; if(v.includes("PRESENT")) return "UNCLEAR"; return "OTHER"; }
+let _cf="notable";
 function renderCouncil(){
-  const rows=S.dissents.map(d=>{
-    const m=d.council_motions||{};
-    return {date:m.motion_date, topic:m.topic||m.motion_text||"", outcome:m.outcome||"", vote:d.vote, src:d.source_url};
-  }).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const all=S.dissents.map(d=>{ const m=d.council_motions||{};
+    return {date:m.motion_date, topic:m.topic||"", outcome:m.outcome||"", vote:d.vote, cat:posCat(d.vote), src:d.source_url}; })
+    .sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const c={NO:0,ABSENT:0,YES:0,UNCLEAR:0,OTHER:0}; all.forEach(r=>c[r.cat]++);
+  const sets={notable:r=>r.cat==="NO"||r.cat==="ABSENT", NO:r=>r.cat==="NO", ABSENT:r=>r.cat==="ABSENT", YES:r=>r.cat==="YES", all:()=>true};
+  const chip=(k,l)=>`<button class="fbtn ${_cf===k?'on':''}" data-f="${k}">${l}</button>`;
   document.getElementById("view-council").innerHTML=`
-    <div class="pitch"><p style="margin:0">Tedjo's <b>${rows.length}</b> recorded NO / dissenting votes across his term — the politically significant divisions. Search all ${S.counts.votes.toLocaleString()} votes below.</p></div>
-    <div class="searchbar"><input id="csearch" placeholder="Filter dissents by topic…"></div>
+    <div class="pitch"><p style="margin:0">Tedjo's full voting record: <b>${c.NO}</b> dissents (NO) · <b>${c.ABSENT}</b> absences — didn't vote, often a conflict-of-interest recusal · <b>${c.YES}</b> supported (YES) · ${c.UNCLEAR} not individually recorded in the minutes. Every row links to the official source.</p></div>
+    <div class="fbar">${chip('notable','★ Notable ('+(c.NO+c.ABSENT)+')')}${chip('NO','Dissents ('+c.NO+')')}${chip('ABSENT','Absences ('+c.ABSENT+')')}${chip('YES','Supported ('+c.YES+')')}${chip('all','All ('+all.length+')')}</div>
+    <div class="searchbar"><input id="csearch" placeholder="Filter by topic…"></div>
     <table><thead><tr><th>Date</th><th>Agenda item</th><th>Vote</th><th>Outcome</th><th>Source</th></tr></thead>
-    <tbody id="ctbody">${rows.map(r=>rowHtml(r)).join("")}</tbody></table>`;
-  const inp=document.getElementById("csearch");
-  inp.oninput=()=>{ const q=inp.value.toLowerCase();
-    document.getElementById("ctbody").innerHTML=rows.filter(r=>(r.topic||"").toLowerCase().includes(q)).map(rowHtml).join(""); };
+    <tbody id="ctbody"></tbody></table>`;
+  const draw=()=>{ const q=(document.getElementById("csearch").value||"").toLowerCase();
+    const list=all.filter(sets[_cf]).filter(r=>!q||(r.topic||"").toLowerCase().includes(q));
+    document.getElementById("ctbody").innerHTML=list.slice(0,600).map(rowHtml).join("")
+      ||'<tr><td colspan="5" class="muted" style="padding:16px">No matching votes.</td></tr>'; };
+  document.getElementById("csearch").oninput=draw;
+  document.querySelector(".fbar").onclick=e=>{ const b=e.target.closest("button[data-f]"); if(!b)return; _cf=b.dataset.f; renderCouncil(); };
+  draw();
 }
-function rowHtml(r){ return `<tr><td class="muted">${fmtD(r.date)}</td><td>${esc((r.topic||"").slice(0,120))}</td>
-  <td class="vote-NO">NO</td><td class="muted">${esc(r.outcome)}</td>
+function rowHtml(r){ const cls={NO:"vote-NO",ABSENT:"vote-ABSENT",YES:"vote-YES"}[r.cat]||"muted";
+  const label={NO:"NO",ABSENT:"ABSENT",YES:"YES"}[r.cat]||esc(r.vote);
+  return `<tr><td class="muted" style="white-space:nowrap">${fmtD(r.date)}</td><td>${esc((r.topic||"(closed / consent item)").slice(0,120))}</td>
+  <td class="${cls}">${label}</td><td class="muted">${esc(r.outcome)}</td>
   <td>${isUrl(r.src)?`<a href="${esc(r.src)}" target="_blank" rel="noopener">minutes ↗</a>`:""}</td></tr>`; }
 
 function renderEvidence(){
