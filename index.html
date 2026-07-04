@@ -325,7 +325,54 @@
   .ld-hero-brand{font-size:clamp(48px,11vw,112px);font-weight:900;letter-spacing:clamp(4px,2vw,16px);color:var(--gold);line-height:1;
     text-shadow:0 0 34px rgba(224,184,76,.4);margin-bottom:8px}
   .ld-hero-brandtag{color:var(--muted);letter-spacing:5px;font-size:clamp(11px,2vw,15px);text-transform:uppercase;margin-bottom:26px}
-  @media (prefers-reduced-motion:reduce){.intro-logo,#intro-enter,.intro-bg span{animation:none}#intro-enter{opacity:1;transform:none}}
+  /* ── premium landing v3 ── */
+  .ld-hero{position:relative;overflow:hidden;max-width:none;padding:90px 6vw 66px}
+  .ld-hero-inner{position:relative;z-index:2;max-width:920px;margin:0 auto}
+  .ld-hero-aurora{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+  .ld-hero-aurora span{position:absolute;border-radius:50%;filter:blur(80px);opacity:.4;mix-blend-mode:screen;animation:auroraDrift 18s ease-in-out infinite}
+  .ld-hero-aurora span:nth-child(1){width:46vw;height:46vw;left:-6vw;top:-16vw;background:radial-gradient(circle,#1c6f4d,transparent 60%)}
+  .ld-hero-aurora span:nth-child(2){width:42vw;height:42vw;right:-8vw;top:-8vw;background:radial-gradient(circle,#8a6a1e,transparent 60%);animation-delay:-6s}
+  .ld-hero-aurora span:nth-child(3){width:44vw;height:44vw;left:30vw;bottom:-24vw;background:radial-gradient(circle,#14415f,transparent 60%);animation-delay:-10s}
+  .ld-btn.ghost{background:transparent;color:var(--gold);border:1px solid var(--gold-dim);box-shadow:none}
+  .ld-btn.ghost:hover{background:var(--gold-dim)}
+  .ld-herocta{flex-direction:row;flex-wrap:wrap;justify-content:center;gap:12px}
+  .ld-proof{margin-top:18px}
+  .ld-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .ld-stats>div{background:#0b1119;padding:26px 16px;text-align:center}
+  .ld-stats .s-n{font-size:clamp(26px,4vw,40px);font-weight:900;color:var(--gold);line-height:1}
+  .ld-stats .s-l{color:var(--muted);font-size:12px;letter-spacing:1px;margin-top:6px;text-transform:uppercase}
+  .ld-kick{color:var(--gold);letter-spacing:3px;font-size:12px;font-weight:800;text-align:center;margin-bottom:10px}
+  .ld-demo-copy .ld-kick{text-align:left}
+  .ld-what2{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px;margin:30px auto 0}
+  .ld-what2>div{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:12px;padding:18px 20px;color:var(--muted);font-size:14.5px}
+  .w2-t{display:block;color:var(--text);font-weight:800;margin-bottom:5px;font-size:15px}
+  .ld-feat.soon{border-style:dashed;opacity:.9}
+  .ld-feat.soon:hover{transform:none;border-color:var(--line)}
+  .ld-soon{font-size:9.5px;letter-spacing:1px;color:#05070b;background:var(--gold);padding:2px 8px;border-radius:20px;font-weight:800;vertical-align:middle;margin-left:6px}
+  .ld-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .ld-step{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 22px}
+  .ld-step .st-n{width:38px;height:38px;border-radius:50%;background:var(--gold);color:#05070b;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px}
+  .ld-step h3{margin:0 0 8px;font-size:18px}
+  .ld-step p{margin:0;color:var(--muted);font-size:14px}
+  .ld-film{position:relative;max-width:880px;margin:0 auto;aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid var(--line);
+    background:radial-gradient(1000px 600px at 50% 28%,#152233,#04060a 72%);box-shadow:0 26px 74px rgba(0,0,0,.62)}
+  .ld-film::before,.ld-film::after{content:"";position:absolute;left:0;right:0;height:8%;background:#000;z-index:4;pointer-events:none}
+  .ld-film::before{top:0}.ld-film::after{bottom:0}
+  .film-vig{position:absolute;inset:0;z-index:3;pointer-events:none;background:radial-gradient(120% 80% at 50% 45%,transparent 55%,rgba(0,0,0,.55))}
+  .ld-film .lx-scene{padding:9% 8%}
+  .ld-film .lx-big{font-size:clamp(22px,3.8vw,34px)}
+  .lx-scene.title .lx-big,.lx-scene.end .lx-big{font-size:clamp(34px,7vw,60px);letter-spacing:2px;color:var(--gold);text-shadow:0 0 34px rgba(224,184,76,.4)}
+  .lx-kick2{font-family:ui-monospace,monospace;color:var(--gold);font-size:12px;letter-spacing:3px;margin-bottom:12px;opacity:.85}
+  .lx-poster{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+    background:radial-gradient(600px 400px at 50% 45%,rgba(10,16,24,.5),rgba(4,6,10,.86));cursor:pointer;transition:opacity .4s}
+  .lx-poster.hide{opacity:0;pointer-events:none}
+  .lx-play{width:74px;height:74px;border-radius:50%;background:var(--gold);color:#05070b;display:flex;align-items:center;justify-content:center;font-size:30px;padding-left:5px;box-shadow:0 0 40px rgba(224,184,76,.6)}
+  .lx-play-l{color:var(--text);letter-spacing:2px;font-size:13px;text-transform:uppercase}
+  .ld-contactbar{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:center;text-align:center;padding:40px 6vw;
+    background:linear-gradient(180deg,#0c1219,#0b0f16);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:clamp(16px,2.4vw,22px);font-weight:700}
+  .ld-formnote{color:var(--faint);font-size:12px;margin-top:10px;text-align:center}
+  @media (max-width:820px){ .ld-stats{grid-template-columns:repeat(2,1fr)} .ld-what2{grid-template-columns:1fr} .ld-steps{grid-template-columns:1fr} }
+  @media (prefers-reduced-motion:reduce){.intro-logo,#intro-enter,.intro-bg span,.ld-hero-aurora span{animation:none}#intro-enter{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -383,88 +430,133 @@
     </header>
 
     <section class="ld-hero">
-      <div class="ld-hero-brand">ROMULUS</div>
-      <div class="ld-hero-brandtag">Campaign Intelligence Tool</div>
-      <h1>Win with the receipts.</h1>
-      <p class="ld-sub">ROMULUS turns the public record into a decisive, court-ready advantage — every vote, every contradiction, every opponent move, traced to its primary source and refreshed every single day.</p>
-      <div class="ld-herocta">
-        <a href="#ld-demo" class="ld-btn">▶ Book a Demo</a>
-        <div class="ld-proof">1,004 votes analyzed · 998 primary-source-confirmed · <b>0</b> fabrications</div>
+      <div class="ld-hero-aurora"><span></span><span></span><span></span></div>
+      <div class="ld-hero-inner">
+        <div class="ld-hero-brand">ROMULUS</div>
+        <div class="ld-hero-brandtag">Campaign Intelligence Tool</div>
+        <h1>The war room, weaponized.</h1>
+        <p class="ld-sub">ROMULUS is the next-generation intelligence platform for political campaigns — it turns the entire public record into a decisive, court-ready advantage. Every vote, every contradiction, every opponent move, traced to its primary source and refreshed every single day.</p>
+        <div class="ld-herocta">
+          <a href="#ld-demo" class="ld-btn">▶ Book a Demo</a>
+          <a href="#ld-video" class="ld-btn ghost">▷ Watch the film</a>
+        </div>
+        <div class="ld-proof">1,004 votes analyzed · 998 primary-source-confirmed · <b>0</b> fabrications · 3 live campaigns</div>
       </div>
     </section>
 
-    <section class="ld-band">
-      <div>Every council vote</div><div>Every contradiction</div><div>Every opponent ad</div><div>Every promise</div><div>Sourced · Verified · Daily</div>
+    <section class="ld-stats">
+      <div><div class="s-n">100%</div><div class="s-l">Primary-source verified</div></div>
+      <div><div class="s-n">24/7</div><div class="s-l">Automated monitoring</div></div>
+      <div><div class="s-n">11</div><div class="s-l">Intelligence streams</div></div>
+      <div><div class="s-n">0</div><div class="s-l">Fabrications, ever</div></div>
     </section>
 
     <section class="ld-section" id="ld-what">
-      <h2>What ROMULUS does</h2>
+      <div class="ld-kick">WHAT IT IS</div>
+      <h2>The intelligence advantage every campaign wishes it had.</h2>
+      <p class="ld-lead">ROMULUS ingests your opponent's entire public record — every council meeting, motion, vote, news mention and paid ad — cross-verifies it against the official source, and hands you ranked, ready-to-use opposition research plus your own affirmative case. What used to take a research team weeks now runs continuously, automatically, and to a standard you can defend in front of a reporter.</p>
+      <div class="ld-what2">
+        <div><span class="w2-t">For the challenger</span> Incumbent-grade research that levels a field you were never supposed to win.</div>
+        <div><span class="w2-t">For the incumbent</span> An early-warning radar on every rival — and the receipts to defend your own record.</div>
+      </div>
+    </section>
+
+    <section class="ld-section ld-cap" id="ld-cap">
+      <div class="ld-kick">CAPABILITIES</div>
+      <h2>Everything ROMULUS does for you</h2>
       <p class="ld-lead">A full opposition-research war room — automated, verifiable, and running while you sleep.</p>
       <div class="ld-grid">
-        <div class="ld-feat"><div class="ld-ico">▤</div><h3>Total record capture</h3><p>Every council vote, motion, dissent, and absence — pulled straight from official minutes and cross-checked line by line. Nothing missed, nothing spun.</p></div>
+        <div class="ld-feat"><div class="ld-ico">▤</div><h3>Total record capture</h3><p>Every council vote, motion, dissent and absence — pulled straight from official minutes and cross-checked line by line. Nothing missed, nothing spun.</p></div>
         <div class="ld-feat"><div class="ld-ico">⚑</div><h3>Court-ready OPPO</h3><p>Tiered opposition findings — Very Strong to Adequate — each contradiction traced to a clickable primary source. Ready to drop into an ad or mailer without fear.</p></div>
         <div class="ld-feat"><div class="ld-ico">★</div><h3>Your affirmative case</h3><p>Build your own candidate's message from real, sourced accomplishments — not talking points. Every line backed by the record.</p></div>
-        <div class="ld-feat"><div class="ld-ico">◱</div><h3>Always-on monitoring</h3><p>Opponents' campaign sites, local news, YouTube, and paid political ads — tracked automatically every morning. You're never blindsided.</p></div>
         <div class="ld-feat"><div class="ld-ico">✦</div><h3>Grounded AI analyst</h3><p>Ask it anything. ROMULUS answers only from the record and cites every claim — and flatly refuses to fabricate.</p></div>
+        <div class="ld-feat"><div class="ld-ico">◰</div><h3>News &amp; media radar</h3><p>Local outlets and Google News, auto-filtered for relevance and linked to every candidate the moment a story breaks.</p></div>
+        <div class="ld-feat"><div class="ld-ico">◱</div><h3>Opponent monitoring</h3><p>Rivals' campaign sites, YouTube and social pages snapshotted every morning — you see every change before they announce it.</p></div>
+        <div class="ld-feat"><div class="ld-ico">◲</div><h3>Political-ad tracking</h3><p>The Meta political-ad library, watched for you — who's spending, on what message, and when it goes live.</p></div>
         <div class="ld-feat"><div class="ld-ico">▦</div><h3>Sealed client silos</h3><p>Every campaign lives in its own secure, isolated vault. Your intelligence is yours alone — it can never cross to another client.</p></div>
+        <div class="ld-feat soon"><div class="ld-ico">◱</div><h3>Social media <span class="ld-soon">SOON</span></h3><p>Live tracking of X, Facebook, Instagram and TikTok — posts, cadence and engagement. Coming to every silo.</p></div>
+      </div>
+    </section>
+
+    <section class="ld-section ld-how" id="ld-how">
+      <div class="ld-kick">HOW IT WORKS</div>
+      <h2>Three steps, zero guesswork</h2>
+      <div class="ld-steps">
+        <div class="ld-step"><div class="st-n">1</div><h3>Ingest</h3><p>ROMULUS pulls the complete public record — council minutes, votes, news, video and the political-ad library — the moment it exists.</p></div>
+        <div class="ld-step"><div class="st-n">2</div><h3>Verify</h3><p>Every claim is cross-checked against the primary source and ranked by strength. Nothing is invented; unverifiable rumours are flagged, not repeated.</p></div>
+        <div class="ld-step"><div class="st-n">3</div><h3>Deploy</h3><p>You get ranked OPPO, your affirmative case and a grounded AI analyst — all sourced and ready for an ad, a mailer or a debate.</p></div>
       </div>
     </section>
 
     <section class="ld-section ld-why" id="ld-why">
+      <div class="ld-kick">WHY IT WINS</div>
       <h2>Why it's a game-changer</h2>
       <ul class="ld-why-list">
         <li><b>Court-ready, not clickbait.</b> Every claim links to the official source. Put it in front of voters — or a reporter — with total confidence.</li>
         <li><b>A research team's month, done overnight.</b> What used to take a war room weeks now runs continuously and automatically, for a fraction of the cost.</li>
         <li><b>It levels the field.</b> Challengers get incumbent-grade research; incumbents get an early-warning radar on every rival.</li>
-        <li><b>It kills misinformation.</b> Circulating claims are cross-checked against the official record — you know what's real versus rumor before it spreads.</li>
-        <li><b>Purpose-built for municipal races.</b> Wired around council minutes, local outlets, and the Meta political-ad library — the exact terrain of a local campaign.</li>
+        <li><b>It kills misinformation.</b> Circulating claims are cross-checked against the official record — you know what's real versus rumour before it spreads.</li>
+        <li><b>Purpose-built for municipal races.</b> Wired around council minutes, local outlets and the Meta political-ad library — the exact terrain of a local campaign.</li>
       </ul>
     </section>
 
     <section class="ld-section" id="ld-video">
-      <h2>See it in 40 seconds</h2>
-      <p class="ld-lead">How ROMULUS turns the public record into an electoral edge.</p>
-      <div class="ld-explainer" id="ld-explainer">
+      <div class="ld-kick">THE FILM</div>
+      <h2>ROMULUS in 60 seconds</h2>
+      <p class="ld-lead">See what it feels like to walk into a race knowing everything.</p>
+      <div class="ld-film" id="ld-explainer">
+        <div class="film-vig"></div>
         <div class="lx-kicker">ROMULUS ▸ CAMPAIGN INTELLIGENCE</div>
         <div class="lx-stage" id="lx-stage"></div>
         <div class="lx-bar"><div class="lx-fill" id="lx-fill"></div></div>
         <button class="lx-replay" id="lx-replay">▶ Replay</button>
+        <div class="lx-poster" id="lx-poster"><div class="lx-play">▶</div><div class="lx-play-l">Play the film</div></div>
       </div>
-      <div class="lx-note">Prefer a narrated cut? A produced voiceover video can drop right into this frame.</div>
+      <div class="lx-note">This is an animated preview. A fully produced, narrated promo drops into this same frame — ask us for the cut.</div>
     </section>
 
     <section class="ld-section ld-demo" id="ld-demo">
       <div class="ld-demo-wrap">
         <div class="ld-demo-copy">
-          <h2>Book your demo</h2>
-          <p>Tell us about your campaign. We'll show you your opponent's record — live, sourced, and unforgettable.</p>
-          <div class="ld-contact">Prefer email? <a href="mailto:a.m.smith31.as@gmail.com">a.m.smith31.as@gmail.com</a></div>
+          <div class="ld-kick">BOOK A DEMO</div>
+          <h2>See your opponent's record — live.</h2>
+          <p>Tell us about your campaign and we'll walk you through a live, sourced dossier built for your race. No obligation.</p>
+          <div class="ld-contact">Prefer to reach us directly?<br><a href="mailto:a.m.smith31.as@gmail.com">a.m.smith31.as@gmail.com</a></div>
         </div>
         <form id="ld-form" class="ld-form">
-          <label>Your name*<input id="lf-name" required autocomplete="name"></label>
+          <div class="ld-row2">
+            <label>First name*<input id="lf-first" required autocomplete="given-name"></label>
+            <label>Last name*<input id="lf-last" required autocomplete="family-name"></label>
+          </div>
           <div class="ld-row2">
             <label>Email*<input id="lf-email" type="email" required autocomplete="email"></label>
             <label>Phone<input id="lf-phone" type="tel" autocomplete="tel"></label>
           </div>
           <div class="ld-row2">
-            <label>Your role on the campaign
-              <select id="lf-role"><option value="">Select…</option><option>Candidate</option><option>Campaign Manager</option><option>Staff</option><option>Volunteer</option><option>Consultant</option><option>Other</option></select>
+            <label>Your role
+              <select id="lf-role"><option value="">Select…</option><option>Candidate</option><option>Campaign Manager</option><option>Campaign Staff</option><option>Volunteer</option><option>Consultant / Strategist</option><option>Other</option></select>
             </label>
             <label>Are you the candidate?
               <select id="lf-iscand"><option value="">Select…</option><option>Yes, I'm the candidate</option><option>No — I represent the candidate</option></select>
             </label>
           </div>
-          <label>Who is the candidate? (name)<input id="lf-cand"></label>
-          <label>Municipality / office you're running for<input id="lf-office" placeholder="e.g. Mayor of Mississauga · Council Ward 3, Oakville"></label>
+          <label>Who are you representing? (candidate name)<input id="lf-cand"></label>
+          <label>Municipality / office being contested<input id="lf-office" placeholder="e.g. Mayor of Mississauga · Council Ward 3, Oakville"></label>
           <label>Your brand — the issues you want to run on<textarea id="lf-brand" rows="3" placeholder="What's your message? What do you want to be known for?"></textarea></label>
           <button type="submit" class="ld-btn" id="lf-submit">Request my demo →</button>
           <div id="lf-msg" class="ld-msg"></div>
+          <div class="ld-formnote">Your details are sent straight to ROMULUS and kept confidential.</div>
         </form>
       </div>
     </section>
 
+    <section class="ld-contactbar">
+      <div>Ready to see what ROMULUS finds on your race?</div>
+      <a href="mailto:a.m.smith31.as@gmail.com" class="ld-btn">Email ROMULUS</a>
+    </section>
+
     <footer class="ld-foot">
-      <div class="ld-logo" style="font-size:16px">ROMULUS</div>
+      <div class="ld-logo" style="font-size:18px">ROMULUS<span>●</span></div>
       <div>Campaign Intelligence · Municipal Elections</div>
       <div>Contact: <a href="mailto:a.m.smith31.as@gmail.com">a.m.smith31.as@gmail.com</a></div>
     </footer>
@@ -479,7 +571,8 @@
     f.onsubmit=function(e){
       e.preventDefault();
       var v=function(id){ return (document.getElementById(id).value||'').trim(); };
-      var lead={ name:v('lf-name'), email:v('lf-email'), phone:v('lf-phone'), role:v('lf-role'),
+      var first=v('lf-first'), last=v('lf-last');
+      var lead={ name:(first+' '+last).trim(), first_name:first, last_name:last, email:v('lf-email'), phone:v('lf-phone'), role:v('lf-role'),
         is_candidate:v('lf-iscand'), candidate_name:v('lf-cand'), office:v('lf-office'), brand:v('lf-brand') };
       var msg=document.getElementById('lf-msg'), btn=document.getElementById('lf-submit');
       btn.disabled=true; msg.className='ld-msg'; msg.textContent='Sending…';
@@ -487,9 +580,9 @@
       var pMail=fetch('https://formsubmit.co/ajax/a.m.smith31.as@gmail.com',{
         method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},
         body:JSON.stringify({ _subject:'ROMULUS demo request — '+(lead.name||'new lead'), _template:'table',
-          Name:lead.name, Email:lead.email, Phone:lead.phone, 'Campaign role':lead.role,
-          'Are you the candidate':lead.is_candidate, Candidate:lead.candidate_name,
-          'Office sought':lead.office, 'Brand / issues to run on':lead.brand, Source:'romulus.vote' })
+          'First name':first, 'Last name':last, Email:lead.email, Phone:lead.phone, 'Campaign role':lead.role,
+          'Are you the candidate':lead.is_candidate, Representing:lead.candidate_name,
+          'Office contested':lead.office, 'Brand / issues to run on':lead.brand, Source:'romulus.vote' })
       }).then(function(r){return r.ok;}).catch(function(){return false;});
       // 2) also keep a durable copy in the private leads database
       var pDb=fetch(LEADS_URL,{method:'POST',headers:{apikey:LEADS_KEY,Authorization:'Bearer '+LEADS_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(lead)})
@@ -509,34 +602,38 @@
 
     // (content is always visible — no JS-gated reveal, so nothing can ever render blank)
 
-    // 40-second animated explainer
+    // cinematic explainer "film" — title card, scenes, end card
     (function(){
-      var stage=document.getElementById('lx-stage'), fill=document.getElementById('lx-fill'), replay=document.getElementById('lx-replay');
+      var stage=document.getElementById('lx-stage'), fill=document.getElementById('lx-fill'),
+          replay=document.getElementById('lx-replay'), poster=document.getElementById('lx-poster');
       if(!stage) return;
       var SCENES=[
-        {ico:'◎',big:'Your opponent’s entire public record — captured.',sub:'Every council meeting, every motion, every vote — pulled straight from the official source.'},
-        {ico:'✓',big:'Cross-verified. Nothing spun, nothing missed.',sub:'998 of 1,004 votes confirmed to a primary source in the demo model alone.'},
-        {ico:'⚑',big:'Contradictions surfaced, ranked, and sourced.',sub:'Court-ready opposition findings you can put in an ad or mailer without fear.'},
-        {ico:'◱',big:'Opponents watched — every single morning.',sub:'Websites, local news, YouTube and paid political ads, tracked automatically.'},
-        {ico:'✦',big:'Ask anything. It answers with receipts.',sub:'A grounded AI analyst that cites every claim — and refuses to fabricate.'},
-        {ico:'▲',big:'ROMULUS — close the gap.',sub:'Challenger or incumbent, you walk in knowing more than anyone in the room. Book a demo below.'}
+        {cls:'title', kick:'ROMULUS ▸ CAMPAIGN INTELLIGENCE', big:'ROMULUS', sub:'The next-generation campaign weapon.', dur:3200},
+        {ico:'◷', kick:'01', big:'Your opponent has a record.', sub:'Every vote. Every motion. Every promise — going back years.', dur:5200},
+        {ico:'▤', kick:'02', big:'Now you own it.', sub:'ROMULUS captures the entire public record — automatically, the moment it exists.', dur:5600},
+        {ico:'✓', kick:'03', big:'Verified to the source.', sub:'998 of 1,004 votes confirmed to the official minutes. Zero fabrications.', dur:5600},
+        {ico:'⚑', kick:'04', big:'Contradictions, ranked and ready.', sub:'Court-ready opposition findings — for an ad, a mailer, a debate.', dur:5600},
+        {ico:'◱', kick:'05', big:'And they never see you coming.', sub:'Websites, news, video and paid ads — watched every single morning.', dur:5600},
+        {ico:'✦', kick:'06', big:'Ask it anything.', sub:'A grounded AI analyst that cites every claim and refuses to invent.', dur:5600},
+        {cls:'end', big:'Walk in knowing everything.', sub:'ROMULUS — Campaign Intelligence. Book your demo below.', dur:6000}
       ];
-      var DUR=6600, els=SCENES.map(function(s){ var d=document.createElement('div'); d.className='lx-scene';
-        d.innerHTML='<div class="lx-ico">'+s.ico+'</div><div class="lx-big">'+s.big+'</div><p class="lx-sub">'+s.sub+'</p>'; stage.appendChild(d); return d; });
-      if(els[0]) els[0].classList.add('on');   // never show an empty frame before autostart
-      var idx=-1, timer=null, started=false;
+      var els=SCENES.map(function(s){ var d=document.createElement('div'); d.className='lx-scene'+(s.cls?' '+s.cls:'');
+        var h=''; if(s.kick) h+='<div class="lx-kick2">'+s.kick+'</div>'; if(s.ico) h+='<div class="lx-ico">'+s.ico+'</div>';
+        h+='<div class="lx-big">'+s.big+'</div><p class="lx-sub">'+s.sub+'</p>'; d.innerHTML=h; stage.appendChild(d); return d; });
+      if(els[0]) els[0].classList.add('on');
+      var idx=-1, timer=null, started=false, total=SCENES.reduce(function(a,s){return a+s.dur;},0), elapsed=0;
       function show(n){ els.forEach(function(e){e.classList.remove('on');}); if(els[n]) els[n].classList.add('on'); }
-      function step(){ idx++; if(idx>=els.length){ idx=els.length-1; show(idx); return; }
-        show(idx); var pct=Math.round(((idx+1)/els.length)*100); fill.style.transition='width '+DUR+'ms linear'; fill.style.width=pct+'%';
-        timer=setTimeout(step,DUR); }
-      function play(){ started=true; clearTimeout(timer); idx=-1; fill.style.transition='none'; fill.style.width='0%'; void fill.offsetWidth; step(); }
-      replay.onclick=play;
+      function step(){ idx++; if(idx>=els.length){ idx=els.length-1; show(idx); fill.style.width='100%'; return; }
+        show(idx); elapsed+=SCENES[idx].dur; var pct=Math.round((elapsed/total)*100);
+        fill.style.transition='width '+SCENES[idx].dur+'ms linear'; fill.style.width=pct+'%';
+        timer=setTimeout(step,SCENES[idx].dur); }
+      function play(){ started=true; if(poster) poster.classList.add('hide'); clearTimeout(timer); idx=-1; elapsed=0; fill.style.transition='none'; fill.style.width='0%'; void fill.offsetWidth; step(); }
+      replay.onclick=play; if(poster) poster.onclick=play;
       var box=document.getElementById('ld-explainer');
-      function maybeStart(){ if(started) return; var r=box.getBoundingClientRect();
-        if(r.top < (window.innerHeight*0.75) && r.bottom > 0){ play(); } }
-      try{ var io2=new IntersectionObserver(function(en){ en.forEach(function(e){ if(e.isIntersecting && !started){ play(); } }); },{threshold:.35});
+      function maybeStart(){ if(started) return; var r=box.getBoundingClientRect(); if(r.top < (window.innerHeight*0.7) && r.bottom > 0){ play(); } }
+      try{ var io2=new IntersectionObserver(function(en){ en.forEach(function(e){ if(e.isIntersecting && !started){ play(); } }); },{threshold:.4});
         io2.observe(box); }catch(e){}
-      window.addEventListener('scroll', maybeStart, {passive:true});   // fallback if IO is slow
+      window.addEventListener('scroll', maybeStart, {passive:true});
       maybeStart();
     })();
   })();
