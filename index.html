@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260704-094449';
+(function(){ var BUILD='20260704-100058';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260704-094449' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260704-100058' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -546,8 +546,8 @@
       <div class="ld-demo-wrap">
         <div class="ld-demo-copy">
           <div class="ld-kick">BOOK A DEMO</div>
-          <h2>See your opponent's record — live.</h2>
-          <p>Tell us about your campaign and we'll walk you through a live, sourced dossier built for your race. No obligation.</p>
+          <h2>See ROMULUS in action.</h2>
+          <p>We'll walk you through a live, fully-sourced demo dossier we've already built — so you can see exactly what ROMULUS delivers. Want it tailored to your race, your opponents and the sources you care about? That's a custom engagement — tell us about your campaign and we'll scope it with you.</p>
           <div class="ld-contact">Prefer to reach us directly?<br><a href="mailto:a.m.smith31.as@gmail.com">a.m.smith31.as@gmail.com</a></div>
         </div>
         <form id="ld-form" class="ld-form">
