@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260704-103731';
+(function(){ var BUILD='20260704-105901';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260704-103731' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260704-105901' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -793,13 +793,20 @@
 //    publishable (anon) key goes here; it's safe in the browser (RLS read-only).
 // Council schemas differ per client. Each profile: a REST query + a row->normalized mapper
 // producing {date, topic, outcome, vote, src, voter}. Default matches the Tedjo/eScribe schema.
+// Motion-centric: one row per motion the principal voted on -> {date,item,topic,doc,council,myVote,minutes}
 const COUNCIL_DEFAULT = {
-  q: "/council_votes?select=vote,source_url,council_motions(motion_date,topic,outcome)&limit=1200",
-  map: r => { const m=r.council_motions||{}; return {date:m.motion_date, topic:m.topic||"", outcome:m.outcome||"", vote:r.vote, src:r.source_url, voter:r.councillor_label||null}; }
+  q: "/council_votes?select=vote,source_url,council_motions(motion_date,agenda_item,topic,motion_text,outcome,source_url)&limit=1500",
+  map: r => { const m=r.council_motions||{}; return {
+    date:m.motion_date, item:m.agenda_item||"", topic:m.topic||"", doc:"",
+    council:m.outcome||"", myVote:r.vote, minutes:r.source_url||m.source_url }; }
 };
 const COUNCIL_BURTON = {
-  q: "/council_votes?select=vote,candidate_name_raw,council_motions(title,description,outcome,source_url,council_meetings(meeting_date))&limit=1500",
-  map: r => { const m=r.council_motions||{}, mt=m.council_meetings||{}; return {date:mt.meeting_date, topic:m.title||m.description||"", outcome:m.outcome||"", vote:r.vote, src:m.source_url, voter:r.candidate_name_raw||null}; }
+  q: "/council_votes?candidate_name_raw=eq.rob-burton&select=vote,council_motions(item_number,motion_type,title,description,outcome,vote_for_count,vote_against_count,vote_abstain_count,source_url,council_meetings(meeting_date,minutes_html_url,minutes_pdf_url))&limit=1500",
+  map: r => { const m=r.council_motions||{}, mt=m.council_meetings||{};
+    const fc=m.vote_for_count, ac=m.vote_against_count, ab=m.vote_abstain_count;
+    const counts=(fc!=null||ac!=null)?(" ("+(fc||0)+"–"+(ac||0)+(ab?"–"+ab:"")+")"):"";
+    return { date:mt.meeting_date, item:m.item_number||"", topic:m.title||m.description||"", doc:m.motion_type||"",
+      council:(m.outcome||"")+counts, myVote:r.vote, minutes:mt.minutes_html_url||mt.minutes_pdf_url||m.source_url }; }
 };
 const CLIENTS = {
   "Mississauga": { candidates: {
@@ -871,7 +878,7 @@ async function init(){
     S.candidates=candidates.sort((a,b)=>rank(a)-rank(b)||(b.is_incumbent?1:0)-(a.is_incumbent?1:0)||(a.name||"").localeCompare(b.name||""));
     const cmap=(ACTIVE&&ACTIVE.council?ACTIVE.council:COUNCIL_DEFAULT).map;
     S.dissents=(dissents||[]).map(cmap);
-    S.counts={meetings, votes, dissents:S.dissents.filter(d=>posCat(d.vote)==="NO").length, attacks:attacks.length, evidence:evidence.length, candidates:candidates.length,
+    S.counts={meetings, votes, dissents:S.dissents.filter(d=>posCat(d.myVote)==="NO").length, attacks:attacks.length, evidence:evidence.length, candidates:candidates.length,
               vulns:evidence.filter(e=>String(e.source_type||"").includes("vulnerability")).length};
     document.getElementById("conn").innerHTML='<span style="color:var(--green)">● live</span>';
     document.getElementById("ct-attacks").textContent=attacks.length;
@@ -971,33 +978,37 @@ function posCat(v){ v=String(v||"").toUpperCase();
   if(v.includes("YES")||v.includes("FOR")||v.includes("AYE")||v.includes("SUPPORT")) return "YES";
   return "OTHER"; }
 let _cf="notable";
+let _cg="all";
 function renderCouncil(){
-  const all=S.dissents.map(d=>({date:d.date, topic:d.topic||"", outcome:d.outcome||"", vote:d.vote, cat:posCat(d.vote), src:d.src, voter:d.voter||""}))
+  const who=((ACTIVE&&ACTIVE.cand)||"Candidate").split(" ").slice(-1)[0];
+  const all=S.dissents.map(d=>({...d, cat:posCat(d.myVote)}))
     .sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-  const hasVoters=all.some(r=>r.voter);
   const c={NO:0,ABSENT:0,YES:0,UNCLEAR:0,OTHER:0}; all.forEach(r=>c[r.cat]++);
   const sets={notable:r=>r.cat==="NO"||r.cat==="ABSENT", NO:r=>r.cat==="NO", ABSENT:r=>r.cat==="ABSENT", YES:r=>r.cat==="YES", all:()=>true};
   const chip=(k,l)=>`<button class="fbtn ${_cf===k?'on':''}" data-f="${k}">${l}</button>`;
   document.getElementById("view-council").innerHTML=`
-    <div class="pitch"><p style="margin:0">Recorded voting positions on file: <b>${c.NO}</b> dissents (NO) · <b>${c.ABSENT}</b> absences — didn't vote, often a conflict-of-interest recusal · <b>${c.YES}</b> supported (YES) · ${c.UNCLEAR} not individually recorded in the minutes. Every row links to the official source.</p></div>
+    <div class="pitch"><p style="margin:0">Every recorded <b>${esc(who)}</b> vote, matched to how council ruled and linked to the official minutes — <b>${c.NO}</b> dissents (NO) · <b>${c.ABSENT}</b> absences · <b>${c.YES}</b> supported (YES). Two columns: the council result, and ${esc(who)}'s own position.</p></div>
     <div class="fbar">${chip('notable','★ Notable ('+(c.NO+c.ABSENT)+')')}${chip('NO','Dissents ('+c.NO+')')}${chip('ABSENT','Absences ('+c.ABSENT+')')}${chip('YES','Supported ('+c.YES+')')}${chip('all','All ('+all.length+')')}</div>
-    <div class="searchbar"><input id="csearch" placeholder="Filter by topic…"></div>
-    <table><thead><tr><th>Date</th><th>Agenda item</th><th>Vote</th><th>Outcome</th><th>Source</th></tr></thead>
+    <div class="searchbar"><input id="csearch" placeholder="Filter by agenda item…"></div>
+    <table><thead><tr><th>Date</th><th>Agenda item</th><th>Council result</th><th>${esc(who)}'s vote</th><th>Minutes</th></tr></thead>
     <tbody id="ctbody"></tbody></table>`;
   const draw=()=>{ const q=(document.getElementById("csearch").value||"").toLowerCase();
-    const list=all.filter(sets[_cf]).filter(r=>!q||String(r.topic||"").toLowerCase().includes(q)||String(r.voter||"").toLowerCase().includes(q));
-    document.getElementById("ctbody").innerHTML=list.slice(0,600).map(rowHtml).join("")
+    const list=all.filter(sets[_cf]).filter(r=>!q||String(r.topic||"").toLowerCase().includes(q)||String(r.item||"").toLowerCase().includes(q));
+    document.getElementById("ctbody").innerHTML=list.slice(0,600).map(r=>councilRow(r,who)).join("")
       ||'<tr><td colspan="5" class="muted" style="padding:16px">No matching votes.</td></tr>'; };
   document.getElementById("csearch").oninput=draw;
   document.querySelector(".fbar").onclick=e=>{ const b=e.target.closest("button[data-f]"); if(!b)return; _cf=b.dataset.f; renderCouncil(); };
   draw();
 }
-function prettySlug(s){ return String(s||"").replace(/-/g," ").replace(/\b\w/g,x=>x.toUpperCase()); }
-function rowHtml(r){ const cls={NO:"vote-NO",ABSENT:"vote-ABSENT",YES:"vote-YES"}[r.cat]||"muted";
-  const label={NO:"NO",ABSENT:"ABSENT",YES:"YES"}[r.cat]||esc(r.vote);
-  return `<tr><td class="muted" style="white-space:nowrap">${fmtD(r.date)}</td><td>${esc(String(r.topic||"(closed / consent item)").slice(0,120))}${r.voter?`<div class="faint" style="font-size:11px">▸ ${esc(prettySlug(r.voter))}</div>`:""}</td>
-  <td class="${cls}">${label}</td><td class="muted">${esc(r.outcome)}</td>
-  <td>${isUrl(r.src)?`<a href="${esc(r.src)}" target="_blank" rel="noopener">minutes ↗</a>`:""}</td></tr>`; }
+function councilRow(r, who){
+  const cls={NO:"vote-NO",ABSENT:"vote-ABSENT",YES:"vote-YES"}[r.cat]||"muted";
+  const label={NO:"✖ NO",ABSENT:"○ ABSENT",YES:"✓ YES"}[r.cat]||esc(r.myVote||"—");
+  return `<tr>
+    <td class="muted" style="white-space:nowrap">${fmtD(r.date)}</td>
+    <td>${r.item?`<b>${esc(r.item)}</b> `:""}${esc(String(r.topic||"(closed / consent item)").slice(0,150))}${r.doc?` <span class="chip" style="font-size:10px">${esc(r.doc)}</span>`:""}</td>
+    <td class="muted" style="white-space:nowrap">${esc(r.council||"—")}</td>
+    <td class="${cls}" style="font-weight:700;white-space:nowrap">${label}</td>
+    <td>${isUrl(r.minutes)?`<a href="${esc(r.minutes)}" target="_blank" rel="noopener">minutes ↗</a>`:'<span class="faint">—</span>'}</td></tr>`; }
 
 function renderEvidence(){
   document.getElementById("view-evidence").innerHTML=`
@@ -1060,9 +1071,15 @@ function renderCandidates(){
       ${c.manual_research_brief?`<div class="profile">${md(c.manual_research_brief)}</div>`:(c.bio?`<div class="profile">${md(c.bio)}</div>`:"")}
       ${vidsBy[c.id]&&vidsBy[c.id].length?videoStrip(vidsBy[c.id]):""}
     </div>`;
+  const gchip=(k,l,n)=>`<button class="fbtn ${_cg===k?'on':''}" data-g="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
+  const chips=order.length>1?`<div class="fbar">${gchip('all','All',S.candidates.length)}${order.map(g=>gchip(g,groupLabel(g),buckets[g].length)).join("")}</div>`:"";
+  const shown=(_cg!=="all"&&buckets[_cg])?[_cg]:order;
   document.getElementById("view-candidates").innerHTML=
-    `<div class="pitch"><p style="margin:0"><b>${S.candidates.length}</b> candidates tracked across ${esc(muni)}${order.length>1?" · grouped by race":""} · ${totalVids} campaign videos indexed. Each profile is auto-built from the campaign's own site and the public record, and refreshes as sites change.</p></div>`
-    + order.map(g=>`<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">${esc(groupLabel(g))} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[g].length}</span></div>`+buckets[g].map(card).join("")).join("");
+    `<div class="pitch"><p style="margin:0"><b>${S.candidates.length}</b> candidates tracked across ${esc(muni)}${order.length>1?" · grouped by race — candidates running against each other are pooled together":""} · ${totalVids} campaign videos indexed. Each profile auto-builds from the campaign's own site and the public record, and refreshes as sites change.</p></div>`
+    + chips
+    + shown.map(g=>`<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">${esc(groupLabel(g))} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[g].length}</span></div>`+buckets[g].map(card).join("")).join("");
+  const fb=document.querySelector("#view-candidates .fbar");
+  if(fb) fb.onclick=e=>{ const b=e.target.closest("button[data-g]"); if(!b)return; _cg=b.dataset.g; renderCandidates(); document.querySelector(".main").scrollTo(0,0); };
 }
 
 function renderWeb(){
@@ -1348,7 +1365,7 @@ function connectClient(muni, cand){
   ACTIVE={muni,cand,office:c.office,msgTable:c.msgTable||"candidate_messaging",council:c.council||COUNCIL_DEFAULT,demo:!!c.demo};
   document.getElementById("activeClient").innerHTML=(c.demo?'<span style="color:var(--gold)">DEMONSTRATION</span><br>':'')+"Client: <b>"+esc(cand)+"</b><br>"+esc(muni)+" · "+esc(c.office||"");
   document.getElementById("conn").textContent="connecting…";
-  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="notable";
+  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="notable"; _cg="all";
   chatHistory.length=0; const cl=document.getElementById("chatlog"); if(cl) cl.innerHTML="";
   document.querySelector('button[data-tab="home"]').click();
   init();                          // load the client's data behind the intro
