@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260704-105901';
+(function(){ var BUILD='20260704-111519';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260704-105901' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260704-111519' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -151,6 +151,10 @@
   .hq-status{font-size:10.5px;font-weight:700;letter-spacing:.5px;color:var(--faint);white-space:nowrap}
   .hq-status.on{color:var(--green)}
   .hq-demo{font-size:9px;letter-spacing:1px;color:#05070b;background:var(--gold);padding:2px 7px;border-radius:20px;font-weight:800;vertical-align:middle}
+  .ev-angle{font-size:13px;color:var(--text);background:rgba(224,184,76,.08);border-left:2px solid var(--gold);padding:6px 10px;border-radius:0 6px 6px 0;margin-top:2px}
+  .ev-angle b{color:var(--gold)}
+  .ev-use{font-size:12.5px;color:var(--muted);margin-top:8px;background:rgba(57,255,139,.06);border-left:2px solid var(--green);padding:6px 10px;border-radius:0 6px 6px 0}
+  .ev-use b{color:var(--green)}
   /* intelligence inventory (Overview) */
   .inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
   .inv{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px;cursor:pointer;transition:border-color .15s,transform .15s}
@@ -858,7 +862,7 @@ async function init(){
   try{
     const [attacks, evidence, candidates, dissents, web, message, promises, news, newsLinks, sources, ads, vids, meetings, votes] = await Promise.all([
       safeApi("/attack_messaging?select=*&is_active=eq.true"),
-      safeApi("/council_evidence?select=*&order=political_utility_score.desc.nullslast"),
+      safeApi("/council_evidence?select=*&order=political_utility_score.desc.nullslast&limit=1500"),
       safeApi("/candidates?select=*"),
       safeApi((ACTIVE&&ACTIVE.council?ACTIVE.council:COUNCIL_DEFAULT).q),
       safeApi("/web_snapshots?select=*&order=retrieved_at.desc"),
@@ -979,6 +983,7 @@ function posCat(v){ v=String(v||"").toUpperCase();
   return "OTHER"; }
 let _cf="notable";
 let _cg="all";
+let _ev="all";
 function renderCouncil(){
   const who=((ACTIVE&&ACTIVE.cand)||"Candidate").split(" ").slice(-1)[0];
   const all=S.dissents.map(d=>({...d, cat:posCat(d.myVote)}))
@@ -1011,19 +1016,39 @@ function councilRow(r, who){
     <td>${isUrl(r.minutes)?`<a href="${esc(r.minutes)}" target="_blank" rel="noopener">minutes ↗</a>`:'<span class="faint">—</span>'}</td></tr>`; }
 
 function renderEvidence(){
-  document.getElementById("view-evidence").innerHTML=`
-    <div class="sect-title">${S.evidence.length} scored evidence items (highest political utility first)</div>
-    ${S.evidence.slice(0,60).map(e=>`
-      <div class="card">
-        <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
-          ${e.political_utility_score!=null?`<span class="chip" style="color:var(--gold)">${e.political_utility_score}</span>`:""}
-          <b>${esc(e.agenda_topic||e.hypocrisy_angle||"(item)")}</b>
-          ${asArr(e.issue_areas).map(i=>`<span class="chip">${esc(i)}</span>`).join("")}
-        </div>
-        ${e.position_text?`<div class="muted" style="font-size:13px">${esc(e.position_text).slice(0,220)}</div>`:""}
-        <div class="faint" style="font-size:12px;margin-top:6px">${fmtD(e.date_parsed||e.date_text)} · ${esc(e.source_type||"")}
-        ${isUrl(e.source_url)?` · <a href="${esc(e.source_url)}" target="_blank" rel="noopener">source ↗</a>`:""}</div>
-      </div>`).join("")}`;
+  const idm={}; S.candidates.forEach(c=>idm[c.id]={name:c.name, group:c.office_group||"", principal:c.is_principal});
+  // scored, actionable findings only — the noise (unscored) is excluded from the display
+  const items=S.evidence.filter(e=>e.political_utility_score!=null).map(e=>{ const c=idm[e.candidate_id]||{};
+    return Object.assign({}, e, {target:e.councillor_label||c.name||"Unattributed", grp:c.group||"other", principal:c.principal}); });
+  const buckets={}, order=[];
+  items.forEach(e=>{ const k=e.target; if(!buckets[k]){buckets[k]=[]; order.push(k);} buckets[k].push(e); });
+  order.sort((a,b)=>{ const ga=GROUP_RANK[(buckets[a][0]||{}).grp]??45, gb=GROUP_RANK[(buckets[b][0]||{}).grp]??45;
+    return ga-gb || buckets[b].length-buckets[a].length; });
+  const shown=(_ev!=="all"&&buckets[_ev])?[_ev]:order;
+  const chip=(k,l,n)=>`<button class="fbtn ${_ev===k?'on':''}" data-ev="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
+  const raceOf=g=>({mayor:"Mayor",regional:"Regional",school_board:"School Board"}[g]||(/^ward(\d+)$/.test(g)?"Ward "+g.slice(4):""));
+  const card=e=>`
+    <div class="card">
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
+        <span class="chip" style="color:#05070b;background:var(--gold);font-weight:800">${esc(e.political_utility_score)}</span>
+        <b style="flex:1;min-width:180px">${esc(e.agenda_topic||(asArr(e.issue_areas)[0])||"(finding)")}</b>
+        ${asArr(e.issue_areas).slice(0,2).map(i=>`<span class="chip">${esc(i)}</span>`).join("")}
+      </div>
+      ${e.hypocrisy_angle?`<div class="ev-angle"><b>⚡ The angle:</b> ${esc(e.hypocrisy_angle)}</div>`:""}
+      ${e.position_text?`<div class="muted" style="font-size:13px;margin-top:6px">${esc(String(e.position_text).slice(0,260))}</div>`:""}
+      ${e.recommended_use?`<div class="ev-use"><b>▸ How to use:</b> ${esc(e.recommended_use)}${e.messaging_axis?` <span class="chip" style="margin-left:4px">${esc(e.messaging_axis)}</span>`:""}</div>`:""}
+      <div class="faint" style="font-size:12px;margin-top:8px">${fmtD(e.date_parsed||e.date_text)}${e.venue?" · "+esc(e.venue):""}${e.source_type?" · "+esc(e.source_type):""}
+        ${isUrl(e.source_url)?` · <a href="${esc(e.source_url)}" target="_blank" rel="noopener">primary source ↗</a>`:""}</div>
+    </div>`;
+  document.getElementById("view-evidence").innerHTML=
+    `<div class="pitch"><p style="margin:0"><b>${items.length}</b> scored, ready-to-use findings — organized by who each one targets. Every item shows the political angle, how to deploy it, and a direct link to the primary source.</p></div>`
+    + `<div class="fbar">${chip('all','All targets',items.length)}${order.map(k=>chip(k,k+(raceOf((buckets[k][0]||{}).grp)?" · "+raceOf((buckets[k][0]||{}).grp):""),buckets[k].length)).join("")}</div>`
+    + shown.map(k=>{ const g=(buckets[k][0]||{}).grp, top=Math.max.apply(null,buckets[k].map(e=>+e.political_utility_score||0));
+        return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${raceOf(g)?` <span class="chip">${esc(raceOf(g))}</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} findings · top score ${top}</span></div>`
+          + buckets[k].slice(0,40).map(card).join("")
+          + (buckets[k].length>40?`<div class="faint" style="font-size:12px;margin:4px 0 8px">+ ${buckets[k].length-40} more findings on ${esc(k)} (filter to see all)</div>`:""); }).join("");
+  const fb=document.querySelector("#view-evidence .fbar");
+  if(fb) fb.onclick=e=>{ const b=e.target.closest("button[data-ev]"); if(!b)return; _ev=b.dataset.ev; renderEvidence(); document.querySelector(".main").scrollTo(0,0); };
 }
 
 function badge(c){
@@ -1365,7 +1390,7 @@ function connectClient(muni, cand){
   ACTIVE={muni,cand,office:c.office,msgTable:c.msgTable||"candidate_messaging",council:c.council||COUNCIL_DEFAULT,demo:!!c.demo};
   document.getElementById("activeClient").innerHTML=(c.demo?'<span style="color:var(--gold)">DEMONSTRATION</span><br>':'')+"Client: <b>"+esc(cand)+"</b><br>"+esc(muni)+" · "+esc(c.office||"");
   document.getElementById("conn").textContent="connecting…";
-  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="notable"; _cg="all";
+  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="notable"; _cg="all"; _ev="all";
   chatHistory.length=0; const cl=document.getElementById("chatlog"); if(cl) cl.innerHTML="";
   document.querySelector('button[data-tab="home"]').click();
   init();                          // load the client's data behind the intro
