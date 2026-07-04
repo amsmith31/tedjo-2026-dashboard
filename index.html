@@ -442,8 +442,7 @@
         <a href="#ld-what">What it is</a>
         <a href="#ld-cap">Capabilities</a>
         <a href="#ld-video">The film</a>
-        <a href="#ld-demo" class="ld-cta-sm">Book a Demo</a>
-        <button id="ld-access" type="button">Operator Access →</button>
+        <button id="ld-access" type="button">Developer Portal →</button>
       </nav>
     </header>
 
@@ -453,12 +452,11 @@
         <div class="ld-hero-brand">ROMULUS</div>
         <div class="ld-hero-brandtag">Campaign Intelligence Tool</div>
         <h1>The war room, weaponized.</h1>
-        <p class="ld-sub">The next-generation intelligence platform for political campaigns — the entire public record, turned into a decisive, court-ready advantage. Refreshed every single day.</p>
+        <p class="ld-sub">The next-generation intelligence platform for political campaigns — the entire public record, turned into a decisive, campaign-winning advantage. Refreshed every single day.</p>
         <div class="ld-herocta">
           <a href="#ld-demo" class="ld-btn">▶ Book a Demo</a>
           <a href="#ld-video" class="ld-btn ghost">▷ Watch the film</a>
         </div>
-        <div class="ld-proof">1,004 votes analyzed · 998 primary-source-confirmed · <b>0</b> fabrications · 3 live campaigns</div>
       </div>
     </section>
 
@@ -485,7 +483,7 @@
       <p class="ld-lead">A full opposition-research war room — automated, verifiable, and running while you sleep.</p>
       <div class="ld-grid">
         <div class="ld-feat"><div class="ld-ico">▤</div><h3>Total record capture</h3><p>Every vote, motion, dissent and absence — straight from the official minutes.</p></div>
-        <div class="ld-feat"><div class="ld-ico">⚑</div><h3>Court-ready OPPO</h3><p>Tiered findings, each traced to a clickable primary source.</p></div>
+        <div class="ld-feat"><div class="ld-ico">⚑</div><h3>Campaign-ready OPPO</h3><p>Tiered findings, each traced to a clickable primary source.</p></div>
         <div class="ld-feat"><div class="ld-ico">★</div><h3>Your affirmative case</h3><p>Your message, built from real, sourced accomplishments — not talking points.</p></div>
         <div class="ld-feat"><div class="ld-ico">✦</div><h3>Grounded AI analyst</h3><p>Ask anything. It answers from the record and cites every claim.</p></div>
         <div class="ld-feat"><div class="ld-ico">◰</div><h3>News &amp; media radar</h3><p>Local news, auto-filtered and linked to every candidate.</p></div>
@@ -510,7 +508,7 @@
       <div class="ld-kick">WHY IT WINS</div>
       <h2>Why it's a game-changer</h2>
       <ul class="ld-why-list">
-        <li><b>Court-ready, not clickbait.</b> Every claim links to the official source — defensible in front of any reporter.</li>
+        <li><b>Sourced, not clickbait.</b> Every claim links to the official source — ready to put in front of any reporter.</li>
         <li><b>A research team's month, overnight.</b> Continuous, automatic, at a fraction of the cost.</li>
         <li><b>It levels the field.</b> Challengers get incumbent-grade research; incumbents get radar on every rival.</li>
       </ul>
@@ -629,7 +627,7 @@
         {ico:'◷', kick:'01', big:'Your opponent has a record.', sub:'Every vote. Every motion. Every promise — going back years.', dur:5200},
         {ico:'▤', kick:'02', big:'Now you own it.', sub:'ROMULUS captures the entire public record — automatically, the moment it exists.', dur:5600},
         {ico:'✓', kick:'03', big:'Verified to the source.', sub:'998 of 1,004 votes confirmed to the official minutes. Zero fabrications.', dur:5600},
-        {ico:'⚑', kick:'04', big:'Contradictions, ranked and ready.', sub:'Court-ready opposition findings — for an ad, a mailer, a debate.', dur:5600},
+        {ico:'⚑', kick:'04', big:'Contradictions, ranked and ready.', sub:'Sourced opposition findings — ready for an ad, a mailer, a debate.', dur:5600},
         {ico:'◱', kick:'05', big:'And they never see you coming.', sub:'Websites, news, video and paid ads — watched every single morning.', dur:5600},
         {ico:'✦', kick:'06', big:'Ask it anything.', sub:'A grounded AI analyst that cites every claim and refuses to invent.', dur:5600},
         {cls:'end', big:'Walk in knowing everything.', sub:'ROMULUS — Campaign Intelligence. Book your demo below.', dur:6000}
@@ -680,7 +678,7 @@
   <div id="splash">
     <div id="pwgate">
       <div class="rs-logo">ROMULUS</div>
-      <div class="rs-tag">Operator Access · Authorized Personnel</div>
+      <div class="rs-tag">Developer Portal · Authorized Personnel</div>
       <div class="rs-boot" id="pw-boot"></div>
       <div class="pw-row">
         <input id="pw-input" type="password" placeholder="ACCESS CODE" autocomplete="off" spellcheck="false">
@@ -705,7 +703,7 @@
       "▸ AWAITING ACCESS CODE_"];
     var i=0;(function tick(){ if(i<lines.length){ var d=document.createElement('div'); d.className='ln';
       d.textContent=lines[i]; boot.appendChild(d); i++; setTimeout(tick,200);} })();
-    // #landing (z above #splash) is hidden by the Operator Access button, revealing this gate
+    // #landing (z above #splash) is hidden by the Developer Portal button, revealing this gate
     function enterTerminal(){ sp.style.display='none'; }   // #landing already hidden -> dashboard shows
     function submit(){ if(inp.value===PW){ enterTerminal(); }
       else { document.getElementById('pw-err').textContent='✖ ACCESS DENIED'; inp.value='';
