@@ -152,7 +152,7 @@
   /* ── public marketing landing ── */
   #landing{position:fixed;inset:0;z-index:1100;overflow-y:auto;background:radial-gradient(1200px 600px at 70% -10%,#141d2b,#0a0e14 60%);color:var(--text);font-size:16px;line-height:1.6}
   .ld-nav{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:15px 6vw;background:#0a0e14cc;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-  .ld-logo{font-weight:800;letter-spacing:3px;font-size:20px;color:var(--gold)} .ld-logo span{color:var(--red);font-size:11px;margin-left:5px}
+  .ld-logo{font-weight:900;letter-spacing:4px;font-size:clamp(26px,3.4vw,36px);color:var(--gold);text-shadow:0 0 22px rgba(224,184,76,.35)} .ld-logo span{color:var(--red);font-size:13px;margin-left:6px;vertical-align:super}
   .ld-navlinks{display:flex;align-items:center;gap:22px}
   .ld-navlinks a{color:var(--muted);font-size:14px} .ld-navlinks a:hover{color:var(--text);text-decoration:none}
   .ld-navlinks .ld-cta-sm{color:var(--gold)}
@@ -442,7 +442,7 @@
         <a href="#ld-what">What it is</a>
         <a href="#ld-cap">Capabilities</a>
         <a href="#ld-video">The film</a>
-        <button id="ld-access" type="button">Developer Portal →</button>
+        <button id="ld-access" type="button">Developer Access →</button>
       </nav>
     </header>
 
@@ -678,7 +678,7 @@
   <div id="splash">
     <div id="pwgate">
       <div class="rs-logo">ROMULUS</div>
-      <div class="rs-tag">Developer Portal · Authorized Personnel</div>
+      <div class="rs-tag">Developer Access · Authorized Personnel</div>
       <div class="rs-boot" id="pw-boot"></div>
       <div class="pw-row">
         <input id="pw-input" type="password" placeholder="ACCESS CODE" autocomplete="off" spellcheck="false">
@@ -703,7 +703,7 @@
       "▸ AWAITING ACCESS CODE_"];
     var i=0;(function tick(){ if(i<lines.length){ var d=document.createElement('div'); d.className='ln';
       d.textContent=lines[i]; boot.appendChild(d); i++; setTimeout(tick,200);} })();
-    // #landing (z above #splash) is hidden by the Developer Portal button, revealing this gate
+    // #landing (z above #splash) is hidden by the Developer Access button, revealing this gate
     function enterTerminal(){ sp.style.display='none'; }   // #landing already hidden -> dashboard shows
     function submit(){ if(inp.value===PW){ enterTerminal(); }
       else { document.getElementById('pw-err').textContent='✖ ACCESS DENIED'; inp.value='';
