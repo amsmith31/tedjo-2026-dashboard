@@ -280,9 +280,85 @@
   @keyframes rsGlitch{0%,92%,100%{text-shadow:0 0 34px rgba(224,184,76,.45)}
     93%{text-shadow:-2px 0 var(--red),2px 0 var(--blue)}95%{text-shadow:2px 0 var(--red),-2px 0 var(--blue)}}
   @media (prefers-reduced-motion:reduce){.rs-logo{animation:none}.rs-boot .ln{animation:none;opacity:1}}
+  /* ── public INTRO: waves + glow + green matrix + Enter ── */
+  #intro{position:fixed;inset:0;z-index:1200;background:#04060a;overflow:hidden;display:flex;align-items:center;justify-content:center;text-align:center}
+  #intro.gone{opacity:0;pointer-events:none;transition:opacity .6s}
+  #mrain{position:absolute;inset:0;z-index:0;opacity:.16}
+  .intro-bg{position:absolute;inset:0;z-index:0;overflow:hidden}
+  .intro-bg span{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;mix-blend-mode:screen;animation:auroraDrift 16s ease-in-out infinite}
+  .intro-bg span:nth-child(1){width:60vw;height:60vw;left:-10vw;top:-18vw;background:radial-gradient(circle,#1c6f4d,transparent 60%)}
+  .intro-bg span:nth-child(2){width:50vw;height:50vw;right:-10vw;top:8vh;background:radial-gradient(circle,#8a6a1e,transparent 60%);animation-delay:-5s}
+  .intro-bg span:nth-child(3){width:55vw;height:55vw;left:20vw;bottom:-22vw;background:radial-gradient(circle,#14415f,transparent 60%);animation-delay:-9s}
+  @keyframes auroraDrift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(6vw,-4vh) scale(1.15)}66%{transform:translate(-5vw,5vh) scale(.92)}}
+  .intro-inner{position:relative;z-index:2;padding:24px;max-width:700px}
+  .intro-logo{font-size:clamp(56px,14vw,140px);font-weight:900;letter-spacing:clamp(8px,3vw,26px);color:#f4e6b8;line-height:1;
+    text-shadow:0 0 30px rgba(224,184,76,.6),0 0 70px rgba(224,184,76,.35);animation:introGlow 3.5s ease-in-out infinite}
+  @keyframes introGlow{0%,100%{text-shadow:0 0 30px rgba(224,184,76,.55),0 0 70px rgba(224,184,76,.3)}50%{text-shadow:0 0 46px rgba(224,184,76,.9),0 0 120px rgba(224,184,76,.55)}}
+  .intro-sub{color:#cfe8d8;letter-spacing:6px;font-size:clamp(11px,2.4vw,16px);margin-top:14px;text-transform:uppercase}
+  .intro-matrix{font-family:ui-monospace,Menlo,Consolas,monospace;color:#39ff8b;text-align:left;display:inline-block;margin:26px auto 6px;
+    font-size:clamp(11px,1.6vw,13.5px);min-height:230px;text-shadow:0 0 8px rgba(57,255,139,.5)}
+  .intro-matrix .ln{opacity:0;animation:rsIn .3s forwards;padding:2.5px 0;white-space:nowrap}
+  .intro-matrix .ln b{color:#eafff3}
+  .intro-matrix .pending{color:#e0b84c;text-shadow:0 0 8px rgba(224,184,76,.5)}
+  #intro-enter{margin-top:18px;background:linear-gradient(180deg,#f2dd93,#e0b84c);color:#05070b;border:none;
+    padding:15px 54px;border-radius:12px;font-weight:800;font-size:17px;letter-spacing:3px;cursor:pointer;
+    opacity:0;transform:translateY(8px);animation:enterIn .6s .2s forwards,enterPulse 2.2s 1s ease-in-out infinite}
+  @keyframes enterIn{to{opacity:1;transform:none}}
+  @keyframes enterPulse{0%,100%{box-shadow:0 0 22px rgba(224,184,76,.4)}50%{box-shadow:0 0 42px rgba(224,184,76,.78)}}
+  #intro-enter:hover{transform:scale(1.05)}
+  #intro-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#04060a;z-index:3}
+  #intro-skip{position:absolute;top:18px;right:22px;z-index:4;background:#0a0e14aa;border:1px solid var(--line);color:var(--muted);padding:8px 15px;border-radius:6px;cursor:pointer;font-size:12px}
+  #intro-skip:hover{color:var(--gold);border-color:var(--gold-dim)}
+  /* bigger, present ROMULUS on the marketing hero */
+  .ld-hero-brand{font-size:clamp(48px,11vw,112px);font-weight:900;letter-spacing:clamp(4px,2vw,16px);color:var(--gold);line-height:1;
+    text-shadow:0 0 34px rgba(224,184,76,.4);margin-bottom:8px}
+  .ld-hero-brandtag{color:var(--muted);letter-spacing:5px;font-size:clamp(11px,2vw,15px);text-transform:uppercase;margin-bottom:26px}
+  @media (prefers-reduced-motion:reduce){.intro-logo,#intro-enter,.intro-bg span{animation:none}#intro-enter{opacity:1;transform:none}}
 </style>
 </head>
 <body>
+  <div id="intro">
+    <canvas id="mrain"></canvas>
+    <div class="intro-bg"><span></span><span></span><span></span></div>
+    <video id="intro-vid" playsinline preload="auto" style="display:none"><source src="opener.mp4" type="video/mp4"></video>
+    <button id="intro-skip" style="display:none">⏭ Skip Intro</button>
+    <div class="intro-inner" id="intro-inner">
+      <div class="intro-logo">ROMULUS</div>
+      <div class="intro-sub">Campaign Intelligence Tool</div>
+      <div class="intro-matrix" id="intro-matrix"></div>
+      <button id="intro-enter">Enter ▸</button>
+    </div>
+  </div>
+  <script>(function(){
+    var intro=document.getElementById('intro'), inner=document.getElementById('intro-inner'),
+        enter=document.getElementById('intro-enter'), vid=document.getElementById('intro-vid'),
+        skip=document.getElementById('intro-skip'), mx=document.getElementById('intro-matrix');
+    // green matrix list of sourced information
+    var items=[["COUNCIL RECORDS","ok"],["RECORDED VOTES","ok"],["MOTIONS & DISSENTS","ok"],["OPPO FINDINGS","ok"],
+      ["CANDIDATE PROFILES","ok"],["CAMPAIGN WEBSITES","ok"],["LOCAL NEWS MONITORING","ok"],["YOUTUBE / VIDEO INTEL","ok"],
+      ["META POLITICAL ADS","ok"],["PRIMARY-SOURCE CITATIONS","ok"],["SOCIAL MEDIA","pending"]];
+    (function tick(i){ if(i>=items.length) return; var d=document.createElement('div');
+      d.className='ln'+(items[i][1]==='pending'?' pending':'');
+      d.innerHTML='▸ '+items[i][0]+(items[i][1]==='pending'?' <span>(pending)</span>':' <b>✓</b>');
+      mx.appendChild(d); setTimeout(function(){tick(i+1);},150); })(0);
+    // matrix rain backdrop
+    try{ var c=document.getElementById('mrain'), ctx=c.getContext('2d'), W,H,drops;
+      function rz(){ W=c.width=window.innerWidth; H=c.height=window.innerHeight; var cols=Math.floor(W/14); drops=[]; for(var k=0;k<cols;k++) drops[k]=Math.random()*H/14; }
+      rz(); window.addEventListener('resize',rz);
+      var chars="01ROMULUS</>{}#".split("");
+      (function draw(){ ctx.fillStyle="rgba(4,6,10,.09)"; ctx.fillRect(0,0,W,H); ctx.fillStyle="#39ff8b"; ctx.font="13px monospace";
+        for(var k=0;k<drops.length;k++){ ctx.fillText(chars[Math.floor(Math.random()*chars.length)],k*14,drops[k]*14);
+          if(drops[k]*14>H && Math.random()>.975) drops[k]=0; drops[k]++; }
+        if(!intro.classList.contains('gone')) requestAnimationFrame(draw); })();
+    }catch(e){}
+    function toLanding(){ intro.classList.add('gone'); try{vid.pause();}catch(e){} setTimeout(function(){ intro.style.display='none'; },650); }
+    function playLaunch(){ inner.style.display='none'; var bg=document.querySelector('#intro .intro-bg'); if(bg) bg.style.display='none';
+      vid.style.display='block'; skip.style.display='block';
+      vid.muted=false; vid.play().catch(function(){ vid.muted=true; vid.play().catch(toLanding); }); }
+    vid.addEventListener('ended',toLanding);
+    vid.addEventListener('error',function(){ if(vid.style.display!=='none') toLanding(); });
+    skip.onclick=toLanding; enter.onclick=playLaunch;
+  })();</script>
   <div id="landing">
     <header class="ld-nav">
       <div class="ld-logo">ROMULUS<span>●</span></div>
@@ -295,7 +371,8 @@
     </header>
 
     <section class="ld-hero">
-      <div class="ld-eyebrow">CAMPAIGN INTELLIGENCE · MUNICIPAL ELECTIONS</div>
+      <div class="ld-hero-brand">ROMULUS</div>
+      <div class="ld-hero-brandtag">Campaign Intelligence Tool</div>
       <h1>Win with the receipts.</h1>
       <p class="ld-sub">ROMULUS turns the public record into a decisive, court-ready advantage — every vote, every contradiction, every opponent move, traced to its primary source and refreshed every single day.</p>
       <div class="ld-herocta">
@@ -418,16 +495,7 @@
       });
     };
 
-    // scroll-reveal animations
-    try{
-      var rev=[].slice.call(document.querySelectorAll('#ld-what h2,#ld-what .ld-lead,.ld-feat,#ld-why h2,.ld-why-list li,#ld-video h2,#ld-video .ld-lead,.ld-explainer,#ld-demo .ld-demo-copy,#ld-demo .ld-form'));
-      rev.forEach(function(el,n){ el.classList.add('reveal'); if(el.classList.contains('ld-feat')) el.style.setProperty('--i', n%3); });
-      function revScan(){ for(var k=rev.length-1;k>=0;k--){ var el=rev[k], r=el.getBoundingClientRect();
-        if(r.top < (window.innerHeight*0.9) && r.bottom > 0){ el.classList.add('in'); rev.splice(k,1); } } }
-      window.addEventListener('scroll', revScan, {passive:true});
-      window.addEventListener('resize', revScan);
-      revScan();
-    }catch(e){}
+    // (content is always visible — no JS-gated reveal, so nothing can ever render blank)
 
     // 40-second animated explainer
     (function(){
@@ -462,24 +530,21 @@
   })();
   </script>
   <div id="splash">
-    <video id="splash-vid" playsinline preload="auto"><source src="opener.mp4" type="video/mp4"></video>
-    <button id="splash-skip">⏭ Skip Intro</button>
     <div id="pwgate">
       <div class="rs-logo">ROMULUS</div>
-      <div class="rs-tag">Campaign Intelligence Tool</div>
+      <div class="rs-tag">Operator Access · Authorized Personnel</div>
       <div class="rs-boot" id="pw-boot"></div>
       <div class="pw-row">
         <input id="pw-input" type="password" placeholder="ACCESS CODE" autocomplete="off" spellcheck="false">
         <button id="pw-enter">Enter ▸</button>
       </div>
       <div id="pw-err"></div>
+      <button id="pw-back" type="button" style="margin-top:18px;background:none;border:1px solid var(--line);color:var(--muted);padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px">← Back to site</button>
     </div>
   </div>
   <script>(function(){
     var PW="Satorus2026";
-    var sp=document.getElementById('splash'), gate=document.getElementById('pwgate'),
-        v=document.getElementById('splash-vid'), skip=document.getElementById('splash-skip'),
-        boot=document.getElementById('pw-boot'), inp=document.getElementById('pw-input');
+    var sp=document.getElementById('splash'), boot=document.getElementById('pw-boot'), inp=document.getElementById('pw-input');
     var lines=["▸ SECURE SESSION ......... established",
       "▸ COUNCIL RECORDS ........ indexed",
       "▸ VOTING RECORD .......... cross-verified",
@@ -491,18 +556,16 @@
       "▸ SOCIAL MEDIA ........... pending",
       "▸ AWAITING ACCESS CODE_"];
     var i=0;(function tick(){ if(i<lines.length){ var d=document.createElement('div'); d.className='ln';
-      d.textContent=lines[i]; boot.appendChild(d); i++; setTimeout(tick,260);} else { try{inp.focus();}catch(e){} } })();
-    function dismiss(){ sp.classList.add('gone'); setTimeout(function(){ if(sp.parentNode) sp.parentNode.removeChild(sp); },650); }
-    function playVideo(){ gate.style.display='none'; sp.classList.add('has-video'); skip.style.display='block';
-      v.muted=false; v.play().catch(function(){ v.muted=true; v.play().catch(dismiss); }); }
-    v.addEventListener('ended',dismiss);
-    v.addEventListener('error',function(){ if(sp.classList.contains('has-video')) dismiss(); });
-    skip.onclick=dismiss;
-    function submit(){ if(inp.value===PW){ playVideo(); }
+      d.textContent=lines[i]; boot.appendChild(d); i++; setTimeout(tick,200);} })();
+    // #landing (z above #splash) is hidden by the Operator Access button, revealing this gate
+    function enterTerminal(){ sp.style.display='none'; }   // #landing already hidden -> dashboard shows
+    function submit(){ if(inp.value===PW){ enterTerminal(); }
       else { document.getElementById('pw-err').textContent='✖ ACCESS DENIED'; inp.value='';
         sp.classList.add('shake'); setTimeout(function(){ sp.classList.remove('shake'); },420); try{inp.focus();}catch(e){} } }
     document.getElementById('pw-enter').onclick=submit;
     inp.addEventListener('keydown',function(e){ if(e.key==='Enter') submit(); });
+    document.getElementById('pw-back').onclick=function(){ var ld=document.getElementById('landing'); if(ld) ld.style.display=''; };
+    var acc=document.getElementById('ld-access'); if(acc) acc.addEventListener('click',function(){ setTimeout(function(){ try{inp.focus();}catch(e){} },60); });
   })();</script>
   <div id="scrim"></div>
   <div id="client-intro">
