@@ -42,8 +42,13 @@
   .topbar .crumb{color:var(--faint);font-size:12px;margin-top:2px}
   .countdown{font-size:12px;color:var(--muted);text-align:right}
   .countdown b{color:var(--gold);font-size:15px}
-  .view{padding:26px 30px;animation:fade .4s ease both}
+  .view{padding:26px 30px;animation:viewIn .5s cubic-bezier(.2,.7,.2,1) both}
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes viewIn{0%{opacity:0;transform:translateY(16px);filter:blur(6px)}60%{filter:blur(0)}100%{opacity:1;transform:none;filter:blur(0)}}
+  .main{position:relative}
+  #tabscan{position:absolute;inset:0;z-index:40;pointer-events:none;opacity:0;background:linear-gradient(100deg,transparent 38%,rgba(57,255,139,.13) 50%,transparent 62%)}
+  #tabscan.go{animation:tabsweep .5s ease}
+  @keyframes tabsweep{0%{opacity:1;transform:translateX(-55%)}100%{opacity:0;transform:translateX(55%)}}
   .hidden{display:none!important}
   /* ── mobile drawer nav ── */
   #menuBtn{display:none;background:none;border:1px solid var(--line);color:var(--gold);font-size:18px;line-height:1;padding:5px 12px;border-radius:8px;cursor:pointer}
@@ -163,7 +168,9 @@
   .ld-proof{color:var(--faint);font-size:13px;font-family:ui-monospace,monospace} .ld-proof b{color:var(--green)}
   .ld-band{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 32px;padding:20px 6vw;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#0c1219;color:var(--muted);font-size:12.5px;letter-spacing:1px;text-transform:uppercase}
   .ld-band div:last-child{color:var(--gold);font-weight:700}
-  .ld-section{max-width:1080px;margin:0 auto;padding:66px 6vw}
+  .ld-section{max-width:1080px;margin:0 auto;padding:52px 6vw}
+  .ld-section h2{font-size:clamp(22px,3.4vw,30px)}
+  .ld-lead{max-width:720px;margin-left:auto;margin-right:auto}
   .ld-section h2{font-size:clamp(26px,4vw,37px);font-weight:800;margin:0 0 10px;text-align:center}
   .ld-lead{color:var(--muted);text-align:center;max-width:660px;margin:0 auto 38px;font-size:17px}
   .ld-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
@@ -370,6 +377,9 @@
   .lx-poster.hide{opacity:0;pointer-events:none}
   .lx-play{width:74px;height:74px;border-radius:50%;background:var(--gold);color:#05070b;display:flex;align-items:center;justify-content:center;font-size:30px;padding-left:5px;box-shadow:0 0 40px rgba(224,184,76,.6)}
   .lx-play-l{color:var(--text);letter-spacing:2px;font-size:13px;text-transform:uppercase}
+  #landing{position:relative}
+  #ld-rain{position:fixed;inset:0;z-index:0;opacity:.05;pointer-events:none}
+  #landing>header,#landing>section,#landing>footer{position:relative;z-index:1}
   .ld-contactbar{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:center;text-align:center;padding:40px 6vw;
     background:linear-gradient(180deg,#0c1219,#0b0f16);border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:clamp(16px,2.4vw,22px);font-weight:700}
   .ld-formnote{color:var(--faint);font-size:12px;margin-top:10px;text-align:center}
@@ -381,7 +391,7 @@
   <div id="intro">
     <canvas id="mrain"></canvas>
     <div class="intro-bg"><span></span><span></span><span></span></div>
-    <video id="intro-vid" playsinline preload="auto" style="display:none"><source src="opener.mp4" type="video/mp4"></video>
+    <video id="intro-vid" playsinline preload="auto" style="display:none"></video>
     <button id="intro-skip" style="display:none">⏭ Skip Intro</button>
     <div class="intro-inner" id="intro-inner">
       <div class="intro-logo">ROMULUS</div>
@@ -413,14 +423,19 @@
         if(!intro.classList.contains('gone')) requestAnimationFrame(draw); })();
     }catch(e){}
     function toLanding(){ intro.classList.add('gone'); try{vid.pause();}catch(e){} setTimeout(function(){ intro.style.display='none'; },650); }
-    function playLaunch(){ inner.style.display='none'; var bg=document.querySelector('#intro .intro-bg'); if(bg) bg.style.display='none';
-      vid.style.display='block'; skip.style.display='block';
-      vid.muted=false; vid.play().catch(function(){ vid.muted=true; vid.play().catch(toLanding); }); }
-    vid.addEventListener('ended',toLanding);
-    vid.addEventListener('error',function(){ if(vid.style.display!=='none') toLanding(); });
-    skip.onclick=toLanding; enter.onclick=playLaunch;
+    // Enter -> launch clip -> avatar promo -> site (one after the other; Skip advances)
+    var SEQ=['opener.mp4','opener-promo.mp4'], si=0;
+    function playCurrent(){ vid.src=SEQ[si]; try{vid.load();}catch(e){} vid.muted=false;
+      vid.play().catch(function(){ vid.muted=true; vid.play().catch(nextVid); }); }
+    function nextVid(){ si++; if(si<SEQ.length){ playCurrent(); } else { toLanding(); } }
+    function startSeq(){ inner.style.display='none'; var bg=document.querySelector('#intro .intro-bg'); if(bg) bg.style.display='none';
+      vid.style.display='block'; skip.style.display='block'; si=0; playCurrent(); }
+    vid.addEventListener('ended',nextVid);
+    vid.addEventListener('error',function(){ if(vid.style.display!=='none') nextVid(); });
+    skip.onclick=nextVid; enter.onclick=startSeq;
   })();</script>
   <div id="landing">
+    <canvas id="ld-rain"></canvas>
     <header class="ld-nav">
       <div class="ld-logo">ROMULUS<span>●</span></div>
       <nav class="ld-navlinks">
@@ -438,7 +453,7 @@
         <div class="ld-hero-brand">ROMULUS</div>
         <div class="ld-hero-brandtag">Campaign Intelligence Tool</div>
         <h1>The war room, weaponized.</h1>
-        <p class="ld-sub">ROMULUS is the next-generation intelligence platform for political campaigns — it turns the entire public record into a decisive, court-ready advantage. Every vote, every contradiction, every opponent move, traced to its primary source and refreshed every single day.</p>
+        <p class="ld-sub">The next-generation intelligence platform for political campaigns — the entire public record, turned into a decisive, court-ready advantage. Refreshed every single day.</p>
         <div class="ld-herocta">
           <a href="#ld-demo" class="ld-btn">▶ Book a Demo</a>
           <a href="#ld-video" class="ld-btn ghost">▷ Watch the film</a>
@@ -456,11 +471,11 @@
 
     <section class="ld-section" id="ld-what">
       <div class="ld-kick">WHAT IT IS</div>
-      <h2>The intelligence advantage every campaign wishes it had.</h2>
-      <p class="ld-lead">ROMULUS ingests your opponent's entire public record — every council meeting, motion, vote, news mention and paid ad — cross-verifies it against the official source, and hands you ranked, ready-to-use opposition research plus your own affirmative case. What used to take a research team weeks now runs continuously, automatically, and to a standard you can defend in front of a reporter.</p>
+      <h2>The advantage every campaign wishes it had.</h2>
+      <p class="ld-lead">ROMULUS captures your opponent's entire public record, verifies every word against the official source, and hands you ranked opposition research — and your own winning message. A research team's month of work, running automatically, every day.</p>
       <div class="ld-what2">
         <div><span class="w2-t">For the challenger</span> Incumbent-grade research that levels a field you were never supposed to win.</div>
-        <div><span class="w2-t">For the incumbent</span> An early-warning radar on every rival — and the receipts to defend your own record.</div>
+        <div><span class="w2-t">For the incumbent</span> Early-warning radar on every rival — and everything you need to defend your record.</div>
       </div>
     </section>
 
@@ -469,15 +484,15 @@
       <h2>Everything ROMULUS does for you</h2>
       <p class="ld-lead">A full opposition-research war room — automated, verifiable, and running while you sleep.</p>
       <div class="ld-grid">
-        <div class="ld-feat"><div class="ld-ico">▤</div><h3>Total record capture</h3><p>Every council vote, motion, dissent and absence — pulled straight from official minutes and cross-checked line by line. Nothing missed, nothing spun.</p></div>
-        <div class="ld-feat"><div class="ld-ico">⚑</div><h3>Court-ready OPPO</h3><p>Tiered opposition findings — Very Strong to Adequate — each contradiction traced to a clickable primary source. Ready to drop into an ad or mailer without fear.</p></div>
-        <div class="ld-feat"><div class="ld-ico">★</div><h3>Your affirmative case</h3><p>Build your own candidate's message from real, sourced accomplishments — not talking points. Every line backed by the record.</p></div>
-        <div class="ld-feat"><div class="ld-ico">✦</div><h3>Grounded AI analyst</h3><p>Ask it anything. ROMULUS answers only from the record and cites every claim — and flatly refuses to fabricate.</p></div>
-        <div class="ld-feat"><div class="ld-ico">◰</div><h3>News &amp; media radar</h3><p>Local outlets and Google News, auto-filtered for relevance and linked to every candidate the moment a story breaks.</p></div>
-        <div class="ld-feat"><div class="ld-ico">◱</div><h3>Opponent monitoring</h3><p>Rivals' campaign sites, YouTube and social pages snapshotted every morning — you see every change before they announce it.</p></div>
-        <div class="ld-feat"><div class="ld-ico">◲</div><h3>Political-ad tracking</h3><p>The Meta political-ad library, watched for you — who's spending, on what message, and when it goes live.</p></div>
-        <div class="ld-feat"><div class="ld-ico">▦</div><h3>Sealed client silos</h3><p>Every campaign lives in its own secure, isolated vault. Your intelligence is yours alone — it can never cross to another client.</p></div>
-        <div class="ld-feat soon"><div class="ld-ico">◱</div><h3>Social media <span class="ld-soon">SOON</span></h3><p>Live tracking of X, Facebook, Instagram and TikTok — posts, cadence and engagement. Coming to every silo.</p></div>
+        <div class="ld-feat"><div class="ld-ico">▤</div><h3>Total record capture</h3><p>Every vote, motion, dissent and absence — straight from the official minutes.</p></div>
+        <div class="ld-feat"><div class="ld-ico">⚑</div><h3>Court-ready OPPO</h3><p>Tiered findings, each traced to a clickable primary source.</p></div>
+        <div class="ld-feat"><div class="ld-ico">★</div><h3>Your affirmative case</h3><p>Your message, built from real, sourced accomplishments — not talking points.</p></div>
+        <div class="ld-feat"><div class="ld-ico">✦</div><h3>Grounded AI analyst</h3><p>Ask anything. It answers from the record and cites every claim.</p></div>
+        <div class="ld-feat"><div class="ld-ico">◰</div><h3>News &amp; media radar</h3><p>Local news, auto-filtered and linked to every candidate.</p></div>
+        <div class="ld-feat"><div class="ld-ico">◱</div><h3>Opponent monitoring</h3><p>Rivals' sites, video and socials — snapshotted every morning.</p></div>
+        <div class="ld-feat"><div class="ld-ico">◲</div><h3>Political-ad tracking</h3><p>The Meta ad library, watched: who's spending, on what, and when.</p></div>
+        <div class="ld-feat"><div class="ld-ico">▦</div><h3>Sealed client silos</h3><p>Your intelligence in its own vault. It never crosses to another client.</p></div>
+        <div class="ld-feat soon"><div class="ld-ico">◱</div><h3>Social media <span class="ld-soon">SOON</span></h3><p>X, Facebook, Instagram and TikTok — posts, cadence, engagement.</p></div>
       </div>
     </section>
 
@@ -495,11 +510,9 @@
       <div class="ld-kick">WHY IT WINS</div>
       <h2>Why it's a game-changer</h2>
       <ul class="ld-why-list">
-        <li><b>Court-ready, not clickbait.</b> Every claim links to the official source. Put it in front of voters — or a reporter — with total confidence.</li>
-        <li><b>A research team's month, done overnight.</b> What used to take a war room weeks now runs continuously and automatically, for a fraction of the cost.</li>
-        <li><b>It levels the field.</b> Challengers get incumbent-grade research; incumbents get an early-warning radar on every rival.</li>
-        <li><b>It kills misinformation.</b> Circulating claims are cross-checked against the official record — you know what's real versus rumour before it spreads.</li>
-        <li><b>Purpose-built for municipal races.</b> Wired around council minutes, local outlets and the Meta political-ad library — the exact terrain of a local campaign.</li>
+        <li><b>Court-ready, not clickbait.</b> Every claim links to the official source — defensible in front of any reporter.</li>
+        <li><b>A research team's month, overnight.</b> Continuous, automatic, at a fraction of the cost.</li>
+        <li><b>It levels the field.</b> Challengers get incumbent-grade research; incumbents get radar on every rival.</li>
       </ul>
     </section>
 
@@ -653,6 +666,17 @@
     })();
   })();
   </script>
+  <script>(function(){
+    var c=document.getElementById('ld-rain'); if(!c) return; var ctx=c.getContext('2d'), W,H,drops, ld=document.getElementById('landing');
+    function rz(){ W=c.width=window.innerWidth; H=c.height=window.innerHeight; var cols=Math.floor(W/16); drops=[]; for(var k=0;k<cols;k++) drops[k]=Math.random()*H/16; }
+    rz(); window.addEventListener('resize',rz);
+    var chars="01ROMULUS</>{}#".split("");
+    (function draw(){ if(!ld||getComputedStyle(ld).display!=='none'){
+        ctx.fillStyle="rgba(4,6,10,.10)"; ctx.fillRect(0,0,W,H); ctx.fillStyle="#39ff8b"; ctx.font="14px monospace";
+        for(var k=0;k<drops.length;k++){ ctx.fillText(chars[Math.floor(Math.random()*chars.length)],k*16,drops[k]*16);
+          if(drops[k]*16>H && Math.random()>.975) drops[k]=0; drops[k]++; } }
+      requestAnimationFrame(draw); })();
+  })();</script>
   <div id="splash">
     <div id="pwgate">
       <div class="rs-logo">ROMULUS</div>
@@ -724,6 +748,7 @@
   </aside>
 
   <main class="main">
+    <div id="tabscan"></div>
     <div class="topbar">
       <button id="menuBtn" aria-label="Open menu">☰</button>
       <div style="flex:1"><h2 id="viewTitle">Overview</h2><div class="crumb" id="viewCrumb">Demo intelligence dossier · primary-source verified</div></div>
@@ -1195,6 +1220,7 @@ document.getElementById("nav").addEventListener("click",e=>{
   const titles={hq:["Municipality","Select a municipality → candidate silo"],home:["Overview","Demo intelligence dossier · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message","Alvin Tedjo's affirmative case — sourced"],promises:["Promises","Auto-tracked once campaigning is official"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],council:["Council Record","Every dissent, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","The full declared mayoral field"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"]};
   document.getElementById("viewTitle").textContent=titles[b.dataset.tab][0];
   document.getElementById("viewCrumb").textContent=titles[b.dataset.tab][1];
+  var ts=document.getElementById("tabscan"); if(ts){ ts.classList.remove("go"); void ts.offsetWidth; ts.classList.add("go"); }
   closeNav();   // close drawer after picking a tab (mobile)
   document.querySelector(".main").scrollTo(0,0);
 });
