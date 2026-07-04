@@ -132,6 +132,18 @@
   .hq-av{width:42px;height:42px;border-radius:50%;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:800;border:1px solid var(--gold-dim)}
   .hq-status{font-size:10.5px;font-weight:700;letter-spacing:.5px;color:var(--faint);white-space:nowrap}
   .hq-status.on{color:var(--green)}
+  /* intelligence inventory (Overview) */
+  .inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+  .inv{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px;cursor:pointer;transition:border-color .15s,transform .15s}
+  .inv:hover{border-color:var(--gold-dim);transform:translateY(-2px)}
+  .inv-h{font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:14.5px}
+  .inv-i{color:var(--gold)}
+  .inv p{margin:0;color:var(--muted);font-size:12.8px;line-height:1.5}
+  .inv.pending{cursor:default;border-style:dashed;opacity:.9}
+  .inv.pending:hover{transform:none;border-color:var(--line)}
+  .inv-soon{margin-left:auto;font-size:9.5px;letter-spacing:1px;color:#05070b;background:var(--gold);padding:2px 8px;border-radius:20px;font-weight:800}
+  .nav-soon{opacity:.5} .nav-soon:hover{opacity:.75}
+  .soon-tag{margin-left:auto;font-size:9px;letter-spacing:1px;color:var(--gold);border:1px solid var(--gold-dim);padding:1px 7px;border-radius:20px;text-transform:uppercase}
   /* ── public marketing landing ── */
   #landing{position:fixed;inset:0;z-index:1100;overflow-y:auto;background:radial-gradient(1200px 600px at 70% -10%,#141d2b,#0a0e14 60%);color:var(--text);font-size:16px;line-height:1.6}
   .ld-nav{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:15px 6vw;background:#0a0e14cc;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
@@ -591,6 +603,7 @@
       <button data-tab="news"><span class="ico">◰</span> News <span class="ct" id="ct-news"></span></button>
       <button data-tab="web"><span class="ico">◱</span> Web Presence <span class="ct" id="ct-web"></span></button>
       <button data-tab="ads"><span class="ico">◲</span> Political Ads <span class="ct" id="ct-ads"></span></button>
+      <button type="button" id="nav-social" class="nav-soon" title="Live social media tracking is coming soon"><span class="ico">◱</span> Social Media <span class="soon-tag">soon</span></button>
     </nav>
     <div class="side-foot">
       <div id="activeClient" style="color:var(--muted)">No client selected</div>
@@ -742,7 +755,24 @@ function renderHome(){
         <span class="tier ${tierClass(a.tier)}">${esc(a.tier)}</span>
         <b>${esc(a.headline)}</b></div>
         <div class="muted" style="font-size:13px">${esc(a.body||"").slice(0,170)}…</div></div>`).join("")}
+
+    <div class="sect-title" style="margin-top:26px">Intelligence inventory</div>
+    <p class="muted" style="margin:-4px 0 14px;font-size:13.5px">Everything ROMULUS organizes on this candidate. Open any inventory from the menu (☰, top-left) — here's what each one holds.</p>
+    <div class="inv-grid">
+      <div class="inv" data-go="attacks"><div class="inv-h"><span class="inv-i">⚑</span> OPPO Findings</div><p>Tiered opposition research — every contradiction traced to a specific council resolution and a clickable primary source.</p></div>
+      <div class="inv" data-go="council"><div class="inv-h"><span class="inv-i">▤</span> Council Record</div><p>Every recorded vote, motion, dissent and absence — pulled from the official minutes and cross-verified.</p></div>
+      <div class="inv" data-go="evidence"><div class="inv-h"><span class="inv-i">◈</span> Evidence</div><p>The underlying source records behind every finding — the receipts you can put in front of a reporter.</p></div>
+      <div class="inv" data-go="message"><div class="inv-h"><span class="inv-i">★</span> My Message</div><p>Your candidate's affirmative case, built only from real, sourced accomplishments — not talking points.</p></div>
+      <div class="inv" data-go="candidates"><div class="inv-h"><span class="inv-i">☰</span> Candidates</div><p>Profiles of your candidate and every declared rival — background, priorities and record.</p></div>
+      <div class="inv" data-go="promises"><div class="inv-h"><span class="inv-i">◎</span> Promises</div><p>Tracked commitments and documented pre-writ positions, monitored over the course of the race.</p></div>
+      <div class="inv" data-go="news"><div class="inv-h"><span class="inv-i">◰</span> News</div><p>Local outlets + Google News, auto-filtered for relevance and linked to each candidate.</p></div>
+      <div class="inv" data-go="web"><div class="inv-h"><span class="inv-i">◱</span> Web Presence</div><p>Snapshots of campaign websites and social pages, watched every morning for changes.</p></div>
+      <div class="inv" data-go="ads"><div class="inv-h"><span class="inv-i">◲</span> Political Ads</div><p>Meta political ad library — who's spending, on what message, and when.</p></div>
+      <div class="inv" data-go="romulus"><div class="inv-h"><span class="inv-i">✦</span> ROMULUS Chat</div><p>Ask the AI anything; every answer is grounded in this dossier and cited — never fabricated.</p></div>
+      <div class="inv pending"><div class="inv-h"><span class="inv-i">◱</span> Social Media <span class="inv-soon">PENDING</span></div><p>Live tracking of X, Facebook, Instagram &amp; TikTok — posts, cadence and engagement. Coming soon.</p></div>
+    </div>
   `;
+  document.querySelectorAll('#view-home .inv[data-go]').forEach(el=>el.onclick=()=>{ const b=document.querySelector('button[data-tab="'+el.dataset.go+'"]'); if(b) b.click(); });
 }
 
 function renderAttacks(){
@@ -1064,6 +1094,7 @@ function closeNav(){ document.body.classList.remove("nav-open");
   s.style.left=""; sc.style.opacity=""; sc.style.pointerEvents=""; }
 document.getElementById("menuBtn").onclick=()=> document.body.classList.contains("nav-open")?closeNav():openNav();
 document.getElementById("scrim").onclick=closeNav;
+document.getElementById("nav-social").onclick=()=>{ document.querySelector('button[data-tab="home"]').click(); };
 function tick(){ const d=Math.ceil((ELECTION-new Date())/86400000);
   document.getElementById("countdown").innerHTML=`<b>${d}</b> days to election<br><span class="faint">Oct 26, 2026</span>`; }
 tick(); setInterval(tick,60000);
