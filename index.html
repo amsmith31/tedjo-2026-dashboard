@@ -3,7 +3,20 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ROMULUS — Tedjo 2026 Intelligence</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+<title>ROMULUS — Campaign Intelligence Tool</title>
+<script>
+/* self-heal stale cache: if a newer build is live, silently reload fresh */
+(function(){ var BUILD='20260704-094449';
+  try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
+    .then(function(r){return r.ok?r.text():'';})
+    .then(function(t){ t=(t||'').trim();
+      if(t && t!=='20260704-094449' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+    .catch(function(){}); }catch(e){}
+})();
+</script>
 <style>
   :root{
     --bg:#0a0e14; --panel:#111823; --panel2:#0d141d; --line:#1e2a3a;
