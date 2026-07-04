@@ -359,6 +359,8 @@
   .ld-film::before,.ld-film::after{content:"";position:absolute;left:0;right:0;height:8%;background:#000;z-index:4;pointer-events:none}
   .ld-film::before{top:0}.ld-film::after{bottom:0}
   .film-vig{position:absolute;inset:0;z-index:3;pointer-events:none;background:radial-gradient(120% 80% at 50% 45%,transparent 55%,rgba(0,0,0,.55))}
+  .ld-film.filmon::before,.ld-film.filmon::after{display:none}
+  .ld-film.filmon .film-vig,.ld-film.filmon .lx-kicker{display:none}
   .ld-film .lx-scene{padding:9% 8%}
   .ld-film .lx-big{font-size:clamp(22px,3.8vw,34px)}
   .lx-scene.title .lx-big,.lx-scene.end .lx-big{font-size:clamp(34px,7vw,60px);letter-spacing:2px;color:var(--gold);text-shadow:0 0 34px rgba(224,184,76,.4)}
@@ -422,8 +424,9 @@
     <header class="ld-nav">
       <div class="ld-logo">ROMULUS<span>●</span></div>
       <nav class="ld-navlinks">
-        <a href="#ld-what">What it does</a>
-        <a href="#ld-why">Why it wins</a>
+        <a href="#ld-what">What it is</a>
+        <a href="#ld-cap">Capabilities</a>
+        <a href="#ld-video">The film</a>
         <a href="#ld-demo" class="ld-cta-sm">Book a Demo</a>
         <button id="ld-access" type="button">Operator Access →</button>
       </nav>
@@ -506,13 +509,14 @@
       <p class="ld-lead">See what it feels like to walk into a race knowing everything.</p>
       <div class="ld-film" id="ld-explainer">
         <div class="film-vig"></div>
+        <video id="lx-video" playsinline preload="metadata" style="display:none;position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#04060a;z-index:2"><source src="opener-promo.mp4" type="video/mp4"></video>
         <div class="lx-kicker">ROMULUS ▸ CAMPAIGN INTELLIGENCE</div>
         <div class="lx-stage" id="lx-stage"></div>
         <div class="lx-bar"><div class="lx-fill" id="lx-fill"></div></div>
         <button class="lx-replay" id="lx-replay">▶ Replay</button>
         <div class="lx-poster" id="lx-poster"><div class="lx-play">▶</div><div class="lx-play-l">Play the film</div></div>
       </div>
-      <div class="lx-note">This is an animated preview. A fully produced, narrated promo drops into this same frame — ask us for the cut.</div>
+      <div class="lx-note">▶ Turn your sound on — a 60-second overview of what ROMULUS does.</div>
     </section>
 
     <section class="ld-section ld-demo" id="ld-demo">
@@ -621,17 +625,28 @@
         var h=''; if(s.kick) h+='<div class="lx-kick2">'+s.kick+'</div>'; if(s.ico) h+='<div class="lx-ico">'+s.ico+'</div>';
         h+='<div class="lx-big">'+s.big+'</div><p class="lx-sub">'+s.sub+'</p>'; d.innerHTML=h; stage.appendChild(d); return d; });
       if(els[0]) els[0].classList.add('on');
+      var box=document.getElementById('ld-explainer');
+      var video=document.getElementById('lx-video'),
+          kicker=box.querySelector('.lx-kicker'), bar=box.querySelector('.lx-bar');
       var idx=-1, timer=null, started=false, total=SCENES.reduce(function(a,s){return a+s.dur;},0), elapsed=0;
       function show(n){ els.forEach(function(e){e.classList.remove('on');}); if(els[n]) els[n].classList.add('on'); }
       function step(){ idx++; if(idx>=els.length){ idx=els.length-1; show(idx); fill.style.width='100%'; return; }
         show(idx); elapsed+=SCENES[idx].dur; var pct=Math.round((elapsed/total)*100);
         fill.style.transition='width '+SCENES[idx].dur+'ms linear'; fill.style.width=pct+'%';
         timer=setTimeout(step,SCENES[idx].dur); }
-      function play(){ started=true; if(poster) poster.classList.add('hide'); clearTimeout(timer); idx=-1; elapsed=0; fill.style.transition='none'; fill.style.width='0%'; void fill.offsetWidth; step(); }
-      replay.onclick=play; if(poster) poster.onclick=play;
-      var box=document.getElementById('ld-explainer');
-      function maybeStart(){ if(started) return; var r=box.getBoundingClientRect(); if(r.top < (window.innerHeight*0.7) && r.bottom > 0){ play(); } }
-      try{ var io2=new IntersectionObserver(function(en){ en.forEach(function(e){ if(e.isIntersecting && !started){ play(); } }); },{threshold:.4});
+      function playAmbient(){ started=true; clearTimeout(timer); idx=-1; elapsed=0; fill.style.transition='none'; fill.style.width='0%'; void fill.offsetWidth; step(); }
+      // the real promo film — plays with sound on click; animation is the ambient preview behind the poster
+      function playFilm(){ if(!video) return; box.classList.add('filmon'); if(poster) poster.classList.add('hide');
+        stage.style.display='none'; if(bar) bar.style.display='none';
+        video.style.display='block'; try{ video.currentTime=0; }catch(e){}
+        video.muted=false; video.play().catch(function(){ video.muted=true; video.play().catch(function(){}); }); }
+      function resetFilm(){ if(!video) return; try{ video.pause(); }catch(e){} video.style.display='none'; box.classList.remove('filmon');
+        stage.style.display=''; if(bar) bar.style.display=''; if(poster) poster.classList.remove('hide'); }
+      if(poster) poster.onclick=playFilm;
+      replay.onclick=playFilm;
+      if(video){ video.addEventListener('ended',resetFilm); video.addEventListener('error',resetFilm); }
+      function maybeStart(){ if(started) return; var r=box.getBoundingClientRect(); if(r.top < (window.innerHeight*0.7) && r.bottom > 0){ playAmbient(); } }
+      try{ var io2=new IntersectionObserver(function(en){ en.forEach(function(e){ if(e.isIntersecting && !started){ playAmbient(); } }); },{threshold:.4});
         io2.observe(box); }catch(e){}
       window.addEventListener('scroll', maybeStart, {passive:true});
       maybeStart();
