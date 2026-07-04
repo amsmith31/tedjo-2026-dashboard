@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260704-100058';
+(function(){ var BUILD='20260704-103731';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260704-100058' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260704-103731' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -150,6 +150,7 @@
   .hq-av{width:42px;height:42px;border-radius:50%;background:var(--gold-dim);color:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:800;border:1px solid var(--gold-dim)}
   .hq-status{font-size:10.5px;font-weight:700;letter-spacing:.5px;color:var(--faint);white-space:nowrap}
   .hq-status.on{color:var(--green)}
+  .hq-demo{font-size:9px;letter-spacing:1px;color:#05070b;background:var(--gold);padding:2px 7px;border-radius:20px;font-weight:800;vertical-align:middle}
   /* intelligence inventory (Overview) */
   .inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
   .inv{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px 16px;cursor:pointer;transition:border-color .15s,transform .15s}
@@ -771,7 +772,7 @@
       <div id="chatlog" class="chatlog"></div>
       <div class="chatsug" id="chatsug"></div>
       <div class="chatbar">
-        <textarea id="chatinput" rows="1" placeholder="Ask about Tedjo's record, vulnerabilities, the strongest attack lines…"></textarea>
+        <textarea id="chatinput" rows="1" placeholder="Ask about the record, vulnerabilities, the strongest attack lines…"></textarea>
         <button id="chatsend">Send</button>
       </div>
     </section>
@@ -790,6 +791,16 @@
 // ── Multi-tenant client registry. Each client is its own isolated Supabase
 //    project (hard silo — data cannot cross between clients). Only the
 //    publishable (anon) key goes here; it's safe in the browser (RLS read-only).
+// Council schemas differ per client. Each profile: a REST query + a row->normalized mapper
+// producing {date, topic, outcome, vote, src, voter}. Default matches the Tedjo/eScribe schema.
+const COUNCIL_DEFAULT = {
+  q: "/council_votes?select=vote,source_url,council_motions(motion_date,topic,outcome)&limit=1200",
+  map: r => { const m=r.council_motions||{}; return {date:m.motion_date, topic:m.topic||"", outcome:m.outcome||"", vote:r.vote, src:r.source_url, voter:r.councillor_label||null}; }
+};
+const COUNCIL_BURTON = {
+  q: "/council_votes?select=vote,candidate_name_raw,council_motions(title,description,outcome,source_url,council_meetings(meeting_date))&limit=1500",
+  map: r => { const m=r.council_motions||{}, mt=m.council_meetings||{}; return {date:mt.meeting_date, topic:m.title||m.description||"", outcome:m.outcome||"", vote:r.vote, src:m.source_url, voter:r.candidate_name_raw||null}; }
+};
 const CLIENTS = {
   "Mississauga": { candidates: {
     "Alvin Tedjo": { office:"Mayor · 2026", status:"live", fn:"romulus", demo:true,
@@ -797,7 +808,7 @@ const CLIENTS = {
       key:"sb_publishable_aDVuWrjpxpn1Zo4Dyix3mw_nkTtxipb" }
   }},
   "Oakville": { candidates: {
-    "Rob Burton": { office:"Mayor · 2026", status:"live", fn:"legatus",
+    "Rob Burton": { office:"Mayor · 2026", status:"live", fn:"legatus", msgTable:"burton_messaging", council:COUNCIL_BURTON,
       url:"https://poddxshidtrulrsavxmy.supabase.co",
       key:"sb_publishable_0jVh2ndw3eHbbbDPpCnU2A_HjN78dIi" }
   }},
@@ -842,9 +853,9 @@ async function init(){
       safeApi("/attack_messaging?select=*&is_active=eq.true"),
       safeApi("/council_evidence?select=*&order=political_utility_score.desc.nullslast"),
       safeApi("/candidates?select=*"),
-      safeApi("/council_votes?select=vote,source_url,council_motions(motion_date,topic,outcome)&limit=1200"),
+      safeApi((ACTIVE&&ACTIVE.council?ACTIVE.council:COUNCIL_DEFAULT).q),
       safeApi("/web_snapshots?select=*&order=retrieved_at.desc"),
-      safeApi("/candidate_messaging?select=*&is_active=eq.true&order=priority_order.asc"),
+      safeApi("/"+((ACTIVE&&ACTIVE.msgTable)||"candidate_messaging")+"?select=*&is_active=eq.true&order=priority_order.asc"),
       safeApi("/candidate_promises?select=*&is_active=eq.true"),
       safeApi("/news_items?select=*&order=published_at.desc.nullslast&limit=120"),
       safeApi("/news_item_candidates?select=news_item_id,candidate_id"),
@@ -856,9 +867,11 @@ async function init(){
     ]);
     S.attacks=attacks; S.evidence=evidence; S.web=web; S.message=message; S.promises=promises;
     S.news=news; S.newsLinks=newsLinks; S.sources=sources; S.ads=ads; S.videos=vids;
-    S.candidates=candidates.sort((a,b)=>(CAND_ORDER[a.slug]??5)-(CAND_ORDER[b.slug]??5)||(a.name||"").localeCompare(b.name||""));
-    S.dissents=dissents;
-    S.counts={meetings, votes, dissents:dissents.length, attacks:attacks.length, evidence:evidence.length, candidates:candidates.length,
+    const rank=c=>(c.is_principal?0:c.slug==="alvin-tedjo"?0:1);
+    S.candidates=candidates.sort((a,b)=>rank(a)-rank(b)||(b.is_incumbent?1:0)-(a.is_incumbent?1:0)||(a.name||"").localeCompare(b.name||""));
+    const cmap=(ACTIVE&&ACTIVE.council?ACTIVE.council:COUNCIL_DEFAULT).map;
+    S.dissents=(dissents||[]).map(cmap);
+    S.counts={meetings, votes, dissents:S.dissents.filter(d=>posCat(d.vote)==="NO").length, attacks:attacks.length, evidence:evidence.length, candidates:candidates.length,
               vulns:evidence.filter(e=>String(e.source_type||"").includes("vulnerability")).length};
     document.getElementById("conn").innerHTML='<span style="color:var(--green)">● live</span>';
     document.getElementById("ct-attacks").textContent=attacks.length;
@@ -951,33 +964,38 @@ function renderAttacks(){
   `;
 }
 
-function posCat(v){ v=String(v||"").toUpperCase(); if(v.includes("NO")) return "NO"; if(v.includes("ABSENT")) return "ABSENT";
-  if(v.includes("YES")) return "YES"; if(v.includes("PRESENT")) return "UNCLEAR"; return "OTHER"; }
+function posCat(v){ v=String(v||"").toUpperCase();
+  if(v.includes("ABSENT")) return "ABSENT";
+  if(v.includes("ABSTAIN")||v.includes("PRESENT")||v.includes("RECUS")) return "UNCLEAR";
+  if(v.includes("NO")||v.includes("AGAINST")||v.includes("NAY")||v.includes("OPPOSE")) return "NO";
+  if(v.includes("YES")||v.includes("FOR")||v.includes("AYE")||v.includes("SUPPORT")) return "YES";
+  return "OTHER"; }
 let _cf="notable";
 function renderCouncil(){
-  const all=S.dissents.map(d=>{ const m=d.council_motions||{};
-    return {date:m.motion_date, topic:m.topic||"", outcome:m.outcome||"", vote:d.vote, cat:posCat(d.vote), src:d.source_url}; })
+  const all=S.dissents.map(d=>({date:d.date, topic:d.topic||"", outcome:d.outcome||"", vote:d.vote, cat:posCat(d.vote), src:d.src, voter:d.voter||""}))
     .sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const hasVoters=all.some(r=>r.voter);
   const c={NO:0,ABSENT:0,YES:0,UNCLEAR:0,OTHER:0}; all.forEach(r=>c[r.cat]++);
   const sets={notable:r=>r.cat==="NO"||r.cat==="ABSENT", NO:r=>r.cat==="NO", ABSENT:r=>r.cat==="ABSENT", YES:r=>r.cat==="YES", all:()=>true};
   const chip=(k,l)=>`<button class="fbtn ${_cf===k?'on':''}" data-f="${k}">${l}</button>`;
   document.getElementById("view-council").innerHTML=`
-    <div class="pitch"><p style="margin:0">Tedjo's full voting record: <b>${c.NO}</b> dissents (NO) · <b>${c.ABSENT}</b> absences — didn't vote, often a conflict-of-interest recusal · <b>${c.YES}</b> supported (YES) · ${c.UNCLEAR} not individually recorded in the minutes. Every row links to the official source.</p></div>
+    <div class="pitch"><p style="margin:0">Recorded voting positions on file: <b>${c.NO}</b> dissents (NO) · <b>${c.ABSENT}</b> absences — didn't vote, often a conflict-of-interest recusal · <b>${c.YES}</b> supported (YES) · ${c.UNCLEAR} not individually recorded in the minutes. Every row links to the official source.</p></div>
     <div class="fbar">${chip('notable','★ Notable ('+(c.NO+c.ABSENT)+')')}${chip('NO','Dissents ('+c.NO+')')}${chip('ABSENT','Absences ('+c.ABSENT+')')}${chip('YES','Supported ('+c.YES+')')}${chip('all','All ('+all.length+')')}</div>
     <div class="searchbar"><input id="csearch" placeholder="Filter by topic…"></div>
     <table><thead><tr><th>Date</th><th>Agenda item</th><th>Vote</th><th>Outcome</th><th>Source</th></tr></thead>
     <tbody id="ctbody"></tbody></table>`;
   const draw=()=>{ const q=(document.getElementById("csearch").value||"").toLowerCase();
-    const list=all.filter(sets[_cf]).filter(r=>!q||String(r.topic||"").toLowerCase().includes(q));
+    const list=all.filter(sets[_cf]).filter(r=>!q||String(r.topic||"").toLowerCase().includes(q)||String(r.voter||"").toLowerCase().includes(q));
     document.getElementById("ctbody").innerHTML=list.slice(0,600).map(rowHtml).join("")
       ||'<tr><td colspan="5" class="muted" style="padding:16px">No matching votes.</td></tr>'; };
   document.getElementById("csearch").oninput=draw;
   document.querySelector(".fbar").onclick=e=>{ const b=e.target.closest("button[data-f]"); if(!b)return; _cf=b.dataset.f; renderCouncil(); };
   draw();
 }
+function prettySlug(s){ return String(s||"").replace(/-/g," ").replace(/\b\w/g,x=>x.toUpperCase()); }
 function rowHtml(r){ const cls={NO:"vote-NO",ABSENT:"vote-ABSENT",YES:"vote-YES"}[r.cat]||"muted";
   const label={NO:"NO",ABSENT:"ABSENT",YES:"YES"}[r.cat]||esc(r.vote);
-  return `<tr><td class="muted" style="white-space:nowrap">${fmtD(r.date)}</td><td>${esc(String(r.topic||"(closed / consent item)").slice(0,120))}</td>
+  return `<tr><td class="muted" style="white-space:nowrap">${fmtD(r.date)}</td><td>${esc(String(r.topic||"(closed / consent item)").slice(0,120))}${r.voter?`<div class="faint" style="font-size:11px">▸ ${esc(prettySlug(r.voter))}</div>`:""}</td>
   <td class="${cls}">${label}</td><td class="muted">${esc(r.outcome)}</td>
   <td>${isUrl(r.src)?`<a href="${esc(r.src)}" target="_blank" rel="noopener">minutes ↗</a>`:""}</td></tr>`; }
 
@@ -998,37 +1016,53 @@ function renderEvidence(){
 }
 
 function badge(c){
-  if(c.slug==="alvin-tedjo") return '<span class="chip" style="color:var(--red)">● TARGET</span>';
+  if(c.is_principal) return '<span class="chip" style="color:var(--gold)">★ OUR CLIENT</span>';
+  if(c.slug==="alvin-tedjo") return '<span class="chip" style="color:var(--red)">● DEMO SUBJECT</span>';
   if(c.is_incumbent) return '<span class="chip" style="color:var(--gold)">INCUMBENT</span>';
   return '<span class="chip">CANDIDATE</span>';
 }
+function statusChip(c){ const s=c.status||"";
+  if(s==="officially_registered") return '<span class="chip" style="color:var(--green)">✓ Registered</span>';
+  if(s==="withdrawn") return '<span class="chip faint">Withdrawn</span>';
+  if(s==="formerly_expected") return '<span class="chip faint">Not running</span>';
+  return s?`<span class="chip faint">${esc(String(s).replace(/_/g," "))}</span>`:""; }
 function social(url,label){ return isUrl(url)?`<a href="${esc(url)}" target="_blank" rel="noopener" class="chip" style="color:var(--blue)">${label} ↗</a>`:""; }
 function fmtViews(n){ if(n==null) return ""; n=+n; return n>=1000?(n/1000).toFixed(n>=10000?0:1)+"K views":n+" views"; }
 function videoStrip(vids){ return `<div class="sect-title" style="margin:14px 0 8px">▶ Recent videos · YouTube</div><div class="vidrow">`+
   vids.slice(0,8).map(v=>`<a class="vid" href="${esc(v.video_url)}" target="_blank" rel="noopener">${v.thumbnail_url?`<img loading="lazy" src="${esc(v.thumbnail_url)}">`:""}<div class="vt">${esc((v.title||"").slice(0,58))}</div><div class="vm">${fmtViews(v.view_count)}${v.published_at?" · "+fmtD(v.published_at):""}</div></a>`).join("")+`</div>`; }
+function groupLabel(g){ if(g==="_all") return "Candidates"; if(g==="mayor") return "Mayor";
+  if(g==="regional") return "Regional Council"; if(g==="school_board") return "School Board Trustees";
+  if(g==="other") return "Other Races"; const m=/^ward(\d+)$/.exec(g); if(m) return "Ward "+m[1];
+  return String(g).replace(/_/g," ").replace(/\b\w/g,x=>x.toUpperCase()); }
+const GROUP_RANK={mayor:0,regional:1,ward1:11,ward2:12,ward3:13,ward4:14,ward5:15,ward6:16,ward7:17,ward8:18,ward9:19,school_board:30,other:40,_all:50};
 function renderCandidates(){
   const vidsBy={}; S.videos.forEach(v=>{(vidsBy[v.candidate_id]=vidsBy[v.candidate_id]||[]).push(v);});
-  document.getElementById("view-candidates").innerHTML=`
-    <div class="pitch"><p style="margin:0">${S.candidates.length} declared mayoral candidates · profiles auto-built from each campaign's own website + council record, refreshed as sites change. <span class="faint">Watchlist: Bonnie Crombie (not yet filed).</span></p></div>
-    ${S.candidates.map(c=>`
+  const buckets={}, order=[];
+  S.candidates.forEach(c=>{ const g=c.office_group||"_all"; if(!buckets[g]){buckets[g]=[]; order.push(g);} buckets[g].push(c); });
+  order.sort((a,b)=>(GROUP_RANK[a]??45)-(GROUP_RANK[b]??45));
+  const muni=(ACTIVE&&ACTIVE.muni)||"the race";
+  const totalVids=S.videos.length;
+  const card=c=>`
     <div class="card">
       <div class="cand" style="align-items:flex-start">
         <div class="av">${esc((c.name||"?").split(" ").map(x=>x[0]).join("").slice(0,2))}</div>
         <div style="flex:1">
-          <div style="font-size:16px;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${esc(c.name)} ${badge(c)}</div>
-          <div class="muted">${esc(c.office||"")}${c.ward?" · "+esc(c.ward):""}${c.filing_date?" · filed "+fmtD(c.filing_date):""}</div>
+          <div style="font-size:16px;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap">${esc(c.name)} ${badge(c)} ${statusChip(c)}</div>
+          <div class="muted">${esc(c.office||"")}${c.previous_role?" · was "+esc(c.previous_role):""}${c.filing_date?" · filed "+fmtD(c.filing_date):""}</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-            ${c.campaign_website?`<a href="${esc(c.campaign_website)}" target="_blank" rel="noopener" class="chip" style="color:var(--gold)">🌐 ${esc(c.campaign_website.replace(/^https?:\/\//,''))} ↗</a>`:'<span class="chip faint">no website yet</span>'}
-            ${social(c.facebook_url,"Facebook")}${social(c.instagram_url,"Instagram")}${social(c.twitter_url,"X")}
+            ${isUrl(c.campaign_website)?`<a href="${esc(c.campaign_website)}" target="_blank" rel="noopener" class="chip" style="color:var(--gold)">🌐 ${esc(c.campaign_website.replace(/^https?:\/\//,'').slice(0,42))} ↗</a>`:'<span class="chip faint">no website</span>'}
+            ${social(c.facebook_url,"Facebook")}${social(c.instagram_url,"Instagram")}${social(c.twitter_url,"X")}${social(c.linkedin_url,"LinkedIn")}${social(c.youtube_url,"YouTube")}
           </div>
-          <div class="faint" style="font-size:12px;margin-top:8px">
-            ${c.email?`✉ ${esc(c.email)}`:""}${c.phone?" · ☎ "+esc(c.phone):""}
-          </div>
+          <div class="faint" style="font-size:12px;margin-top:8px">${c.email?"✉ "+esc(c.email):""}${c.phone?" · ☎ "+esc(c.phone):""}</div>
         </div>
       </div>
-      ${c.manual_research_brief?`<div class="profile">${md(c.manual_research_brief)}</div>`:""}
+      ${c.slogan?`<div class="quote" style="margin-top:10px">"${esc(c.slogan)}"</div>`:""}
+      ${c.manual_research_brief?`<div class="profile">${md(c.manual_research_brief)}</div>`:(c.bio?`<div class="profile">${md(c.bio)}</div>`:"")}
       ${vidsBy[c.id]&&vidsBy[c.id].length?videoStrip(vidsBy[c.id]):""}
-    </div>`).join("")}`;
+    </div>`;
+  document.getElementById("view-candidates").innerHTML=
+    `<div class="pitch"><p style="margin:0"><b>${S.candidates.length}</b> candidates tracked across ${esc(muni)}${order.length>1?" · grouped by race":""} · ${totalVids} campaign videos indexed. Each profile is auto-built from the campaign's own site and the public record, and refreshes as sites change.</p></div>`
+    + order.map(g=>`<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">${esc(groupLabel(g))} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[g].length}</span></div>`+buckets[g].map(card).join("")).join("");
 }
 
 function renderWeb(){
@@ -1054,8 +1088,8 @@ const fmtDT = s => { if(!s) return ""; const d=new Date(s); return isNaN(d)?Stri
 
 function renderMessage(){
   document.getElementById("view-message").innerHTML=`
-    <div class="pitch"><h3>The affirmative case for Alvin Tedjo</h3>
-      <p>Credibility content built from his real, verifiable record — accomplishments, leadership, and experience, each linked to the council minutes or campaign material. This is the message side of the platform: what a candidate should lead with.</p></div>
+    <div class="pitch"><h3>The affirmative case for ${esc((ACTIVE&&ACTIVE.cand)||"your candidate")}</h3>
+      <p>Credibility content built from a real, verifiable record — accomplishments, leadership and experience, each linked to the council minutes or campaign material. This is the message side of the platform: what your candidate should lead with.</p></div>
     <div class="tiles">
       ${S.message.filter(m=>m.stat_value).slice(0,4).map(m=>`
         <div class="tile"><div class="n" style="font-size:22px">${esc(m.stat_value)}</div><div class="l">${esc(m.stat_label||"")}</div></div>`).join("")}
@@ -1074,10 +1108,11 @@ function renderMessage(){
       </div>`).join("")}`;
 }
 
-function promiseCard(p){
+function promiseCard(p, candName){
   const sc={kept:"var(--green)",broken:"var(--red)",in_progress:"var(--gold)",pending:"var(--muted)"}[p.status]||"var(--muted)";
   return `<div class="card">
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+      ${candName?`<span class="chip" style="color:var(--blue)">${esc(candName)}</span>`:""}
       <span class="chip" style="color:${sc}">${esc((p.status||"pending").replace("_"," "))}</span>
       <span class="chip">${esc(p.issue_area||"")}</span>
       <b>${esc(p.promise_text)}</b></div>
@@ -1089,6 +1124,12 @@ function promiseCard(p){
 function renderPromises(){
   const now=new Date(), locked=now<FILING_DEADLINE;
   const box=document.getElementById("view-promises");
+  const idn={}; S.candidates.forEach(c=>idn[c.id]=c.name);
+  // Show real data whenever it exists — the lock is only a placeholder for empty silos.
+  if(S.promises.length){
+    box.innerHTML=`<div class="pitch"><p style="margin:0"><b>${S.promises.length}</b> documented positions &amp; promises tracked, each linked to source.</p></div>`+S.promises.map(p=>promiseCard(p,idn[p.candidate_id])).join("");
+    return;
+  }
   if(!locked){
     box.innerHTML=`<div class="pitch"><p style="margin:0">Live promise tracking is active. ${S.promises.length} tracked.</p></div>`+S.promises.map(promiseCard).join("");
     return;
@@ -1118,7 +1159,7 @@ function renderNews(){
   const src={}; S.sources.forEach(s=>src[s.id]=s.publisher);
   const mby={}; S.newsLinks.forEach(l=>{ (mby[l.news_item_id]=mby[l.news_item_id]||[]).push(l.candidate_id); });
   document.getElementById("view-news").innerHTML=`
-    <div class="pitch"><p style="margin:0">${S.news.length} recent articles from Mississauga outlets + Google News, auto-filtered for council/election relevance and linked to candidates. <span class="faint">Ambiguous names require political context to match.</span></p></div>
+    <div class="pitch"><p style="margin:0">${S.news.length} recent articles from local outlets + Google News, auto-filtered for council/election relevance and linked to candidates. <span class="faint">Ambiguous names require political context to match.</span></p></div>
     <div class="searchbar"><input id="nsearch" placeholder="Filter headlines…"><select id="nfilter"><option value="">All candidates</option>${S.candidates.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("")}</select></div>
     <div id="nlist"></div>`;
   const draw=()=>{
@@ -1227,7 +1268,8 @@ document.getElementById("nav").addEventListener("click",e=>{
   document.querySelectorAll(".view").forEach(x=>x.classList.add("hidden"));
   b.classList.add("active");
   document.getElementById("view-"+b.dataset.tab).classList.remove("hidden");
-  const titles={hq:["Municipality","Select a municipality → candidate silo"],home:["Overview","Demo intelligence dossier · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message","Alvin Tedjo's affirmative case — sourced"],promises:["Promises","Auto-tracked once campaigning is official"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],council:["Council Record","Every dissent, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","The full declared mayoral field"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"]};
+  const _cand=(ACTIVE&&ACTIVE.cand)||"your candidate";
+  const titles={hq:["Municipality","Select a municipality → candidate silo"],home:["Overview",(ACTIVE&&ACTIVE.demo?"Demonstration dossier":"Intelligence dossier")+" · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message",_cand+"'s affirmative case — sourced"],promises:["Promises","Documented positions, tracked over time"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],council:["Council Record","Recorded votes, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","Every candidate in the race, grouped"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"]};
   document.getElementById("viewTitle").textContent=titles[b.dataset.tab][0];
   document.getElementById("viewCrumb").textContent=titles[b.dataset.tab][1];
   var ts=document.getElementById("tabscan"); if(ts){ ts.classList.remove("go"); void ts.offsetWidth; ts.classList.add("go"); }
@@ -1260,7 +1302,7 @@ function renderHQ(){
           const live=c.status==="live"&&c.url;
           return `<div class="hq-card ${live?'':'pending'}" data-muni="${esc(m)}" data-cand="${esc(name)}">
             <div class="hq-av">${esc(name.split(" ").map(x=>x[0]).join("").slice(0,2))}</div>
-            <div style="flex:1"><div style="font-weight:700">${esc(name)}</div>
+            <div style="flex:1"><div style="font-weight:700">${esc(name)} ${c.demo?'<span class="hq-demo">DEMONSTRATION</span>':''}</div>
               <div class="muted" style="font-size:12.5px">${esc(c.office||"")}</div></div>
             <span class="hq-status ${live?'on':''}">${live?'● LIVE':'○ not connected'}</span></div>`;}).join("")}
       </div>`).join("")}
@@ -1303,10 +1345,10 @@ function connectClient(muni, cand){
   const c=CLIENTS[muni].candidates[cand];
   SUPABASE_URL=c.url.replace(/\/+$/,""); SUPABASE_KEY=c.key;
   REST=SUPABASE_URL+"/rest/v1"; ROMULUS_FN=c.fn?SUPABASE_URL+"/functions/v1/"+c.fn:"";
-  ACTIVE={muni,cand,office:c.office};
-  document.getElementById("activeClient").innerHTML="Target: <b>"+esc(cand)+"</b><br>"+esc(muni)+" · "+esc(c.office||"");
+  ACTIVE={muni,cand,office:c.office,msgTable:c.msgTable||"candidate_messaging",council:c.council||COUNCIL_DEFAULT,demo:!!c.demo};
+  document.getElementById("activeClient").innerHTML=(c.demo?'<span style="color:var(--gold)">DEMONSTRATION</span><br>':'')+"Client: <b>"+esc(cand)+"</b><br>"+esc(muni)+" · "+esc(c.office||"");
   document.getElementById("conn").textContent="connecting…";
-  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={};
+  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="notable";
   chatHistory.length=0; const cl=document.getElementById("chatlog"); if(cl) cl.innerHTML="";
   document.querySelector('button[data-tab="home"]').click();
   init();                          // load the client's data behind the intro
