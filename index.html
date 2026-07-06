@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-112114';
+(function(){ var BUILD='20260706-115039';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-112114' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-115039' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -846,7 +846,18 @@ function asArr(v){ if(Array.isArray(v)) return v; if(v==null||v==="") return [];
   if(typeof v==="string"){ const s=v.trim(); if(s[0]==="["||s[0]==="{"){ try{ const p=JSON.parse(s); return Array.isArray(p)?p:[p]; }catch(e){} }
     return s.split(/[,;|]/).map(x=>x.trim()).filter(Boolean); }
   return [v]; }
-const tierClass = t => ({"very strong":"very","strong":"strong","medium":"medium","adequate":"adequate"}[String(t||"").toLowerCase()]||"adequate");
+// tiers arrive as "Very Strong" OR "VERY_STRONG"/"WEAK" depending on the silo — normalize both.
+const tierKey = t => String(t||"").toUpperCase().replace(/[\s-]+/g,"_");
+const tierRank = t => ({VERY_STRONG:0,STRONG:1,MEDIUM:2,ADEQUATE:3,WEAK:4}[tierKey(t)] ?? 5);
+const tierLabel = t => ({VERY_STRONG:"Very Strong",STRONG:"Strong",MEDIUM:"Medium",ADEQUATE:"Adequate",WEAK:"Weak"}[tierKey(t)] || String(t||""));
+const tierClass = t => (["very","strong","medium","adequate","adequate","adequate"][tierRank(t)] || "adequate");
+// Pull the first URL out of anything: array, object {url}, or a Python-repr string like "[{'url': 'https://…'}]".
+function firstUrl(v){
+  if(!v) return null;
+  if(Array.isArray(v)){ for(const x of v){ const u=firstUrl(x); if(u) return u; } return null; }
+  if(typeof v==="object"){ if(isUrl(v.url)) return v.url; if(isUrl(v.href)) return v.href; return firstUrl(Object.values(v)); }
+  const m=String(v).match(/https?:\/\/[^\s'"\]\)}>]+/); return m?m[0]:null;
+}
 const fmtD = s => { if(!s) return ""; const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s)); const d=m?new Date(+m[1],+m[2]-1,+m[3]):new Date(s); return isNaN(d)?String(s).slice(0,10):d.toLocaleDateString("en-CA",{year:"numeric",month:"short",day:"numeric"}); };
 async function api(path){ const r=await fetch(REST+path,{headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY}}); if(!r.ok) throw new Error("HTTP "+r.status+" "+path+" — "+(await r.text()).slice(0,160)); return r.json(); }
 async function count(t,q=""){ const r=await fetch(REST+"/"+t+"?select=id"+(q?"&"+q:""),{headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,Prefer:"count=exact",Range:"0-0"}}); const cr=r.headers.get("content-range"); return cr?parseInt(cr.split("/")[1]):0; }
@@ -921,9 +932,9 @@ function renderHome(){
       <div class="tile"><div class="n">${c.evidence}</div><div class="l">Evidence items</div></div>
     </div>
     <div class="sect-title">Top vulnerabilities</div>
-    ${S.attacks.filter(a=>["Very Strong","Strong"].includes(a.tier)).slice(0,4).map(a=>`
+    ${[...S.attacks].filter(a=>tierRank(a.tier)<=1).sort((a,b)=>tierRank(a.tier)-tierRank(b.tier)).slice(0,4).map(a=>`
       <div class="card"><div style="display:flex;gap:10px;align-items:center;margin-bottom:6px">
-        <span class="tier ${tierClass(a.tier)}">${esc(a.tier)}</span>
+        <span class="tier ${tierClass(a.tier)}">${esc(tierLabel(a.tier))}</span>
         <b>${esc(a.headline)}</b></div>
         <div class="muted" style="font-size:13px">${esc(a.body||"").slice(0,170)}…</div></div>`).join("")}
 
@@ -947,32 +958,43 @@ function renderHome(){
 }
 
 function renderAttacks(){
-  const order={"Very Strong":0,"Strong":1,"Medium":2,"Adequate":3};
-  const cards=[...S.attacks].sort((a,b)=>(order[a.tier]??9)-(order[b.tier]??9));
-  document.getElementById("view-attacks").innerHTML=`
-    <div class="pitch"><p style="margin:0">${cards.length} tiered opposition findings · each backed by a specific council resolution and a clickable primary source. Verification status shown per card.</p></div>
-    ${cards.map(a=>{
-      const src=asArr(a.source_citations).find(isUrl);
-      const ver=String(a.notes_verification||"").toUpperCase();
-      const vclass=/CONFIRM/.test(a.supporting_evidence||"")?"" : "";
-      return `<div class="atk">
-        <div class="hd"><div style="flex:1">
-          <h3>${esc(a.headline)}</h3>
-          <div class="meta"><span class="tier ${tierClass(a.tier)}">${esc(a.tier)}</span>
-          <span class="chip">${esc(a.issue_area||"")}</span></div>
-        </div></div>
-        <div class="bd">
-          <div>${esc(a.body||"")}</div>
-          ${a.supporting_evidence?`<div class="lbl">Primary-source record</div><div class="ev">${esc(a.supporting_evidence)}</div>`:""}
-          ${a.key_quote?`<div class="quote">"${esc(a.key_quote).slice(0,260)}…"</div>`:""}
-          ${a.recommended_use?`<div class="lbl">Suggested use</div><div class="muted">${esc(a.recommended_use)}</div>`:""}
-        </div>
-        <div class="foot">
-          <span>Audience: ${esc(a.audience||"—")} · Tone: ${esc(a.delivery_tone||"—")}</span>
-          ${src?`<a class="srcbtn" href="${esc(src)}" target="_blank" rel="noopener">View official minutes ↗</a>`:'<span class="chip">no direct link</span>'}
-        </div>
-      </div>`;}).join("")}
-  `;
+  const idm={}; S.candidates.forEach(c=>idm[c.id]={name:c.name, grp:c.office_group||"other"});
+  // group by TARGET candidate, then rank by tier (most lethal first)
+  const buckets={}, grp={}, order=[];
+  S.attacks.forEach(a=>{ const c=idm[a.target_candidate_id]||{}; const k=c.name||"Unattributed";
+    if(!buckets[k]){ buckets[k]=[]; grp[k]=c.grp||"other"; order.push(k); } buckets[k].push(a); });
+  Object.keys(buckets).forEach(k=>buckets[k].sort((a,b)=>tierRank(a.tier)-tierRank(b.tier)));
+  order.sort((a,b)=>(GROUP_RANK[grp[a]]??45)-(GROUP_RANK[grp[b]]??45) || buckets[b].length-buckets[a].length);
+  const OP=window.__op||"all";
+  const shown=(OP!=="all"&&buckets[OP])?[OP]:order;
+  const chip=(k,l,n)=>`<button class="fbtn ${OP===k?'on':''}" data-op="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
+  const raceOf=g=>({mayor:"Mayor",regional:"Regional",school_board:"School Board"}[g]||(/^ward(\d+)$/.test(g)?"Ward "+g.slice(4):""));
+  const linked=S.attacks.filter(a=>firstUrl(a.source_citations)).length;
+  const card=a=>{
+    const src=firstUrl(a.source_citations);
+    return `<div class="atk">
+      <div class="hd"><div style="flex:1">
+        <h3>${esc(a.headline)}</h3>
+        <div class="meta"><span class="tier ${tierClass(a.tier)}">${esc(tierLabel(a.tier))}</span>
+        <span class="chip">${esc(a.issue_area||"")}</span></div>
+      </div></div>
+      <div class="bd">
+        <div>${esc(a.body||"")}</div>
+        ${a.key_quote?`<div class="quote">"${esc(String(a.key_quote).slice(0,260))}…"</div>`:""}
+      </div>
+      <div class="foot">
+        <span>Audience: ${esc(a.audience||"—")} · Tone: ${esc(a.delivery_tone||"—")}</span>
+        ${src?`<a class="srcbtn" href="${esc(src)}" target="_blank" rel="noopener">📎 primary source ↗</a>`:'<span class="chip faint">no direct link</span>'}
+      </div>
+    </div>`; };
+  document.getElementById("view-attacks").innerHTML=
+    `<div class="pitch"><p style="margin:0"><b>${S.attacks.length}</b> opposition findings, organized by target and ranked most-lethal first (Very Strong → Weak). <b>${linked}</b> link to a primary source. Pick a rival to load their file.</p></div>`
+    + `<div class="fbar">${chip('all','All',S.attacks.length)}${order.map(k=>chip(k,k+(raceOf(grp[k])?" · "+raceOf(grp[k]):""),buckets[k].length)).join("")}</div>`
+    + shown.map(k=>{ const vs=buckets[k].filter(a=>tierRank(a.tier)<=1).length;
+        return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${raceOf(grp[k])?` <span class="chip">${esc(raceOf(grp[k]))}</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} findings · ${vs} strong+</span></div>`
+          + buckets[k].map(card).join(""); }).join("");
+  const vc=document.getElementById("view-attacks");
+  if(vc && !vc.__opBound){ vc.__opBound=true; vc.addEventListener("click",function(e){ const b=e.target.closest("button[data-op]"); if(!b) return; window.__op=b.dataset.op; renderAttacks(); var m=document.querySelector(".main"); if(m) m.scrollTo(0,0); }); }
 }
 
 function posCat(v){ v=String(v||"").toUpperCase();
@@ -986,6 +1008,7 @@ let _cg="all";
 let _ev="all";
 let _msgSec="all";
 let _pr="all";
+window.__op="all";
 // My Message: map raw messaging categories -> clean themed sections (case-insensitive)
 const MSG_SECTIONS = [
   {label:"Brand & Vision", short:"Brand", cats:["brand","pillar","bio","vision"]},
@@ -1152,7 +1175,8 @@ function renderMessage(){
   order.forEach(l=>buckets[l].sort((a,b)=>(+a.priority_order||99)-(+b.priority_order||99)));
   const shown=(_msgSec!=="all"&&buckets[_msgSec])?[_msgSec]:order;
   const chip=(k,l,n)=>`<button class="fbtn ${_msgSec===k?'on':''}" data-ms="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
-  const statTile=m=>`<div class="tile"><div class="n" style="font-size:20px">${esc(m.stat_value)}</div><div class="l">${esc(m.stat_label||m.title||"")}</div></div>`;
+  const statTile=m=>{ const inner=`<div class="n" style="font-size:20px">${esc(m.stat_value)}</div><div class="l">${esc(m.stat_label||m.title||"")}</div>${isUrl(m.source_url)?'<div class="faint" style="font-size:10px;margin-top:5px;color:var(--gold)">📎 source ↗</div>':''}`;
+    return isUrl(m.source_url)?`<a class="tile" href="${esc(m.source_url)}" target="_blank" rel="noopener" style="text-decoration:none;display:block">${inner}</a>`:`<div class="tile">${inner}</div>`; };
   const card=m=>{
     const title=(m.title||"").trim(), body=(m.body||"").trim();
     // Title-less items (bio lines, pillars, policy points) carry their content in body — show it directly.
@@ -1417,7 +1441,7 @@ function connectClient(muni, cand){
   ACTIVE={muni,cand,office:c.office,msgTable:c.msgTable||"candidate_messaging",council:c.council||COUNCIL_DEFAULT,demo:!!c.demo};
   document.getElementById("activeClient").innerHTML=(c.demo?'<span style="color:var(--gold)">DEMONSTRATION</span><br>':'')+"Client: <b>"+esc(cand)+"</b><br>"+esc(muni)+" · "+esc(c.office||"");
   document.getElementById("conn").textContent="connecting…";
-  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="notable"; _cg="all"; _ev="all"; _msgSec="all"; _pr="all";
+  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="notable"; _cg="all"; _ev="all"; _msgSec="all"; _pr="all"; window.__op="all";
   chatHistory.length=0; const cl=document.getElementById("chatlog"); if(cl) cl.innerHTML="";
   document.querySelector('button[data-tab="home"]').click();
   init();                          // load the client's data behind the intro
