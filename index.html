@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-121843';
+(function(){ var BUILD='20260706-133646';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-121843' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-133646' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -984,7 +984,7 @@ function renderAttacks(){
       </div>
       <div class="foot">
         <span>Audience: ${esc(a.audience||"—")} · Tone: ${esc(a.delivery_tone||"—")}</span>
-        ${src?`<a class="srcbtn" href="${esc(src)}" target="_blank" rel="noopener">📎 primary source ↗</a>`:'<span class="chip faint">no direct link</span>'}
+        ${src?`<a class="srcbtn" href="${esc(src)}" target="_blank" rel="noopener">📎 primary source ↗</a>`:'<span class="chip faint" title="Analytical inference (e.g. an absence of record) — no single citable source">analytical</span>'}
       </div>
     </div>`; };
   document.getElementById("view-attacks").innerHTML=
