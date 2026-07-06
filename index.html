@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-143357';
+(function(){ var BUILD='20260706-151023';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-143357' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-151023' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1010,6 +1010,7 @@ let _cg="all";
 let _ev="all";
 let _msgSec="all";
 let _pr="all";
+let _ward="All";
 window.__op="all";
 // My Message: map raw messaging categories -> clean themed sections (case-insensitive)
 const MSG_SECTIONS = [
@@ -1020,8 +1021,10 @@ const MSG_SECTIONS = [
   {label:"The Numbers", short:"Numbers", cats:["stat"]},
   {label:"Talking Points & Rebuttals", short:"Rebuttals", cats:["talking_point","hanna rebuttal 2026","faq","message","attack"]},
   {label:"Chamber Speech 2026", short:"Speech", cats:["chamber speech 2026"]},
+  {label:"Wards", short:"Wards", cats:["ward"]},
   {label:"Contact & Logistics", short:"Contact", cats:["contact"]},
 ];
+const WARD_LIST=["Ward 1","Ward 2","Ward 3","Ward 4","Ward 5","Ward 6","Ward 7","All"];
 function renderCouncil(){
   const who=((ACTIVE&&ACTIVE.cand)||"Candidate").split(" ").slice(-1)[0];
   const all=S.dissents.map(d=>({...d, cat:posCat(d.myVote)}))
@@ -1201,12 +1204,29 @@ function renderMessage(){
     + shown.map(l=>{
         const isNums=(l==="The Numbers");
         const items=buckets[l];
+        if(l==="Wards"){
+          const wardOf=m=>(m.subcategory||"Town-wide");
+          const counts={}; WARD_LIST.forEach(w=>counts[w]=0);
+          items.forEach(m=>{ const w=wardOf(m); if(w==="Town-wide") counts["All"]++; else if(counts[w]!=null) counts[w]++; });
+          const sel=WARD_LIST.includes(_ward)?_ward:"All";
+          // Ward view = that ward's items + town-wide; "All" = town-wide only.
+          const list=items.filter(m=>{ const w=wardOf(m); return sel==="All"?w==="Town-wide":(w===sel||w==="Town-wide"); })
+            .sort((a,b)=>((wardOf(a)==="Town-wide")-(wardOf(b)==="Town-wide"))||(+a.priority_order||99)-(+b.priority_order||99));
+          const opts=WARD_LIST.map(w=>`<option value="${esc(w)}" ${w===sel?"selected":""}>${w==="All"?"All — Town-wide":w+" ("+counts[w]+")"}</option>`).join("");
+          return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🗺️ Wards <span class="faint" style="font-weight:400;font-size:12px">· ${items.length} initiatives</span></div>`
+            + `<div class="pitch" style="margin-bottom:12px"><p style="margin:0 0 8px">Ward-specific and town-wide plans already underway — the local record and the future, ready for ward-level messaging.</p>`
+            + `<select id="wardsel" style="background:var(--bg2,#141821);color:var(--fg,#e8edf5);border:1px solid var(--line,#2a3140);border-radius:8px;padding:8px 12px;font-size:14px;font-weight:600">${opts}</select>`
+            + `<span class="faint" style="margin-left:10px;font-size:12px">${sel==="All"?"town-wide initiatives":"“"+sel+"” + town-wide"}</span></div>`
+            + (list.length?list.map(card).join(""):`<div class="muted" style="padding:12px">No cards yet for ${esc(sel)} — being populated.</div>`);
+        }
         return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">${esc(l)} <span class="faint" style="font-weight:400;font-size:12px">· ${items.length}</span></div>`
           + (isNums?`<div class="tiles">${items.filter(m=>m.stat_value).map(statTile).join("")}</div>`
                    :items.map(card).join(""));
       }).join("");
   const fb=document.querySelector("#view-message .fbar");
   if(fb) fb.onclick=e=>{ const b=e.target.closest("button[data-ms]"); if(!b)return; _msgSec=b.dataset.ms; renderMessage(); document.querySelector(".main").scrollTo(0,0); };
+  const wsel=document.getElementById("wardsel");
+  if(wsel) wsel.onchange=e=>{ _ward=e.target.value; renderMessage(); };
 }
 
 function promiseCard(p, candName){
@@ -1444,7 +1464,7 @@ function connectClient(muni, cand){
   ACTIVE={muni,cand,office:c.office,msgTable:c.msgTable||"candidate_messaging",council:c.council||COUNCIL_DEFAULT,demo:!!c.demo};
   document.getElementById("activeClient").innerHTML=(c.demo?'<span style="color:var(--gold)">DEMONSTRATION</span><br>':'')+"Client: <b>"+esc(cand)+"</b><br>"+esc(muni)+" · "+esc(c.office||"");
   document.getElementById("conn").textContent="connecting…";
-  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="all"; _cg="all"; _ev="all"; _msgSec="all"; _pr="all"; window.__op="all";
+  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="all"; _cg="all"; _ev="all"; _msgSec="all"; _pr="all"; _ward="All"; window.__op="all";
   chatHistory.length=0; const cl=document.getElementById("chatlog"); if(cl) cl.innerHTML="";
   document.querySelector('button[data-tab="home"]').click();
   init();                          // load the client's data behind the intro
