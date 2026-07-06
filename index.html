@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-120902';
+(function(){ var BUILD='20260706-121843';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-120902' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-121843' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1038,7 +1038,8 @@ function renderCouncil(){
     document.getElementById("ctbody").innerHTML=list.slice(0,600).map(r=>councilRow(r,who)).join("")
       ||'<tr><td colspan="5" class="muted" style="padding:16px">No matching votes.</td></tr>'; };
   document.getElementById("csearch").oninput=draw;
-  document.querySelector(".fbar").onclick=e=>{ const b=e.target.closest("button[data-f]"); if(!b)return; _cf=b.dataset.f; renderCouncil(); };
+  const cvc=document.getElementById("view-council");
+  if(cvc && !cvc.__cfBound){ cvc.__cfBound=true; cvc.addEventListener("click",function(e){ const b=e.target.closest("button[data-f]"); if(!b) return; _cf=b.dataset.f; renderCouncil(); var m=document.querySelector(".main"); if(m) m.scrollTo(0,0); }); }
   draw();
 }
 function councilRow(r, who){
