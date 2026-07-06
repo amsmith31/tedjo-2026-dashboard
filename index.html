@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-110012';
+(function(){ var BUILD='20260706-111506';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-110012' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-111506' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1152,18 +1152,19 @@ function renderMessage(){
   const shown=(_msgSec!=="all"&&buckets[_msgSec])?[_msgSec]:order;
   const chip=(k,l,n)=>`<button class="fbtn ${_msgSec===k?'on':''}" data-ms="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
   const statTile=m=>`<div class="tile"><div class="n" style="font-size:20px">${esc(m.stat_value)}</div><div class="l">${esc(m.stat_label||m.title||"")}</div></div>`;
-  const card=m=>`
-    <div class="card">
-      <div style="display:flex;gap:10px;align-items:baseline;margin-bottom:${m.body?"6px":"0"};flex-wrap:wrap">
-        <b style="font-size:15px;flex:1;min-width:180px">${esc(m.title||"(untitled)")}</b>
-        ${m.subcategory?`<span class="chip">${esc(m.subcategory)}</span>`:""}
-      </div>
-      ${m.body?`<div class="muted" style="line-height:1.55">${esc(m.body)}</div>`:""}
-      ${(m.stat_value&&m.stat_label)?`<div style="font-size:12.5px;margin-top:6px">▸ <b style="color:var(--gold)">${esc(m.stat_value)}</b> <span class="muted">${esc(m.stat_label)}</span></div>`:""}
-      <div class="faint" style="font-size:12px;margin-top:8px">
-        ${isUrl(m.source_url)?`<a href="${esc(m.source_url)}" target="_blank" rel="noopener">📎 ${esc(m.source_label||"primary source")} ↗</a>`:(m.source_label?esc(m.source_label):'<span class="faint">— source not yet linked</span>')}
-      </div>
-    </div>`;
+  const card=m=>{
+    const title=(m.title||"").trim(), body=(m.body||"").trim();
+    // Title-less items (bio lines, pillars, policy points) carry their content in body — show it directly.
+    const head = title
+      ? `<div style="display:flex;gap:10px;align-items:baseline;margin-bottom:${body?"6px":"0"};flex-wrap:wrap"><b style="font-size:15px;flex:1;min-width:180px">${esc(title)}</b>${m.subcategory?`<span class="chip">${esc(m.subcategory)}</span>`:""}</div>${body?`<div class="muted" style="line-height:1.55">${esc(body)}</div>`:""}`
+      : `<div style="font-size:14.5px;line-height:1.55">${esc(body||"—")}</div>${m.subcategory?`<div style="margin-top:7px"><span class="chip">${esc(m.subcategory)}</span></div>`:""}`;
+    const stat=(m.stat_value&&m.stat_label)?`<div style="font-size:12.5px;margin-top:6px">▸ <b style="color:var(--gold)">${esc(m.stat_value)}</b> <span class="muted">${esc(m.stat_label)}</span></div>`:"";
+    // Only render a source line when there's something to show — no "unlinked" clutter on brand/bio statements.
+    const src=isUrl(m.source_url)
+      ? `<div style="font-size:12px;margin-top:8px"><a href="${esc(m.source_url)}" target="_blank" rel="noopener">📎 ${esc(m.source_label||"primary source")} ↗</a></div>`
+      : (m.source_label?`<div class="faint" style="font-size:12px;margin-top:8px">${esc(m.source_label)}</div>`:"");
+    return `<div class="card">${head}${stat}${src}</div>`;
+  };
   const sourced=S.message.filter(m=>isUrl(m.source_url)).length;
   document.getElementById("view-message").innerHTML=
     `<div class="pitch"><h3>The affirmative case for ${esc(cand)}</h3>
