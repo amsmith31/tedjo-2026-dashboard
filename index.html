@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-151023';
+(function(){ var BUILD='20260706-152338';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-151023' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-152338' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -98,6 +98,8 @@
   .tile .n{font-size:30px;font-weight:800;color:var(--gold);line-height:1}
   .tile .l{font-size:12px;color:var(--muted);margin-top:6px;letter-spacing:.3px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:18px 20px;margin-bottom:14px}
+  #view-message .card{border:1px solid rgba(224,184,76,.38);border-left:4px solid var(--gold);box-shadow:0 1px 0 rgba(224,184,76,.06)}
+  #view-message .card a[href]{color:var(--gold)}
   .pitch{background:linear-gradient(135deg,#111823,#0d1a17);border:1px solid var(--line);border-left:3px solid var(--gold);
     border-radius:10px;padding:18px 22px;margin-bottom:22px;color:var(--text)}
   .pitch h3{margin:0 0 8px;color:var(--gold);font-size:15px}
