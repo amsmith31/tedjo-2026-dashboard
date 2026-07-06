@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-133646';
+(function(){ var BUILD='20260706-143357';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-133646' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-143357' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -958,6 +958,8 @@ function renderHome(){
 }
 
 function renderAttacks(){
+  // Strategic-alliance flags: a target who is a known ally of a mayoral rival (name-keyed → scoped per silo).
+  const ALLIES={"Jonathan McNeice":"Sean O'Meara"};
   const idm={}; S.candidates.forEach(c=>idm[c.id]={name:c.name, grp:c.office_group||"other"});
   // group by TARGET candidate, then rank by tier (most lethal first)
   const buckets={}, grp={}, order=[];
@@ -991,7 +993,7 @@ function renderAttacks(){
     `<div class="pitch"><p style="margin:0"><b>${S.attacks.length}</b> opposition findings, organized by target and ranked most-lethal first (Very Strong → Weak). <b>${linked}</b> link to a primary source. Pick a rival to load their file.</p></div>`
     + `<div class="fbar">${chip('all','All',S.attacks.length)}${order.map(k=>chip(k,k+(raceOf(grp[k])?" · "+raceOf(grp[k]):""),buckets[k].length)).join("")}</div>`
     + shown.map(k=>{ const vs=buckets[k].filter(a=>tierRank(a.tier)<=1).length;
-        return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${raceOf(grp[k])?` <span class="chip">${esc(raceOf(grp[k]))}</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} findings · ${vs} strong+</span></div>`
+        return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${raceOf(grp[k])?` <span class="chip">${esc(raceOf(grp[k]))}</span>`:""}${ALLIES[k]?` <span class="chip" style="background:rgba(220,40,40,.16);color:var(--red);border-color:rgba(220,40,40,.35)" title="Strategic ally of a mayoral rival — damaging this target indirectly weakens ${esc(ALLIES[k])}">⚑ ${esc(ALLIES[k])} ally</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} findings · ${vs} strong+</span></div>`
           + buckets[k].map(card).join(""); }).join("");
   const vc=document.getElementById("view-attacks");
   if(vc && !vc.__opBound){ vc.__opBound=true; vc.addEventListener("click",function(e){ const b=e.target.closest("button[data-op]"); if(!b) return; window.__op=b.dataset.op; renderAttacks(); var m=document.querySelector(".main"); if(m) m.scrollTo(0,0); }); }
