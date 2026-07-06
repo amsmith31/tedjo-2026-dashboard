@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-111506';
+(function(){ var BUILD='20260706-112114';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-111506' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-112114' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -985,6 +985,7 @@ let _cf="notable";
 let _cg="all";
 let _ev="all";
 let _msgSec="all";
+let _pr="all";
 // My Message: map raw messaging categories -> clean themed sections (case-insensitive)
 const MSG_SECTIONS = [
   {label:"Brand & Vision", short:"Brand", cats:["brand","pillar","bio","vision"]},
@@ -1195,36 +1196,31 @@ function promiseCard(p, candName){
   </div>`;
 }
 function renderPromises(){
-  const now=new Date(), locked=now<FILING_DEADLINE;
+  if(window._pcd){ clearInterval(window._pcd); window._pcd=null; }
   const box=document.getElementById("view-promises");
-  const idn={}; S.candidates.forEach(c=>idn[c.id]=c.name);
-  // Show real data whenever it exists — the lock is only a placeholder for empty silos.
-  if(S.promises.length){
-    box.innerHTML=`<div class="pitch"><p style="margin:0"><b>${S.promises.length}</b> documented positions &amp; promises tracked, each linked to source.</p></div>`+S.promises.map(p=>promiseCard(p,idn[p.candidate_id])).join("");
+  const idc={}; S.candidates.forEach(c=>idc[c.id]={name:c.name, grp:c.office_group||"other"});
+  if(!S.promises.length){
+    box.innerHTML=`<div class="card" style="text-align:center;border-color:var(--gold-dim)">
+      <div style="font-size:13px;letter-spacing:1px;color:var(--faint)">PROMISE TRACKER</div>
+      <div class="muted" style="margin-top:8px">No promises captured for this client yet. Once campaigns are active, every candidate promise (from news + campaign channels) is auto-captured here — attributed, sourced, and tracked kept / broken / in-progress.</div></div>`;
     return;
   }
-  if(!locked){
-    box.innerHTML=`<div class="pitch"><p style="margin:0">Live promise tracking is active. ${S.promises.length} tracked.</p></div>`+S.promises.map(promiseCard).join("");
-    return;
-  }
-  box.innerHTML=`
-    <div class="card" style="text-align:center;border-color:var(--gold-dim)">
-      <div style="font-size:13px;letter-spacing:1px;color:var(--faint)">PROMISE TRACKER UNLOCKS AT NOMINATION DEADLINE</div>
-      <div id="pcd" style="font-size:34px;font-weight:800;color:var(--gold);margin:10px 0">—</div>
-      <div class="muted">Aug 21, 2026 · 2:00 PM ET — once campaigning is official, every candidate promise (from news + campaign channels) is auto-captured here, attributed, sourced, and tracked kept / broken / in-progress.</div>
-      <button id="pprev" class="srcbtn" style="margin-top:14px;cursor:pointer">▸ Preview ${S.promises.length} staged records</button>
-    </div>
-    <div id="pstaged" class="hidden"></div>`;
-  const cd=()=>{ const ms=FILING_DEADLINE-new Date(); if(ms<=0){renderPromises();return;}
-    const d=Math.floor(ms/86400000),h=Math.floor(ms/3600000)%24,m=Math.floor(ms/60000)%60,s=Math.floor(ms/1000)%60;
-    const el=document.getElementById("pcd"); if(el) el.textContent=`${d}d ${h}h ${m}m ${s}s`; };
-  cd(); if(window._pcd) clearInterval(window._pcd); window._pcd=setInterval(cd,1000);
-  document.getElementById("pprev").onclick=()=>{
-    const st=document.getElementById("pstaged");
-    st.classList.remove("hidden");
-    st.innerHTML=`<div class="sect-title" style="margin-top:20px">Staged records (pre-writ documented positions)</div>`+S.promises.map(promiseCard).join("");
-    document.getElementById("pprev").style.display="none";
-  };
+  // group promises by candidate — one tab each
+  const buckets={}, grp={}, order=[];
+  S.promises.forEach(p=>{ const c=idc[p.candidate_id]||{}; const k=c.name||"Unattributed";
+    if(!buckets[k]){ buckets[k]=[]; grp[k]=c.grp||"other"; order.push(k); } buckets[k].push(p); });
+  order.sort((a,b)=>(GROUP_RANK[grp[a]]??45)-(GROUP_RANK[grp[b]]??45) || buckets[b].length-buckets[a].length);
+  const shown=(_pr!=="all"&&buckets[_pr])?[_pr]:order;
+  const chip=(k,l,n)=>`<button class="fbtn ${_pr===k?'on':''}" data-pr="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
+  const raceOf=g=>({mayor:"Mayor",regional:"Regional",school_board:"School Board"}[g]||(/^ward(\d+)$/.test(g)?"Ward "+g.slice(4):""));
+  const sourced=S.promises.filter(p=>isUrl(p.source_url)).length;
+  box.innerHTML=
+    `<div class="pitch"><p style="margin:0"><b>${S.promises.length}</b> tracked promises across <b>${order.length}</b> candidates — <b>${sourced}</b> linked to a primary source. Pick a candidate to see everything they've pledged. <span class="faint">After the Aug 21 nomination deadline, new campaign promises are auto-captured, attributed and sourced.</span></p></div>`
+    + `<div class="fbar">${chip('all','All',S.promises.length)}${order.map(k=>chip(k,k+(raceOf(grp[k])?" · "+raceOf(grp[k]):""),buckets[k].length)).join("")}</div>`
+    + shown.map(k=>`<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🗳️ ${esc(k)}${raceOf(grp[k])?` <span class="chip">${esc(raceOf(grp[k]))}</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} promises</span></div>`
+        + buckets[k].map(p=>promiseCard(p)).join("")).join("");
+  const fb=document.querySelector("#view-promises .fbar");
+  if(fb) fb.onclick=e=>{ const b=e.target.closest("button[data-pr]"); if(!b)return; _pr=b.dataset.pr; renderPromises(); document.querySelector(".main").scrollTo(0,0); };
 }
 
 function renderNews(){
@@ -1421,7 +1417,7 @@ function connectClient(muni, cand){
   ACTIVE={muni,cand,office:c.office,msgTable:c.msgTable||"candidate_messaging",council:c.council||COUNCIL_DEFAULT,demo:!!c.demo};
   document.getElementById("activeClient").innerHTML=(c.demo?'<span style="color:var(--gold)">DEMONSTRATION</span><br>':'')+"Client: <b>"+esc(cand)+"</b><br>"+esc(muni)+" · "+esc(c.office||"");
   document.getElementById("conn").textContent="connecting…";
-  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="notable"; _cg="all"; _ev="all"; _msgSec="all";
+  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="notable"; _cg="all"; _ev="all"; _msgSec="all"; _pr="all";
   chatHistory.length=0; const cl=document.getElementById("chatlog"); if(cl) cl.innerHTML="";
   document.querySelector('button[data-tab="home"]').click();
   init();                          // load the client's data behind the intro
