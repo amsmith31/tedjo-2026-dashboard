@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-153854';
+(function(){ var BUILD='20260706-154113';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-153854' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-154113' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1218,7 +1218,7 @@ function renderMessage(){
             return ``; };
           const wcard=m=>{ const w=wardOf(m);
             return `<div class="card">
-              <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">${statusChip(m)}<span class="chip" style="${w==="Town-wide"?"opacity:.7":""}">${w==="Town-wide"?"Town-wide":esc(w)}</span></div>
+              <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">${w==="Town-wide"?`<span class="chip" style="opacity:.7">🌐 Town-wide</span>`:statusChip(m)+`<span class="chip">${esc(w)}</span>`}</div>
               <b style="font-size:15px">${esc(m.title||"")}</b>
               ${m.body?`<div class="muted" style="line-height:1.55;margin-top:6px">${esc(m.body)}</div>`:""}
               ${isUrl(m.source_url)?`<div style="font-size:12px;margin-top:9px"><a href="${esc(m.source_url)}" target="_blank" rel="noopener">📎 ${esc(m.source_label||"primary source")} ↗</a></div>`:""}
