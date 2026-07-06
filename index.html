@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-160359';
+(function(){ var BUILD='20260706-170916';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-160359' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-170916' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1201,7 +1201,7 @@ function renderMessage(){
   const sourced=S.message.filter(m=>isUrl(m.source_url)).length;
   document.getElementById("view-message").innerHTML=
     `<div class="pitch"><h3>The affirmative case for ${esc(cand)}</h3>
-      <p>${esc(cand)}'s brand, 20-year record, accomplishments and platform — the message to lead with, organized by theme. <b>${sourced}</b> of ${S.message.length} claims link to a primary source.</p></div>`
+      <p>${esc(cand)}'s brand, record, accomplishments and platform — the message to lead with, organized by theme. <b>${sourced}</b> of ${S.message.length} claims link to a primary source.</p></div>`
     + `<div class="fbar">${chip('all','All',S.message.length)}${order.map(l=>chip(l,shortOf[l]||l,buckets[l].length)).join("")}</div>`
     + shown.map(l=>{
         const isNums=(l==="The Numbers");
