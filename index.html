@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-170955';
+(function(){ var BUILD='20260706-171801';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-170955' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-171801' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1231,7 +1231,7 @@ function renderMessage(){
           const townwide=items.filter(m=>wardOf(m)==="Town-wide").sort((a,b)=>(+a.priority_order||99)-(+b.priority_order||99));
           const opts=WARDS.map(w=>`<option value="${esc(w)}" ${w===sel?"selected":""}>${w==="All"?"All — Town-wide ("+counts["All"]+")":w+" ("+counts[w]+")"}</option>`).join("");
           const sub=(t)=>`<div class="sect-title" style="margin:20px 0 10px;font-size:14px;color:var(--gold)">${t}</div>`;
-          let out=`<div class="sect-title" style="margin:22px 0 6px;font-size:15px;color:var(--gold)">🗺️ Wards <span class="faint" style="font-weight:400;font-size:12px">· pick a ward to see what ${esc(cand)} delivered and what is coming</span></div>`
+          let out=`<div class="sect-title" style="margin:22px 0 6px;font-size:15px;color:var(--gold)">🗺️ Wards <span class="faint" style="font-weight:400;font-size:12px">· pick a ward to see what's delivered, underway and planned</span></div>`
             + `<div class="pitch" style="margin-bottom:6px"><p style="margin:0 0 8px">A clear plan for every neighbourhood — what has been <b style="color:#3fb950">delivered</b>, what is <b style="color:var(--gold)">underway</b>, and what is <b style="color:#5aa9ff">planned</b>, drawn from the city's current master plans and budget.</p>`
             + `<select id="wardsel" style="background:#141821;color:#e8edf5;border:1px solid #2a3140;border-radius:8px;padding:8px 12px;font-size:14px;font-weight:600">${opts}</select></div>`;
           if(sel==="All"){ out+=sub("🌐 Town-wide initiatives")+ (townwide.length?townwide.map(wcard).join(""):""); }
