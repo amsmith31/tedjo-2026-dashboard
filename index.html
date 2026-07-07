@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-203334';
+(function(){ var BUILD='20260706-205218';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-203334' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-205218' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1256,32 +1256,39 @@ function chartBlock(m){
   let cfg=null; try{ cfg=JSON.parse(m.notes||m.body||"null"); }catch(e){}
   if(!cfg||!cfg.datasets) return "";
   const id="chart_"+String(m.claim_key||m.id||"c").replace(/[^a-z0-9]/gi,"");
+  const srcRow = (Array.isArray(cfg.sources)&&cfg.sources.length)
+    ? `<div style="font-size:11.5px;margin-top:10px;line-height:1.7"><span class="faint">Sources: </span>${cfg.sources.map(s=>isUrl(s.url)?`<a href="${esc(s.url)}" target="_blank" rel="noopener" style="color:var(--gold)">${esc(s.label)} ↗</a>`:esc(s.label)).join(" &middot; ")}</div>`
+    : (isUrl(m.source_url)?`<div style="font-size:12px;margin-top:10px"><a href="${esc(m.source_url)}" target="_blank" rel="noopener">📎 ${esc(m.source_label||"primary source")} ↗</a></div>`:"");
   return `<div class="card" style="border:1px solid rgba(224,184,76,.38);border-left:4px solid var(--gold)">
     <b style="font-size:15px">${esc(m.title||"")}</b>
     ${m.subcategory?`<div class="muted" style="font-size:12.5px;line-height:1.5;margin:5px 0 10px">${esc(m.subcategory)}</div>`:""}
     <div style="position:relative;height:300px;margin-top:6px"><canvas id="${id}" data-chart='${esc(JSON.stringify(cfg))}' role="img" aria-label="${esc(m.title||"chart")}"></canvas></div>
-    ${isUrl(m.source_url)?`<div style="font-size:12px;margin-top:10px"><a href="${esc(m.source_url)}" target="_blank" rel="noopener">📎 ${esc(m.source_label||"primary source")} ↗</a></div>`:""}
+    ${srcRow}
   </div>`;
 }
 // Instantiate Chart.js on any canvas[data-chart] not yet drawn — themed gold/dark. No-op if Chart.js failed to load.
+// cfg: {type:"line"|"bar", labels, yPrefix, yUnit, pointNotes[], sources[], datasets:[{label,data,color,fill,dash}]}
 function initChartsIn(root){
   if(!root||typeof Chart==="undefined") return;
   const GOLD="#e0b84c", GREY="#8a94a6", TICK="#9aa4b2", GRID="rgba(255,255,255,0.08)";
   root.querySelectorAll("canvas[data-chart]").forEach(function(cv){
     if(cv.__charted) return; cv.__charted=true;
     let cfg; try{ cfg=JSON.parse(cv.dataset.chart); }catch(e){ return; }
-    const ds=(cfg.datasets||[]).map(function(d,i){ return {
-      label:d.label, data:d.data,
-      borderColor:d.color||(i===0?GOLD:GREY),
-      backgroundColor:d.fill?(i===0?"rgba(224,184,76,0.13)":"rgba(138,148,166,0.10)"):"transparent",
-      borderWidth:2, borderDash:d.dash?[5,4]:[], tension:0.3, fill:!!d.fill, pointRadius:0, pointHoverRadius:5 }; });
-    const u=cfg.yUnit||"";
-    try{ new Chart(cv,{ type:cfg.type||"line",
+    const type=cfg.type||"line", pre=cfg.yPrefix||"", u=cfg.yUnit||"";
+    const fmt=function(v){ return (v==null)?"—":pre+v+u; };
+    const isBar=(type==="bar");
+    const ds=(cfg.datasets||[]).map(function(d,i){
+      const col=d.color||(i===0?GOLD:GREY);
+      if(isBar) return {label:d.label, data:d.data, backgroundColor:col, borderColor:"rgba(0,0,0,0)", borderWidth:0, borderRadius:4, maxBarThickness:40};
+      return {label:d.label, data:d.data, borderColor:col,
+        backgroundColor:d.fill?(i===0?"rgba(224,184,76,0.13)":"rgba(138,148,166,0.10)"):"transparent",
+        borderWidth:2, borderDash:d.dash?[5,4]:[], tension:0.3, fill:!!d.fill, pointRadius:0, pointHoverRadius:5}; });
+    try{ new Chart(cv,{ type:type,
       data:{labels:cfg.labels, datasets:ds},
       options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
-        plugins:{legend:{labels:{color:TICK,usePointStyle:true,boxWidth:8,font:{size:12}}},
-          tooltip:{callbacks:{label:function(c){return c.dataset.label+": "+(c.parsed.y==null?"—":c.parsed.y+u)}}}},
-        scales:{ y:{ticks:{color:TICK,callback:function(v){return v+u}},grid:{color:GRID}},
+        plugins:{legend:{display:ds.length>1,labels:{color:TICK,usePointStyle:true,boxWidth:8,font:{size:12}}},
+          tooltip:{callbacks:{label:function(c){ var note=(cfg.pointNotes&&cfg.pointNotes[c.dataIndex])?"  ("+cfg.pointNotes[c.dataIndex]+")":""; return c.dataset.label+": "+fmt(c.parsed.y)+note; }}}},
+        scales:{ y:{beginAtZero:isBar,ticks:{color:TICK,callback:function(v){return fmt(v)}},grid:{color:GRID}},
                  x:{ticks:{color:TICK,autoSkip:true,maxRotation:0},grid:{display:false}} }
       }});
     }catch(e){ console.warn("chart",e); }
