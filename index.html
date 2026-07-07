@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-212312';
+(function(){ var BUILD='20260706-231142';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-212312' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-231142' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -850,7 +850,8 @@ function asArr(v){ if(Array.isArray(v)) return v; if(v==null||v==="") return [];
     return s.split(/[,;|]/).map(x=>x.trim()).filter(Boolean); }
   return [v]; }
 // tiers arrive as "Very Strong" OR "VERY_STRONG"/"WEAK" depending on the silo — normalize both.
-const tierKey = t => String(t||"").toUpperCase().replace(/[\s-]+/g,"_");
+const NUM2TIER = {1:"VERY_STRONG",2:"STRONG",3:"MEDIUM",4:"WEAK",5:"ADEQUATE"};  // some silos store tier as an integer (1=strongest)
+const tierKey = t => { const s=String(t==null?"":t).trim(); return /^\d+$/.test(s) ? (NUM2TIER[+s]||"MEDIUM") : s.toUpperCase().replace(/[\s-]+/g,"_"); };
 const tierRank = t => ({VERY_STRONG:0,STRONG:1,MEDIUM:2,ADEQUATE:3,WEAK:4}[tierKey(t)] ?? 5);
 const tierLabel = t => ({VERY_STRONG:"Very Strong",STRONG:"Strong",MEDIUM:"Medium",ADEQUATE:"Adequate",WEAK:"Weak"}[tierKey(t)] || String(t||""));
 const tierClass = t => (["very","strong","medium","adequate","adequate","adequate"][tierRank(t)] || "adequate");
