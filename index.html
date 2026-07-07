@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-171801';
+(function(){ var BUILD='20260706-203334';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-171801' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-203334' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -405,6 +405,7 @@
   @media (max-width:820px){ .ld-stats{grid-template-columns:repeat(2,1fr)} .ld-what2{grid-template-columns:1fr} .ld-steps{grid-template-columns:1fr} }
   @media (prefers-reduced-motion:reduce){.intro-logo,#intro-enter,.intro-bg span,.ld-hero-aurora span{animation:none}#intro-enter{opacity:1;transform:none}}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 </head>
 <body>
   <div id="intro">
@@ -1020,7 +1021,7 @@ const MSG_SECTIONS = [
   {label:"Why Re-elect — Legacy", short:"Legacy", cats:["legacy","burton legacy 20-year","record","honour","wccd"]},
   {label:"Record & Accomplishments", short:"Accomplishments", cats:["achievement","strategic_plan"]},
   {label:"Platform & Promises", short:"Platform", cats:["policy","policy_detail","fiscal","promise","priority"]},
-  {label:"The Numbers", short:"Numbers", cats:["stat"]},
+  {label:"The Numbers", short:"Numbers", cats:["stat","chart"]},
   {label:"Talking Points & Rebuttals", short:"Rebuttals", cats:["talking_point","hanna rebuttal 2026","faq","message","attack"]},
   {label:"Chamber Speech 2026", short:"Speech", cats:["chamber speech 2026"]},
   {label:"Wards", short:"Wards", cats:["ward"]},
@@ -1240,13 +1241,51 @@ function renderMessage(){
           return out;
         }
         return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">${esc(l)} <span class="faint" style="font-weight:400;font-size:12px">· ${items.length}</span></div>`
-          + (isNums?`<div class="tiles">${items.filter(m=>m.stat_value).map(statTile).join("")}</div>`
+          + (isNums? items.filter(m=>String(m.category).toLowerCase()==="chart").map(chartBlock).join("")
+                     + `<div class="tiles">${items.filter(m=>m.stat_value).map(statTile).join("")}</div>`
                    :items.map(card).join(""));
       }).join("");
   const fb=document.querySelector("#view-message .fbar");
   if(fb) fb.onclick=e=>{ const b=e.target.closest("button[data-ms]"); if(!b)return; _msgSec=b.dataset.ms; renderMessage(); document.querySelector(".main").scrollTo(0,0); };
   const wsel=document.getElementById("wardsel");
   if(wsel) wsel.onchange=e=>{ _ward=e.target.value; renderMessage(); };
+  initChartsIn(document.getElementById("view-message"));
+}
+// Chart card: a messaging row with category="chart" and a Chart.js config JSON in `notes` (or `body`).
+function chartBlock(m){
+  let cfg=null; try{ cfg=JSON.parse(m.notes||m.body||"null"); }catch(e){}
+  if(!cfg||!cfg.datasets) return "";
+  const id="chart_"+String(m.claim_key||m.id||"c").replace(/[^a-z0-9]/gi,"");
+  return `<div class="card" style="border:1px solid rgba(224,184,76,.38);border-left:4px solid var(--gold)">
+    <b style="font-size:15px">${esc(m.title||"")}</b>
+    ${m.subcategory?`<div class="muted" style="font-size:12.5px;line-height:1.5;margin:5px 0 10px">${esc(m.subcategory)}</div>`:""}
+    <div style="position:relative;height:300px;margin-top:6px"><canvas id="${id}" data-chart='${esc(JSON.stringify(cfg))}' role="img" aria-label="${esc(m.title||"chart")}"></canvas></div>
+    ${isUrl(m.source_url)?`<div style="font-size:12px;margin-top:10px"><a href="${esc(m.source_url)}" target="_blank" rel="noopener">📎 ${esc(m.source_label||"primary source")} ↗</a></div>`:""}
+  </div>`;
+}
+// Instantiate Chart.js on any canvas[data-chart] not yet drawn — themed gold/dark. No-op if Chart.js failed to load.
+function initChartsIn(root){
+  if(!root||typeof Chart==="undefined") return;
+  const GOLD="#e0b84c", GREY="#8a94a6", TICK="#9aa4b2", GRID="rgba(255,255,255,0.08)";
+  root.querySelectorAll("canvas[data-chart]").forEach(function(cv){
+    if(cv.__charted) return; cv.__charted=true;
+    let cfg; try{ cfg=JSON.parse(cv.dataset.chart); }catch(e){ return; }
+    const ds=(cfg.datasets||[]).map(function(d,i){ return {
+      label:d.label, data:d.data,
+      borderColor:d.color||(i===0?GOLD:GREY),
+      backgroundColor:d.fill?(i===0?"rgba(224,184,76,0.13)":"rgba(138,148,166,0.10)"):"transparent",
+      borderWidth:2, borderDash:d.dash?[5,4]:[], tension:0.3, fill:!!d.fill, pointRadius:0, pointHoverRadius:5 }; });
+    const u=cfg.yUnit||"";
+    try{ new Chart(cv,{ type:cfg.type||"line",
+      data:{labels:cfg.labels, datasets:ds},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},
+        plugins:{legend:{labels:{color:TICK,usePointStyle:true,boxWidth:8,font:{size:12}}},
+          tooltip:{callbacks:{label:function(c){return c.dataset.label+": "+(c.parsed.y==null?"—":c.parsed.y+u)}}}},
+        scales:{ y:{ticks:{color:TICK,callback:function(v){return v+u}},grid:{color:GRID}},
+                 x:{ticks:{color:TICK,autoSkip:true,maxRotation:0},grid:{display:false}} }
+      }});
+    }catch(e){ console.warn("chart",e); }
+  });
 }
 
 function promiseCard(p, candName){
