@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260706-205218';
+(function(){ var BUILD='20260706-212312';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260706-205218' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260706-212312' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1277,9 +1277,10 @@ function initChartsIn(root){
     const type=cfg.type||"line", pre=cfg.yPrefix||"", u=cfg.yUnit||"";
     const fmt=function(v){ return (v==null)?"—":pre+v+u; };
     const isBar=(type==="bar");
+    const hexA=function(h,a){ h=String(h||"").replace("#",""); if(h.length===3) h=h.split("").map(function(c){return c+c;}).join(""); const n=parseInt(h,16); return "rgba("+((n>>16)&255)+","+((n>>8)&255)+","+(n&255)+","+a+")"; };
     const ds=(cfg.datasets||[]).map(function(d,i){
       const col=d.color||(i===0?GOLD:GREY);
-      if(isBar) return {label:d.label, data:d.data, backgroundColor:col, borderColor:"rgba(0,0,0,0)", borderWidth:0, borderRadius:4, maxBarThickness:40};
+      if(isBar) return {label:d.label, data:d.data, backgroundColor:hexA(col,0.14), borderColor:col, borderWidth:2, borderRadius:4, borderSkipped:false, maxBarThickness:40};
       return {label:d.label, data:d.data, borderColor:col,
         backgroundColor:d.fill?(i===0?"rgba(224,184,76,0.13)":"rgba(138,148,166,0.10)"):"transparent",
         borderWidth:2, borderDash:d.dash?[5,4]:[], tension:0.3, fill:!!d.fill, pointRadius:0, pointHoverRadius:5}; });
