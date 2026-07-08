@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260708-135548';
+(function(){ var BUILD='20260708-142317';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260708-135548' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260708-142317' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1054,6 +1054,7 @@ let _ward="All";
 let _councilCand="";
 let _cissue="all";
 let _social="all";
+let _socRace="all";
 window.__op="all";
 // My Message: map raw messaging categories -> clean themed sections (case-insensitive)
 const MSG_SECTIONS = [
@@ -1191,26 +1192,36 @@ function postCard(p){
     </div></div>`;
 }
 function renderSocial(){
-  const idm={}; S.candidates.forEach(c=>idm[c.id]=c.name||"?");
-  const byC={}; (S.social||[]).forEach(p=>{ (byC[p.candidate_id]=byC[p.candidate_id]||[]).push(p); });
-  const groups=Object.keys(byC).map(cid=>({cid, name:idm[cid]||"Unknown",
-      posts:byC[cid].sort((a,b)=>String(b.posted_at||"").localeCompare(String(a.posted_at||"")))}));
-  groups.sort((a,b)=>String(b.posts[0].posted_at||"").localeCompare(String(a.posts[0].posted_at||"")));
-  const sel=groups.some(g=>g.cid===_social)?_social:"all";
   const el=document.getElementById("view-social"); if(!el) return;
-  if(!groups.length){ el.innerHTML='<div class="pitch"><p style="margin:0">No social posts captured yet for this silo. Once the daily social scraper runs, each candidate’s public posts appear here — every one linked to its source.</p></div>'; return; }
-  const last=(g)=>g.posts[0].posted_at;
-  const chip=(k,l,n)=>`<button class="fbtn ${sel===k?'on':''}" data-soc="${esc(k)}">${esc(l)}${n!=null?" ("+n+")":""}</button>`;
-  const shown=sel==="all"?groups:groups.filter(g=>g.cid===sel);
-  const per=sel==="all"?3:200;
+  const idm={}; S.candidates.forEach(c=>idm[c.id]=c);
+  const byC={}; (S.social||[]).forEach(p=>{ (byC[p.candidate_id]=byC[p.candidate_id]||[]).push(p); });
+  const entries=Object.keys(byC).map(cid=>{ const c=idm[cid]||{}; return {cid, name:c.name||"Unknown", race:c.office_group||"other",
+      posts:byC[cid].sort((a,b)=>String(b.posted_at||"").localeCompare(String(a.posted_at||"")))}; });
+  if(!entries.length){ el.innerHTML='<div class="pitch"><p style="margin:0">No social posts captured yet for this silo. Once the daily social scraper runs, each candidate’s public posts appear here — grouped by race, every one linked to its source.</p></div>'; return; }
+  // Level 1: race chips (ranked). Level 2: a candidate dropdown within the chosen race.
+  const races=[...new Set(entries.map(e=>e.race))].sort((a,b)=>(GROUP_RANK[a]??45)-(GROUP_RANK[b]??45)||String(a).localeCompare(String(b)));
+  const rsel=(_socRace!=="all"&&races.includes(_socRace))?_socRace:"all";
+  const raceCount=r=>entries.filter(e=>e.race===r).length;
+  const inRace=(rsel==="all"?entries:entries.filter(e=>e.race===rsel)).slice()
+      .sort((a,b)=>String(b.posts[0].posted_at||"").localeCompare(String(a.posts[0].posted_at||"")));
+  const csel=(_social!=="all"&&inRace.some(e=>e.cid===_social))?_social:"all";
+  const rchip=(k,l,n)=>`<button class="fbtn ${rsel===k?'on':''}" data-socrace="${esc(k)}">${esc(l)}${n!=null?" ("+n+")":""}</button>`;
+  const raceChips=rchip('all','All races',entries.length)+races.map(r=>rchip(r,groupLabel(r),raceCount(r))).join("");
+  const candOpts=`<option value="all">All candidates${rsel!=="all"?" in "+esc(groupLabel(rsel)):""} (${inRace.length})</option>`
+      +inRace.map(e=>`<option value="${e.cid}" ${e.cid===csel?"selected":""}>${esc(e.name)} (${e.posts.length})</option>`).join("");
+  const shown=csel==="all"?inRace:inRace.filter(e=>e.cid===csel);
+  const per=csel==="all"?3:200;
   el.innerHTML=
-    `<div class="pitch"><p style="margin:0"><b>${(S.social||[]).length}</b> public posts captured from <b>${groups.length}</b> candidates, scraped every morning — latest activity first. Every post links to its original as a verifiable primary source.</p></div>`
-    + `<div class="fbar">${chip('all','All',groups.length)}${groups.map(g=>chip(g.cid,g.name.split(" ").slice(-1)[0],g.posts.length)).join("")}</div>`
-    + shown.map(g=>`<div class="sect-title" style="margin:20px 0 8px;font-size:15px;color:var(--gold)">${esc(g.name)} <span class="faint" style="font-weight:400;font-size:12px">· ${g.posts.length} posts · latest ${fmtD(last(g))}</span></div>`
+    `<div class="pitch"><p style="margin:0"><b>${(S.social||[]).length}</b> public posts captured, scraped every morning — organized by race. Pick a race, then a candidate. Every post links to its original as a verifiable primary source.</p></div>`
+    + `<div class="fbar">${raceChips}</div>`
+    + `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0 4px"><label class="faint" style="font-size:12px">Candidate</label>`
+    + `<select id="soccand" style="background:#141821;color:#e8edf5;border:1px solid #2a3140;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600">${candOpts}</select></div>`
+    + shown.map(g=>`<div class="sect-title" style="margin:18px 0 8px;font-size:15px;color:var(--gold)">${esc(g.name)} <span class="faint" style="font-weight:400;font-size:12px">· ${esc(groupLabel(g.race))} · ${g.posts.length} posts · latest ${fmtD(g.posts[0].posted_at)}</span></div>`
         + g.posts.slice(0,per).map(postCard).join("")
-        + (sel==="all"&&g.posts.length>per?`<div class="faint" style="font-size:12px;margin:2px 0 4px">+ ${g.posts.length-per} more — filter to ${esc(g.name.split(" ").slice(-1)[0])} to see all</div>`:"")).join("");
+        + (csel==="all"&&g.posts.length>per?`<div class="faint" style="font-size:12px;margin:2px 0 4px">+ ${g.posts.length-per} more — pick ${esc(g.name.split(" ").slice(-1)[0])} in the dropdown to see all</div>`:"")).join("");
   const fb=el.querySelector(".fbar");
-  if(fb) fb.onclick=e=>{ const b=e.target.closest("button[data-soc]"); if(!b) return; _social=b.dataset.soc; renderSocial(); var m=document.querySelector(".main"); if(m) m.scrollTo(0,0); };
+  if(fb) fb.onclick=e=>{ const b=e.target.closest("button[data-socrace]"); if(!b) return; _socRace=b.dataset.socrace; _social="all"; renderSocial(); var m=document.querySelector(".main"); if(m) m.scrollTo(0,0); };
+  const cs=el.querySelector("#soccand"); if(cs) cs.onchange=ev=>{ _social=ev.target.value; renderSocial(); };
 }
 // Recent social posts shown inside a candidate profile (Candidates tab).
 function socialBlock(c){
@@ -1283,7 +1294,7 @@ function renderCandidates(){
     const tb=document.querySelector('button[data-tab="council"]'); if(tb) tb.click();
     loadCouncilCand(raw); });
   document.querySelectorAll("#view-candidates [data-soc-cand]").forEach(b=>b.onclick=()=>{
-    _social=b.dataset.socCand;
+    _socRace="all"; _social=b.dataset.socCand;
     const tb=document.querySelector('button[data-tab="social"]'); if(tb) tb.click();
     renderSocial(); });
 }
