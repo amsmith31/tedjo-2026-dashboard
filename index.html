@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260708-163715';
+(function(){ var BUILD='20260708-180342';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260708-163715' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260708-180342' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -765,6 +765,7 @@
       <button data-tab="web"><span class="ico">◱</span> Web Presence <span class="ct" id="ct-web"></span></button>
       <button data-tab="ads"><span class="ico">◲</span> Political Ads <span class="ct" id="ct-ads"></span></button>
       <button data-tab="social" id="nav-social"><span class="ico">◱</span> Social Media <span class="ct" id="ct-social"></span></button>
+      <button data-tab="mentions" id="nav-mentions" style="display:none"><span class="ico">◍</span> Community Watch <span class="ct" id="ct-mentions"></span></button>
     </nav>
     <div class="side-foot">
       <div id="activeClient" style="color:var(--muted)">No client selected</div>
@@ -800,6 +801,7 @@
     <section class="view hidden" id="view-web"></section>
     <section class="view hidden" id="view-ads"></section>
     <section class="view hidden" id="view-social"></section>
+    <section class="view hidden" id="view-mentions"></section>
   </main>
 
 <script>
@@ -906,12 +908,12 @@ async function candSummary(raw){ const base="/council_votes?candidate_name_raw=e
     ...ISSUE_AREAS.map(i=>countPath(base+"&issue_area=eq."+enc(i))) ]);
   const s={total,YES,NO,ABSENT,byIssue:{}}; ISSUE_AREAS.forEach((i,k)=>{ if(iss[k]) s.byIssue[i]=iss[k]; }); return s; }
 
-const S = { attacks:[], evidence:[], candidates:[], dissents:[], web:[], message:[], promises:[], news:[], newsLinks:[], sources:[], ads:[], videos:[], social:[], counts:{} };
+const S = { attacks:[], evidence:[], candidates:[], dissents:[], web:[], message:[], promises:[], news:[], newsLinks:[], sources:[], ads:[], videos:[], social:[], mentions:[], counts:{} };
 const CAND_ORDER = {"alvin-tedjo":0,"carolyn-parrish":1};
 
 async function init(){
   try{
-    const [attacks, evidence, candidates, dissents, web, message, promises, news, newsLinks, sources, ads, vids, social, meetings, votes] = await Promise.all([
+    const [attacks, evidence, candidates, dissents, web, message, promises, news, newsLinks, sources, ads, vids, social, mentions, meetings, votes] = await Promise.all([
       safeApi("/attack_messaging?select=*&is_active=eq.true"),
       safeApi("/council_evidence?select=*&order=political_utility_score.desc.nullslast&limit=1500"),
       safeApi("/candidates?select=*"),
@@ -924,12 +926,13 @@ async function init(){
       safeApi("/sources?select=id,publisher"),
       safeApi("/political_ads?select=*&order=ad_delivery_start_time.desc.nullslast&limit=200"),
       safeApi("/candidate_videos?select=candidate_id,title,published_at,view_count,thumbnail_url,video_url&order=published_at.desc.nullslast&limit=300"),
-      safeApi("/social_posts?select=candidate_id,platform,post_url,posted_at,text,likes,comments,shares,views,media_url&order=posted_at.desc.nullslast&limit=3000"),
+      safeApi("/social_posts?select=candidate_id,platform,post_url,posted_at,text,likes,comments,shares,views,media_url&platform=neq.facebook_group&order=posted_at.desc.nullslast&limit=3000"),
+      safeApi("/social_posts?select=candidate_id,post_url,posted_at,text,likes,comments,shares,raw&platform=eq.facebook_group&order=posted_at.desc.nullslast&limit=500"),
       safeCount("council_meetings"),
       safeCount("council_votes"),
     ]);
     S.attacks=attacks; S.evidence=evidence; S.web=web; S.message=message; S.promises=promises;
-    S.news=news; S.newsLinks=newsLinks; S.sources=sources; S.ads=ads; S.videos=vids; S.social=social;
+    S.news=news; S.newsLinks=newsLinks; S.sources=sources; S.ads=ads; S.videos=vids; S.social=social; S.mentions=mentions||[];
     const rank=c=>(c.is_principal?0:c.slug==="alvin-tedjo"?0:1);
     S.candidates=candidates.sort((a,b)=>rank(a)-rank(b)||(b.is_incumbent?1:0)-(a.is_incumbent?1:0)||(a.name||"").localeCompare(b.name||""));
     const _cfg=(ACTIVE&&ACTIVE.council?ACTIVE.council:COUNCIL_DEFAULT);
@@ -952,7 +955,9 @@ async function init(){
     document.getElementById("ct-news").textContent=news.length;
     document.getElementById("ct-ads").textContent=ads.length||"";
     document.getElementById("ct-social").textContent=social.length||"";
-    renderHome(); renderAttacks(); renderCouncil(); renderEvidence(); renderCandidates(); renderWeb(); renderMessage(); renderPromises(); renderNews(); renderAds(); renderSocial();
+    const nmB=document.getElementById("nav-mentions");
+    if(nmB){ nmB.style.display=(S.mentions.length)?"":"none"; document.getElementById("ct-mentions").textContent=S.mentions.length||""; }
+    renderHome(); renderAttacks(); renderCouncil(); renderEvidence(); renderCandidates(); renderWeb(); renderMessage(); renderPromises(); renderNews(); renderAds(); renderSocial(); renderMentions();
   }catch(e){
     document.getElementById("view-home").innerHTML='<div class="loading"><h2>Could not load data</h2><p class="muted">'+esc(e.message)+'</p></div>';
     document.getElementById("conn").innerHTML='<span style="color:var(--red)">● error</span>';
@@ -1256,6 +1261,28 @@ function renderSocial(){
   if(fb) fb.onclick=e=>{ const b=e.target.closest("button[data-socrace]"); if(!b) return; _socRace=b.dataset.socrace; _social="all"; renderSocial(); var m=document.querySelector(".main"); if(m) m.scrollTo(0,0); };
   const cs=el.querySelector("#soccand"); if(cs) cs.onchange=ev=>{ _social=ev.target.value; renderSocial(); };
   const ps=el.querySelector("#socplat"); if(ps) ps.onchange=ev=>{ _socPlat=ev.target.value; renderSocial(); };
+}
+// Community Watch — unverified third-party posts from monitored FB groups that name a candidate.
+function renderMentions(){
+  const el=document.getElementById("view-mentions"); if(!el) return;
+  const posts=S.mentions||[];
+  const pitch=`<div class="pitch"><p style="margin:0"><b>Community Watch — what locals are saying.</b> Public posts from monitored community Facebook groups that mention a candidate by name. <span class="faint">These are <b>unverified, third-party</b> posts written by residents — captured verbatim and linked to the original. Treat them as chatter to be <i>aware</i> of, <b>not</b> as verified fact or a sourced OPPO finding.</span></p></div>`;
+  if(!posts.length){ el.innerHTML=pitch+`<div class="pitch" style="margin-top:10px"><p style="margin:0" class="faint">No candidate mentions captured in monitored groups yet.</p></div>`; return; }
+  const idm={}; S.candidates.forEach(c=>idm[c.id]=c);
+  const byC={}; posts.forEach(p=>{ (byC[p.candidate_id]=byC[p.candidate_id]||[]).push(p); });
+  const order=Object.keys(byC).sort((a,b)=>byC[b].length-byC[a].length);
+  const card=p=>{ const a=(p.raw&&p.raw._author)||"", g=(p.raw&&p.raw.groupTitle)||"community group";
+    return `<div class="card" style="padding:12px 14px;border-left:2px solid var(--gold-dim)">
+      <div class="faint" style="font-size:12px;margin-bottom:5px">⚠ unverified${a?" · 👤 "+esc(a):""} · <span>${esc(g)}</span></div>
+      <div class="muted" style="line-height:1.55;white-space:pre-wrap">${esc(String(p.text||"(no text)").slice(0,600))}</div>
+      <div class="faint" style="font-size:12px;margin-top:9px;display:flex;gap:13px;flex-wrap:wrap;align-items:center">
+        <span>${fmtD(p.posted_at)}</span><span>♥ ${socNum(p.likes)}</span><span>💬 ${socNum(p.comments)}</span><span>↺ ${socNum(p.shares)}</span>
+        ${isUrl(p.post_url)?`<a href="${esc(p.post_url)}" target="_blank" rel="noopener" style="color:var(--gold)">view original ↗</a>`:""}
+      </div></div>`; };
+  el.innerHTML=pitch
+    + order.map(cid=>{ const c=idm[cid]||{}, list=byC[cid];
+        return `<div class="sect-title" style="margin:18px 0 8px;font-size:15px;color:var(--gold)">◍ Mentions of ${esc(c.name||"a candidate")} <span class="faint" style="font-weight:400;font-size:12px">· ${list.length} post${list.length!==1?"s":""} · unverified community chatter</span></div>`
+          + list.map(card).join(""); }).join("");
 }
 // Recent social posts shown inside a candidate profile (Candidates tab).
 function socialBlock(c){
@@ -1639,7 +1666,7 @@ document.getElementById("nav").addEventListener("click",e=>{
   b.classList.add("active");
   document.getElementById("view-"+b.dataset.tab).classList.remove("hidden");
   const _cand=(ACTIVE&&ACTIVE.cand)||"your candidate";
-  const titles={hq:["Municipality","Select a municipality → candidate silo"],home:["Overview",(ACTIVE&&ACTIVE.demo?"Demonstration dossier":"Intelligence dossier")+" · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message",_cand+"'s affirmative case — sourced"],promises:["Promises","Documented positions, tracked over time"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],council:["Council Record","Recorded votes, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","Every candidate in the race, grouped"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"]};
+  const titles={hq:["Municipality","Select a municipality → candidate silo"],home:["Overview",(ACTIVE&&ACTIVE.demo?"Demonstration dossier":"Intelligence dossier")+" · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message",_cand+"'s affirmative case — sourced"],promises:["Promises","Documented positions, tracked over time"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],council:["Council Record","Recorded votes, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","Every candidate in the race, grouped"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"],social:["Social Media","Candidates' own public posts — X, Instagram, Facebook"],mentions:["Community Watch","Unverified community-group chatter mentioning candidates"]};
   document.getElementById("viewTitle").textContent=titles[b.dataset.tab][0];
   document.getElementById("viewCrumb").textContent=titles[b.dataset.tab][1];
   var ts=document.getElementById("tabscan"); if(ts){ ts.classList.remove("go"); void ts.offsetWidth; ts.classList.add("go"); }
