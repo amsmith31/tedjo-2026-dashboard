@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260708-142317';
+(function(){ var BUILD='20260708-151634';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260708-142317' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260708-151634' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1191,11 +1191,22 @@ function postCard(p){
       ${isUrl(p.post_url)?`<a href="${esc(p.post_url)}" target="_blank" rel="noopener" style="color:var(--gold)">view source ↗</a>`:""}
     </div></div>`;
 }
+// Race key for grouping — prefer office_group; fall back to parsing `office` (silos whose
+// candidates table has no office_group column, e.g. Mississauga mayor) so grouping stays uniform.
+function socRaceKey(c){
+  if(c && c.office_group) return c.office_group;
+  const o=String((c&&c.office)||"").toLowerCase();
+  if(o.includes("mayor")) return "mayor";
+  if(o.includes("regional")) return "regional";
+  if(o.includes("school")||o.includes("trustee")) return "school_board";
+  const m=/ward\s*(\d+)/.exec(o); if(m) return "ward"+m[1];
+  return "other";
+}
 function renderSocial(){
   const el=document.getElementById("view-social"); if(!el) return;
   const idm={}; S.candidates.forEach(c=>idm[c.id]=c);
   const byC={}; (S.social||[]).forEach(p=>{ (byC[p.candidate_id]=byC[p.candidate_id]||[]).push(p); });
-  const entries=Object.keys(byC).map(cid=>{ const c=idm[cid]||{}; return {cid, name:c.name||"Unknown", race:c.office_group||"other",
+  const entries=Object.keys(byC).map(cid=>{ const c=idm[cid]||{}; return {cid, name:c.name||"Unknown", race:socRaceKey(c),
       posts:byC[cid].sort((a,b)=>String(b.posted_at||"").localeCompare(String(a.posted_at||"")))}; });
   if(!entries.length){ el.innerHTML='<div class="pitch"><p style="margin:0">No social posts captured yet for this silo. Once the daily social scraper runs, each candidate’s public posts appear here — grouped by race, every one linked to its source.</p></div>'; return; }
   // Level 1: race chips (ranked). Level 2: a candidate dropdown within the chosen race.
