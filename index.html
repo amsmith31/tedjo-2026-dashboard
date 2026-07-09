@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260708-180342';
+(function(){ var BUILD='20260708-200251';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260708-180342' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260708-200251' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1266,14 +1266,15 @@ function renderSocial(){
 function renderMentions(){
   const el=document.getElementById("view-mentions"); if(!el) return;
   const posts=S.mentions||[];
-  const pitch=`<div class="pitch"><p style="margin:0"><b>Community Watch — what locals are saying.</b> Public posts from monitored community Facebook groups that mention a candidate by name. <span class="faint">These are <b>unverified, third-party</b> posts written by residents — captured verbatim and linked to the original. Treat them as chatter to be <i>aware</i> of, <b>not</b> as verified fact or a sourced OPPO finding.</span></p></div>`;
+  const nDel=posts.filter(p=>p.raw&&p.raw._deleted_detected_at).length;
+  const pitch=`<div class="pitch"><p style="margin:0"><b>Community Watch — what locals are saying.</b> Public posts from monitored community Facebook groups that mention a candidate by name. <span class="faint">These are <b>unverified, third-party</b> posts written by residents — captured verbatim and <b>permanently archived here even after they're deleted from Facebook</b>. Treat them as chatter to be <i>aware</i> of, <b>not</b> as verified fact or a sourced OPPO finding.</span>${nDel?` <b style="color:var(--gold)">${nDel} post${nDel!==1?"s":""} here ${nDel!==1?"have":"has"} since been deleted at the source — preserved below.</b>`:""}</p></div>`;
   if(!posts.length){ el.innerHTML=pitch+`<div class="pitch" style="margin-top:10px"><p style="margin:0" class="faint">No candidate mentions captured in monitored groups yet.</p></div>`; return; }
   const idm={}; S.candidates.forEach(c=>idm[c.id]=c);
   const byC={}; posts.forEach(p=>{ (byC[p.candidate_id]=byC[p.candidate_id]||[]).push(p); });
   const order=Object.keys(byC).sort((a,b)=>byC[b].length-byC[a].length);
-  const card=p=>{ const a=(p.raw&&p.raw._author)||"", g=(p.raw&&p.raw.groupTitle)||"community group";
-    return `<div class="card" style="padding:12px 14px;border-left:2px solid var(--gold-dim)">
-      <div class="faint" style="font-size:12px;margin-bottom:5px">⚠ unverified${a?" · 👤 "+esc(a):""} · <span>${esc(g)}</span></div>
+  const card=p=>{ const a=(p.raw&&p.raw._author)||"", g=(p.raw&&p.raw.groupTitle)||"community group", del=p.raw&&p.raw._deleted_detected_at;
+    return `<div class="card" style="padding:12px 14px;border-left:2px solid ${del?"var(--red)":"var(--gold-dim)"}">
+      <div class="faint" style="font-size:12px;margin-bottom:5px">${del?`<span style="color:var(--red);font-weight:700">🗑 DELETED FROM SOURCE · archived ${esc(del)}</span> · `:""}⚠ unverified${a?" · 👤 "+esc(a):""} · <span>${esc(g)}</span></div>
       <div class="muted" style="line-height:1.55;white-space:pre-wrap">${esc(String(p.text||"(no text)").slice(0,600))}</div>
       <div class="faint" style="font-size:12px;margin-top:9px;display:flex;gap:13px;flex-wrap:wrap;align-items:center">
         <span>${fmtD(p.posted_at)}</span><span>♥ ${socNum(p.likes)}</span><span>💬 ${socNum(p.comments)}</span><span>↺ ${socNum(p.shares)}</span>
