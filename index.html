@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260708-202937';
+(function(){ var BUILD='20260708-223147';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260708-202937' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260708-223147' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1263,6 +1263,22 @@ function renderSocial(){
   const ps=el.querySelector("#socplat"); if(ps) ps.onchange=ev=>{ _socPlat=ev.target.value; renderSocial(); };
 }
 // Community Watch — unverified third-party posts from monitored FB groups that name a candidate.
+// Archived evidence for a monitored post: media files we downloaded into our own storage + captured comments.
+function evidenceHtml(r){
+  const media=(r&&r._archived_media)||[], cm=(r&&r._comments)||[]; let h="";
+  if(media.length){
+    h+=`<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">`+media.map(m=>m.kind==="video"
+      ? `<a href="${esc(m.url)}" target="_blank" rel="noopener" class="chip" style="color:var(--gold)">▶ archived video ↗</a>`
+      : `<a href="${esc(m.url)}" target="_blank" rel="noopener"${m.ocr?` title="${esc(m.ocr)}"`:""}><img loading="lazy" src="${esc(m.url)}" style="max-height:200px;max-width:100%;border-radius:8px;border:1px solid #2a3140"></a>`
+    ).join("")+`</div><div class="faint" style="font-size:11px;margin-top:4px">📁 media saved to our own storage — preserved even if deleted at source</div>`;
+  }
+  if(cm.length){
+    h+=`<div style="margin-top:10px"><div class="faint" style="font-size:12px;margin-bottom:4px">💬 ${cm.length} archived comment${cm.length!==1?"s":""}</div>`
+      +cm.slice(0,15).map(c=>`<div style="border-left:2px solid #2a3140;padding:2px 0 2px 9px;margin:5px 0;font-size:13px"><b class="faint">${esc(c.author||"—")}:</b> <span class="muted">${esc(String(c.text||"").slice(0,320))}</span></div>`).join("")+`</div>`;
+  }
+  if(r&&r._comment_media_note) h+=`<div class="faint" style="font-size:11px;margin-top:6px;font-style:italic">⚠ ${esc(r._comment_media_note)}</div>`;
+  return h;
+}
 function renderMentions(){
   const el=document.getElementById("view-mentions"); if(!el) return;
   const posts=S.mentions||[];
@@ -1277,6 +1293,7 @@ function renderMentions(){
     return `<div class="card" style="padding:12px 14px;border-left:2px solid ${del?"var(--red)":"var(--gold-dim)"}">
       <div class="faint" style="font-size:12px;margin-bottom:5px">${del?`<span style="color:var(--red);font-weight:700">🗑 DELETED FROM SOURCE · content preserved · archived ${esc(del)}</span> · `:""}⚠ unverified · ${esc(src)}${a?" · 👤 "+esc(a):""} · <span>${esc(g)}</span></div>
       <div class="muted" style="line-height:1.55;white-space:pre-wrap">${esc(String(p.text||"(no text)").slice(0,2000))}</div>
+      ${evidenceHtml(r)}
       <div class="faint" style="font-size:12px;margin-top:9px;display:flex;gap:13px;flex-wrap:wrap;align-items:center">
         <span>${fmtD(p.posted_at)}</span><span>♥ ${socNum(p.likes)}</span><span>💬 ${socNum(p.comments)}</span><span>↺ ${socNum(p.shares)}</span>
         ${isUrl(p.post_url)?`<a href="${esc(p.post_url)}" target="_blank" rel="noopener" style="color:var(--gold)">view original ↗</a>`:""}
@@ -1305,6 +1322,7 @@ function mentionsBlock(c){
     return `<div class="card" style="padding:11px 13px;border-left:2px solid ${del?"var(--red)":"var(--gold-dim)"}">
       <div class="faint" style="font-size:12px;margin-bottom:4px">${del?`<span style="color:var(--red);font-weight:700">🗑 DELETED · content preserved</span> · `:""}⚠ unverified · ${esc(src)}${who?" · 👤 "+esc(who):""}</div>
       <div class="muted" style="line-height:1.5;white-space:pre-wrap">${esc(String(p.text||"").slice(0,700))}</div>
+      ${evidenceHtml(r)}
       <div class="faint" style="font-size:12px;margin-top:7px">${fmtD(p.posted_at)}${isUrl(p.post_url)?` · <a href="${esc(p.post_url)}" target="_blank" rel="noopener" style="color:var(--gold)">source ↗</a>`:""}</div></div>`; };
   return `<div class="profile" style="margin-top:12px;border-top:1px solid #232a36;padding-top:12px">
     <div style="color:var(--gold);font-weight:700;font-size:14px;margin-bottom:4px">◍ Community mentions <span class="faint" style="font-weight:400;font-size:12px">· ${posts.length} unverified${nDel?` · ${nDel} deleted but preserved`:""}</span></div>
