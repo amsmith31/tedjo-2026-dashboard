@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260708-200251';
+(function(){ var BUILD='20260708-201524';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260708-200251' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260708-201524' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -926,8 +926,8 @@ async function init(){
       safeApi("/sources?select=id,publisher"),
       safeApi("/political_ads?select=*&order=ad_delivery_start_time.desc.nullslast&limit=200"),
       safeApi("/candidate_videos?select=candidate_id,title,published_at,view_count,thumbnail_url,video_url&order=published_at.desc.nullslast&limit=300"),
-      safeApi("/social_posts?select=candidate_id,platform,post_url,posted_at,text,likes,comments,shares,views,media_url&platform=neq.facebook_group&order=posted_at.desc.nullslast&limit=3000"),
-      safeApi("/social_posts?select=candidate_id,post_url,posted_at,text,likes,comments,shares,raw&platform=eq.facebook_group&order=posted_at.desc.nullslast&limit=500"),
+      safeApi("/social_posts?select=candidate_id,platform,post_url,posted_at,text,likes,comments,shares,views,media_url&platform=not.in.(facebook_group,facebook_watch)&order=posted_at.desc.nullslast&limit=3000"),
+      safeApi("/social_posts?select=candidate_id,platform,post_url,posted_at,text,likes,comments,shares,raw&platform=in.(facebook_group,facebook_watch)&order=posted_at.desc.nullslast&limit=800"),
       safeCount("council_meetings"),
       safeCount("council_votes"),
     ]);
@@ -1272,10 +1272,11 @@ function renderMentions(){
   const idm={}; S.candidates.forEach(c=>idm[c.id]=c);
   const byC={}; posts.forEach(p=>{ (byC[p.candidate_id]=byC[p.candidate_id]||[]).push(p); });
   const order=Object.keys(byC).sort((a,b)=>byC[b].length-byC[a].length);
-  const card=p=>{ const a=(p.raw&&p.raw._author)||"", g=(p.raw&&p.raw.groupTitle)||"community group", del=p.raw&&p.raw._deleted_detected_at;
+  const card=p=>{ const r=p.raw||{}, a=r._author||"", g=r.groupTitle||r._watch_page||"community group",
+      src=p.platform==="facebook_watch"?"opposition page":"community group", del=r._deleted_detected_at;
     return `<div class="card" style="padding:12px 14px;border-left:2px solid ${del?"var(--red)":"var(--gold-dim)"}">
-      <div class="faint" style="font-size:12px;margin-bottom:5px">${del?`<span style="color:var(--red);font-weight:700">🗑 DELETED FROM SOURCE · archived ${esc(del)}</span> · `:""}⚠ unverified${a?" · 👤 "+esc(a):""} · <span>${esc(g)}</span></div>
-      <div class="muted" style="line-height:1.55;white-space:pre-wrap">${esc(String(p.text||"(no text)").slice(0,600))}</div>
+      <div class="faint" style="font-size:12px;margin-bottom:5px">${del?`<span style="color:var(--red);font-weight:700">🗑 DELETED FROM SOURCE · content preserved · archived ${esc(del)}</span> · `:""}⚠ unverified · ${esc(src)}${a?" · 👤 "+esc(a):""} · <span>${esc(g)}</span></div>
+      <div class="muted" style="line-height:1.55;white-space:pre-wrap">${esc(String(p.text||"(no text)").slice(0,2000))}</div>
       <div class="faint" style="font-size:12px;margin-top:9px;display:flex;gap:13px;flex-wrap:wrap;align-items:center">
         <span>${fmtD(p.posted_at)}</span><span>♥ ${socNum(p.likes)}</span><span>💬 ${socNum(p.comments)}</span><span>↺ ${socNum(p.shares)}</span>
         ${isUrl(p.post_url)?`<a href="${esc(p.post_url)}" target="_blank" rel="noopener" style="color:var(--gold)">view original ↗</a>`:""}
