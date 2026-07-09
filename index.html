@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260708-223147';
+(function(){ var BUILD='20260708-224136';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260708-223147' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260708-224136' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1267,10 +1267,13 @@ function renderSocial(){
 function evidenceHtml(r){
   const media=(r&&r._archived_media)||[], cm=(r&&r._comments)||[]; let h="";
   if(media.length){
-    h+=`<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">`+media.map(m=>m.kind==="video"
-      ? `<a href="${esc(m.url)}" target="_blank" rel="noopener" class="chip" style="color:var(--gold)">▶ archived video ↗</a>`
-      : `<a href="${esc(m.url)}" target="_blank" rel="noopener"${m.ocr?` title="${esc(m.ocr)}"`:""}><img loading="lazy" src="${esc(m.url)}" style="max-height:200px;max-width:100%;border-radius:8px;border:1px solid #2a3140"></a>`
-    ).join("")+`</div><div class="faint" style="font-size:11px;margin-top:4px">📁 media saved to our own storage — preserved even if deleted at source</div>`;
+    h+=`<div style="margin-top:10px;display:flex;flex-direction:column;gap:12px">`+media.map(m=>{
+      const cap=m.label||m.ocr||"";
+      return m.kind==="video"
+        ? `<div><a href="${esc(m.url)}" target="_blank" rel="noopener" class="chip" style="color:var(--gold)">▶ open archived video ↗</a>${cap?` <span class="faint" style="font-size:11px">${esc(cap)}</span>`:""}</div>`
+        : `<figure style="margin:0"><a href="${esc(m.url)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(m.url)}" style="max-height:360px;max-width:100%;border-radius:8px;border:1px solid #2a3140;display:block;cursor:zoom-in"></a>
+           <figcaption class="faint" style="font-size:11px;margin-top:3px">${cap?esc(cap)+" · ":""}<a href="${esc(m.url)}" target="_blank" rel="noopener" style="color:var(--gold)">open full image ↗</a></figcaption></figure>`;
+    }).join("")+`</div><div class="faint" style="font-size:11px;margin-top:5px">📁 media saved to our own storage — preserved even if deleted at source</div>`;
   }
   if(cm.length){
     h+=`<div style="margin-top:10px"><div class="faint" style="font-size:12px;margin-bottom:4px">💬 ${cm.length} archived comment${cm.length!==1?"s":""}</div>`
