@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260708-201524';
+(function(){ var BUILD='20260708-202937';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260708-201524' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260708-202937' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -1296,6 +1296,23 @@ function socialBlock(c){
     <button class="fbtn" data-soc-cand="${esc(c.id)}" style="color:var(--gold)">See all ${posts.length} posts →</button>
   </div>`;
 }
+// Community mentions about this candidate (from monitored groups/pages) — shown inside the profile.
+function mentionsBlock(c){
+  const posts=(S.mentions||[]).filter(p=>p.candidate_id===c.id).sort((a,b)=>String(b.posted_at||"").localeCompare(String(a.posted_at||"")));
+  if(!posts.length) return "";
+  const nDel=posts.filter(p=>p.raw&&p.raw._deleted_detected_at).length;
+  const card=p=>{ const r=p.raw||{}, del=r._deleted_detected_at, src=p.platform==="facebook_watch"?"opposition page":"community group", who=r._author||r._watch_page||"";
+    return `<div class="card" style="padding:11px 13px;border-left:2px solid ${del?"var(--red)":"var(--gold-dim)"}">
+      <div class="faint" style="font-size:12px;margin-bottom:4px">${del?`<span style="color:var(--red);font-weight:700">🗑 DELETED · content preserved</span> · `:""}⚠ unverified · ${esc(src)}${who?" · 👤 "+esc(who):""}</div>
+      <div class="muted" style="line-height:1.5;white-space:pre-wrap">${esc(String(p.text||"").slice(0,700))}</div>
+      <div class="faint" style="font-size:12px;margin-top:7px">${fmtD(p.posted_at)}${isUrl(p.post_url)?` · <a href="${esc(p.post_url)}" target="_blank" rel="noopener" style="color:var(--gold)">source ↗</a>`:""}</div></div>`; };
+  return `<div class="profile" style="margin-top:12px;border-top:1px solid #232a36;padding-top:12px">
+    <div style="color:var(--gold);font-weight:700;font-size:14px;margin-bottom:4px">◍ Community mentions <span class="faint" style="font-weight:400;font-size:12px">· ${posts.length} unverified${nDel?` · ${nDel} deleted but preserved`:""}</span></div>
+    <div class="faint" style="font-size:12px;margin-bottom:8px">Third-party posts from monitored groups/pages that name this candidate — captured verbatim, <b>not</b> verified.</div>
+    ${posts.slice(0,4).map(card).join("")}
+    <button class="fbtn" data-tab-jump="mentions" style="color:var(--gold)">Open Community Watch →</button>
+  </div>`;
+}
 // Per-councillor voting-record summary shown inside a candidate profile (data-driven from council_votes).
 function councilBlock(c){
   const sum = S.councilSummary && S.councilSummary[c.slug]; if(!sum || !sum.total) return "";
@@ -1341,6 +1358,7 @@ function renderCandidates(){
       ${c.manual_research_brief?`<div class="profile">${md(c.manual_research_brief)}</div>`:(c.bio?`<div class="profile">${md(c.bio)}</div>`:"")}
       ${councilBlock(c)}
       ${socialBlock(c)}
+      ${mentionsBlock(c)}
       ${vidsBy[c.id]&&vidsBy[c.id].length?videoStrip(vidsBy[c.id]):""}
     </div>`;
   const gchip=(k,l,n)=>`<button class="fbtn ${_cg===k?'on':''}" data-g="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
@@ -1681,6 +1699,8 @@ function openNav(){ document.body.classList.add("nav-open");
 function closeNav(){ document.body.classList.remove("nav-open");
   var s=document.querySelector(".sidebar"), sc=document.getElementById("scrim");
   s.style.left=""; sc.style.opacity=""; sc.style.pointerEvents=""; }
+document.addEventListener("click",e=>{ const j=e.target.closest("[data-tab-jump]"); if(!j) return;
+  const t=document.querySelector('button[data-tab="'+j.dataset.tabJump+'"]'); if(t) t.click(); });
 document.getElementById("menuBtn").onclick=()=> document.body.classList.contains("nav-open")?closeNav():openNav();
 document.getElementById("scrim").onclick=closeNav;
 /* Social Media is now a live tab (data-tab="social") handled by the tab router. */
