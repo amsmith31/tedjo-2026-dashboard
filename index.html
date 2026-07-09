@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260708-224136';
+(function(){ var BUILD='20260709-001051';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260708-224136' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260709-001051' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -926,7 +926,7 @@ async function init(){
       safeApi("/sources?select=id,publisher"),
       safeApi("/political_ads?select=*&order=ad_delivery_start_time.desc.nullslast&limit=200"),
       safeApi("/candidate_videos?select=candidate_id,title,published_at,view_count,thumbnail_url,video_url&order=published_at.desc.nullslast&limit=300"),
-      safeApi("/social_posts?select=candidate_id,platform,post_url,posted_at,text,likes,comments,shares,views,media_url&platform=not.in.(facebook_group,facebook_watch)&order=posted_at.desc.nullslast&limit=3000"),
+      safeApi("/social_posts?select=candidate_id,platform,post_url,posted_at,text,likes,comments,shares,views,media_url,archived:raw->_archived_media,deleted:raw->>_deleted_detected_at&platform=not.in.(facebook_group,facebook_watch)&order=posted_at.desc.nullslast&limit=3000"),
       safeApi("/social_posts?select=candidate_id,platform,post_url,posted_at,text,likes,comments,shares,raw&platform=in.(facebook_group,facebook_watch)&order=posted_at.desc.nullslast&limit=800"),
       safeCount("council_meetings"),
       safeCount("council_votes"),
@@ -1196,8 +1196,17 @@ const GROUP_RANK={mayor:0,regional:1,ward1:11,ward2:12,ward3:13,ward4:14,ward5:1
 function socNum(n){ n=+n||0; return n>=1000?(n/1000).toFixed(n>=10000?0:1).replace(/\.0$/,"")+"k":String(n); }
 function platIcon(p){ return ({x:"𝕏",twitter:"𝕏",instagram:"📷",facebook:"f",tiktok:"♪"}[String(p||"").toLowerCase()]||"◱"); }
 function postCard(p){
-  return `<div class="card" style="padding:12px 14px">
+  const del=p.deleted;
+  const media=(p.archived&&p.archived.length)?p.archived
+      :(isUrl(p.media_url)?[{kind:/\.mp4($|\?)/.test(p.media_url)?"video":"image",url:p.media_url}]:[]);
+  const mediaHtml=media.length?`<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">`+media.slice(0,4).map(m=>m.kind==="video"
+      ? `<a href="${esc(m.url)}" target="_blank" rel="noopener" class="chip" style="color:var(--gold)">▶ archived video ↗</a>`
+      : `<a href="${esc(m.url)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(m.url)}" style="max-height:130px;max-width:100%;border-radius:6px;border:1px solid #2a3140"></a>`
+    ).join("")+`</div>`:"";
+  return `<div class="card" style="padding:12px 14px${del?";border-left:2px solid var(--red)":""}">
+    ${del?`<div style="font-size:12px;margin-bottom:5px;color:var(--red);font-weight:700">🗑 DELETED FROM SOURCE · content preserved · archived ${esc(del)}</div>`:""}
     <div class="muted" style="line-height:1.55;white-space:pre-wrap">${esc(String(p.text||"(no text)").slice(0,400))}</div>
+    ${mediaHtml}
     <div class="faint" style="font-size:12px;margin-top:9px;display:flex;gap:13px;flex-wrap:wrap;align-items:center">
       <span>${platIcon(p.platform)} ${fmtD(p.posted_at)}</span>
       <span>♥ ${socNum(p.likes)}</span><span>↺ ${socNum(p.shares)}</span><span>💬 ${socNum(p.comments)}</span>${p.views?`<span>👁 ${socNum(p.views)}</span>`:""}
