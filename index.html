@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260709-001051';
+(function(){ var BUILD='20260711-115432';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260709-001051' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260711-115432' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -514,10 +514,9 @@
         <div class="ld-feat"><div class="ld-ico">★</div><h3>Your affirmative case</h3><p>Your message, built from real, sourced accomplishments — not talking points.</p></div>
         <div class="ld-feat"><div class="ld-ico">✦</div><h3>Grounded AI analyst</h3><p>Ask anything. It answers from the record and cites every claim.</p></div>
         <div class="ld-feat"><div class="ld-ico">◰</div><h3>News &amp; media radar</h3><p>Local news, auto-filtered and linked to every candidate.</p></div>
-        <div class="ld-feat"><div class="ld-ico">◱</div><h3>Opponent monitoring</h3><p>Rivals' sites, video and socials — snapshotted every morning.</p></div>
+        <div class="ld-feat"><div class="ld-ico">◱</div><h3>Opponent monitoring</h3><p>Rivals' websites, social posts (X, Instagram &amp; Facebook) and video — captured every morning and permanently archived, so even a deleted post is preserved.</p></div>
         <div class="ld-feat"><div class="ld-ico">◲</div><h3>Political-ad tracking</h3><p>Every paid political ad — Facebook, Instagram &amp; YouTube — captured from the ad libraries: who's spending, on what message, and when.</p></div>
         <div class="ld-feat"><div class="ld-ico">▦</div><h3>Sealed client silos</h3><p>Your intelligence in its own vault. It never crosses to another client.</p></div>
-        <div class="ld-feat"><div class="ld-ico">◱</div><h3>Social media monitoring</h3><p>X, Instagram &amp; Facebook — every candidate's public posts, captured daily and filterable by platform.</p></div>
       </div>
     </section>
 
@@ -748,7 +747,7 @@
   </div>
   <aside class="sidebar">
     <div class="brand">
-      <div class="logo">ROMULUS</div>
+      <div class="logo" id="brandLogo" style="cursor:pointer" title="Back to Overview">ROMULUS</div>
       <div class="sub">CAMPAIGN INTELLIGENCE</div>
     </div>
     <nav class="nav" id="nav">
@@ -1722,6 +1721,19 @@ document.getElementById("nav").addEventListener("click",e=>{
   var ts=document.getElementById("tabscan"); if(ts){ ts.classList.remove("go"); void ts.offsetWidth; ts.classList.add("go"); }
   closeNav();   // close drawer after picking a tab (mobile)
   document.querySelector(".main").scrollTo(0,0);
+  // Record each tab in browser history so the Back button steps through tabs instead of leaving the app.
+  if(!window._navPop) history.pushState({app:"silo",tab:b.dataset.tab},"");
+});
+// ROMULUS wordmark (top-left) → Overview, standard "home" behaviour when inside a silo.
+(function(){ var bl=document.getElementById("brandLogo"); if(bl) bl.onclick=function(){
+  if(typeof ACTIVE!=="undefined" && ACTIVE){ var b=document.querySelector('button[data-tab="home"]'); if(b) b.click(); } }; })();
+// Back/Forward buttons navigate WITHIN the app (tab → tab → picker) rather than kicking the user out.
+window.addEventListener("popstate",function(e){
+  var s=e.state; window._navPop=true;
+  try{
+    if(s && s.app==="silo" && s.tab){ var b=document.querySelector('button[data-tab="'+s.tab+'"]'); if(b) b.click(); }
+    else { var h=document.querySelector('button[data-tab="hq"]'); if(h) h.click(); }   // back past the silo → municipality picker
+  } finally { window._navPop=false; }
 });
 function openNav(){ document.body.classList.add("nav-open");
   var s=document.querySelector(".sidebar"), sc=document.getElementById("scrim");
