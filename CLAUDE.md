@@ -73,6 +73,18 @@ walk all the way to the hero page.
 ## DEFERRED (do not touch until asked)
 - The hero-page contact email on file = the operator's Gmail; a change is planned LATER.
 
+## ROMULUS UNIFORMITY STANDARD (Burton is the reference — applies to EVERY silo)
+This is the ONE shared file that renders EVERY client silo, so all UI must be uniform — a fix here
+serves all silos and every future client. Burton is the standard to match.
+- **Candidates tab — grouped and ordered BY RACE, never a flat scroll.** Mayoral first, then each Ward
+  in order (Ward 1, 2, 3…), then school-board/other; incumbent/principal marked. A viewer must find any
+  candidate at a glance. Derive the race key from `office_group`, or **parse it from the `office` string
+  when `office_group` is missing** (e.g. Mississauga rows are `office="Mayor of Mississauga"` with no
+  office_group — they must still land under "Mayor", not "Other"). This mirrors the Social tab's existing
+  race-grouping (`socRaceKey`/`groupLabel`) — reuse that pattern for Candidates.
+- **Same tab set, order, naming, and card styling for every silo.** No silo-specific layout drift.
+- **Improve once, apply everywhere.** Verify on all three silos in preview before pushing.
+
 ## HOW TO WORK IN HERE (safety)
 - **Test locally before every push:** `python -m http.server 8790` in this folder → open
   `http://127.0.0.1:8790/index.html`; check the console for errors and click through the flow.
