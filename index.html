@@ -576,7 +576,7 @@
           <div class="ld-kick">BOOK A DEMO</div>
           <h2>See ROMULUS in action.</h2>
           <p>We'll walk you through a live, fully-sourced demo dossier we've already built — so you can see exactly what ROMULUS delivers. Want it tailored to your race, your opponents and the sources you care about? That's a custom engagement — tell us about your campaign and we'll scope it with you.</p>
-          <div class="ld-contact">Prefer to reach us directly?<br><a href="mailto:a.m.smith31.as@gmail.com">a.m.smith31.as@gmail.com</a></div>
+          <div class="ld-contact">Prefer to reach us directly?<br><a href="mailto:andrew.smith@romulus.vote">andrew.smith@romulus.vote</a></div>
         </div>
         <form id="ld-form" class="ld-form">
           <div class="ld-row2">
@@ -607,13 +607,13 @@
 
     <section class="ld-contactbar">
       <div>Ready to see what ROMULUS finds on your race?</div>
-      <a href="mailto:a.m.smith31.as@gmail.com" class="ld-btn">Email ROMULUS</a>
+      <a href="mailto:andrew.smith@romulus.vote" class="ld-btn">Email ROMULUS</a>
     </section>
 
     <footer class="ld-foot">
       <div class="ld-logo" style="font-size:18px">ROMULUS<span>●</span></div>
       <div>Campaign Intelligence · Municipal Elections</div>
-      <div>Contact: <a href="mailto:a.m.smith31.as@gmail.com">a.m.smith31.as@gmail.com</a></div>
+      <div>Contact: <a href="mailto:andrew.smith@romulus.vote">andrew.smith@romulus.vote</a></div>
     </footer>
   </div>
   <script>
@@ -631,8 +631,8 @@
         is_candidate:v('lf-iscand'), candidate_name:v('lf-cand'), office:v('lf-office'), brand:v('lf-brand') };
       var msg=document.getElementById('lf-msg'), btn=document.getElementById('lf-submit');
       btn.disabled=true; msg.className='ld-msg'; msg.textContent='Sending…';
-      // 1) email the submission straight to the operator's inbox (FormSubmit -> a.m.smith31.as@gmail.com)
-      var pMail=fetch('https://formsubmit.co/ajax/a.m.smith31.as@gmail.com',{
+      // 1) email the submission straight to the operator's inbox (FormSubmit -> andrew.smith@romulus.vote)
+      var pMail=fetch('https://formsubmit.co/ajax/andrew.smith@romulus.vote',{
         method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},
         body:JSON.stringify({ _subject:'ROMULUS demo request — '+(lead.name||'new lead'), _template:'table',
           'First name':first, 'Last name':last, Email:lead.email, Phone:lead.phone, 'Campaign role':lead.role,
@@ -650,7 +650,7 @@
       }).catch(function(){
         var body='Name: '+lead.name+'\nEmail: '+lead.email+'\nPhone: '+lead.phone+'\nRole: '+lead.role+'\nAre you the candidate: '+lead.is_candidate+'\nCandidate: '+lead.candidate_name+'\nOffice: '+lead.office+'\nBrand/issues: '+lead.brand;
         msg.className='ld-msg';
-        msg.innerHTML='Couldn\'t reach the server — <a href="mailto:a.m.smith31.as@gmail.com?subject='+encodeURIComponent('ROMULUS demo request — '+lead.name)+'&body='+encodeURIComponent(body)+'">click here to email your request instead</a>.';
+        msg.innerHTML='Couldn\'t reach the server — <a href="mailto:andrew.smith@romulus.vote?subject='+encodeURIComponent('ROMULUS demo request — '+lead.name)+'&body='+encodeURIComponent(body)+'">click here to email your request instead</a>.';
         btn.disabled=false;
       });
     };
