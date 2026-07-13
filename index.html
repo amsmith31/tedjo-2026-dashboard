@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260712-223052';
+(function(){ var BUILD='20260712-224042';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260712-223052' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260712-224042' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -480,7 +480,7 @@
   <div id="landing">
     <canvas id="ld-rain"></canvas>
     <header class="ld-nav">
-      <div class="ld-logo"><svg class="rmk" width="26" height="26" style="margin-right:9px"><use href="#romMark"/></svg>ROMULUS</div>
+      <div class="ld-logo" style="display:flex;align-items:center"><img class="rmk" src="romulus-mark.png" alt="" style="height:34px;width:auto;margin-right:10px">ROMULUS</div>
       <nav class="ld-navlinks">
         <a href="#ld-what">What it is</a>
         <a href="#ld-cap">Capabilities</a>
@@ -492,7 +492,7 @@
     <section class="ld-hero">
       <div class="ld-hero-aurora"><span></span><span></span><span></span></div>
       <div class="ld-hero-inner">
-        <div class="ld-hero-brand"><svg class="rmk" width="46" height="46" style="margin-right:14px"><use href="#romMark"/></svg>ROMULUS</div>
+        <div class="ld-hero-brand" style="display:inline-flex;align-items:center"><img class="rmk" src="romulus-mark.png" alt="" style="height:74px;width:auto;margin-right:16px">ROMULUS</div>
         <div class="ld-hero-brandtag">Campaign Intelligence Tool</div>
         <h1>Know more. Prove all of it.</h1>
         <p class="ld-sub">ROMULUS turns the entire public record — votes, statements, filings, news and social — into clear, verifiable intelligence, refreshed every single day. Every finding traced to its official source. The best-prepared campaign in the room.</p>
@@ -763,7 +763,7 @@
   </div>
   <aside class="sidebar">
     <div class="brand" id="brandLogo" style="cursor:pointer;display:flex;align-items:center;gap:10px" title="Back to Overview">
-      <svg class="rmk" width="36" height="36"><use href="#romMark"/></svg>
+      <img class="rmk" src="romulus-mark.png" alt="ROMULUS" style="height:40px;width:auto;flex:none">
       <div style="line-height:1.15"><div class="logo">ROMULUS</div><div class="sub">CAMPAIGN INTELLIGENCE</div></div>
     </div>
     <nav class="nav" id="nav">
