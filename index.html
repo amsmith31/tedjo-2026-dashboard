@@ -563,6 +563,7 @@
         <div class="lx-kicker">ROMULUS ▸ CAMPAIGN INTELLIGENCE</div>
         <div class="lx-stage" id="lx-stage"></div>
         <div class="lx-bar"><div class="lx-fill" id="lx-fill"></div></div>
+        <button class="lx-pause" id="lx-pause" style="display:none;position:absolute;bottom:14px;right:104px;background:#0a0e14cc;border:1px solid var(--gold-dim);color:var(--gold);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:12px;z-index:3">❚❚ Pause</button>
         <button class="lx-replay" id="lx-replay">▶ Replay</button>
         <div class="lx-poster" id="lx-poster"><div class="lx-play">▶</div><div class="lx-play-l">Play the film</div></div>
       </div>
@@ -659,7 +660,8 @@
     // cinematic explainer "film" — title card, scenes, end card
     (function(){
       var stage=document.getElementById('lx-stage'), fill=document.getElementById('lx-fill'),
-          replay=document.getElementById('lx-replay'), poster=document.getElementById('lx-poster');
+          replay=document.getElementById('lx-replay'), poster=document.getElementById('lx-poster'),
+          lxPause=document.getElementById('lx-pause');
       if(!stage) return;
       var SCENES=[
         {cls:'title', kick:'ROMULUS ▸ CAMPAIGN INTELLIGENCE', big:'ROMULUS', sub:'The next-generation campaign weapon.', dur:3200},
@@ -686,15 +688,20 @@
         timer=setTimeout(step,SCENES[idx].dur); }
       function playAmbient(){ started=true; clearTimeout(timer); idx=-1; elapsed=0; fill.style.transition='none'; fill.style.width='0%'; void fill.offsetWidth; step(); }
       // the real promo film — plays with sound on click; animation is the ambient preview behind the poster
+      function updateLxPause(){ if(lxPause) lxPause.textContent=(video && !video.paused)?'❚❚ Pause':'▶ Play'; }
       function playFilm(){ if(!video) return; box.classList.add('filmon'); if(poster) poster.classList.add('hide');
         stage.style.display='none'; if(bar) bar.style.display='none';
-        video.style.display='block'; try{ video.currentTime=0; }catch(e){}
-        video.muted=false; video.play().catch(function(){ video.muted=true; video.play().catch(function(){}); }); }
+        video.style.display='block'; if(lxPause) lxPause.style.display='block'; try{ video.currentTime=0; }catch(e){}
+        video.muted=false; video.play().catch(function(){ video.muted=true; video.play().catch(function(){}); }); updateLxPause(); }
       function resetFilm(){ if(!video) return; try{ video.pause(); }catch(e){} video.style.display='none'; box.classList.remove('filmon');
+        if(lxPause) lxPause.style.display='none';
         stage.style.display=''; if(bar) bar.style.display=''; if(poster) poster.classList.remove('hide'); }
       if(poster) poster.onclick=playFilm;
       replay.onclick=playFilm;
-      if(video){ video.addEventListener('ended',resetFilm); video.addEventListener('error',resetFilm); }
+      // Pause/Play toggle for the 60-second film (was replay-only before).
+      if(lxPause && video){ lxPause.onclick=function(){ if(video.paused){ video.play().catch(function(){}); } else { video.pause(); } updateLxPause(); }; }
+      if(video){ video.addEventListener('ended',resetFilm); video.addEventListener('error',resetFilm);
+        video.addEventListener('play',updateLxPause); video.addEventListener('pause',updateLxPause); }
       function maybeStart(){ if(started) return; var r=box.getBoundingClientRect(); if(r.top < (window.innerHeight*0.7) && r.bottom > 0){ playAmbient(); } }
       try{ var io2=new IntersectionObserver(function(en){ en.forEach(function(e){ if(e.isIntersecting && !started){ playAmbient(); } }); },{threshold:.4});
         io2.observe(box); }catch(e){}
