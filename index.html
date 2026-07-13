@@ -1759,7 +1759,8 @@ async function askRomulus(){
   const inp=document.getElementById('chatinput'); const q=inp.value.trim(); if(!q) return;
   inp.value=''; inp.style.height='auto'; document.getElementById('chatsend').disabled=true;
   addMsg('user',esc(q)); chatHistory.push({role:'user',content:q});
-  if(!ROMULUS_FN){ addMsg('bot','<span class="faint">The AI analyst is still being provisioned for this client — check back soon. The council record, OPPO findings and candidate profiles are fully available in the tabs above.</span>'); chatHistory.pop(); document.getElementById('chatsend').disabled=false; return; }
+  if(!ACTIVE){ addMsg('bot','<span class="faint">👈 First choose a municipality and candidate from the <b>Municipality</b> tab (top of the menu). Then ask ROMULUS anything about that race — vulnerabilities, contradictions, the strongest attack lines.</span>'); chatHistory.pop(); document.getElementById('chatsend').disabled=false; return; }
+  if(!ROMULUS_FN){ addMsg('bot','<span class="faint">The AI analyst isn\'t deployed for this client yet — check back soon. The council record, OPPO findings and candidate profiles are fully available in the tabs above.</span>'); chatHistory.pop(); document.getElementById('chatsend').disabled=false; return; }
   const think=addMsg('bot think','ROMULUS is analysing the dossier…');
   try{
     const r=await fetch(ROMULUS_FN,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY,'apikey':SUPABASE_KEY},body:JSON.stringify({messages:chatHistory.slice(-8)})});
