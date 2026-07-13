@@ -1040,7 +1040,7 @@ function renderHome(){
     <div class="tiles">
       <div class="tile"><div class="n">${c.meetings}</div><div class="l">Council meetings</div></div>
       <div class="tile"><div class="n">${c.votes.toLocaleString()}</div><div class="l">Recorded votes</div></div>
-      <div class="tile"><div class="n">${c.dissents}</div><div class="l">${esc(candFirst)} dissents (NO)</div></div>
+      <div class="tile"><div class="n">${c.dissents}</div><div class="l">${(ACTIVE&&ACTIVE.council&&ACTIVE.council.perCandidate)?"Rival dissents (NO)":esc(candFirst)+" dissents (NO)"}</div></div>
       <div class="tile"><div class="n">${c.attacks}</div><div class="l">OPPO findings</div></div>
       <div class="tile"><div class="n">${c.evidence}</div><div class="l">Evidence items</div></div>
     </div>
