@@ -503,20 +503,19 @@
       </div>
     </section>
 
-    <section class="ld-stats">
-      <div><div class="s-n">100%</div><div class="s-l">Primary-source verified</div></div>
-      <div><div class="s-n">24/7</div><div class="s-l">Automated monitoring</div></div>
-      <div><div class="s-n">11</div><div class="s-l">Intelligence streams</div></div>
-      <div><div class="s-n">0</div><div class="s-l">Fabrications, ever</div></div>
-    </section>
+    <!-- hero stat row removed per request -->
 
     <section class="ld-section" id="ld-what">
       <div class="ld-kick">WHAT IT IS</div>
       <h2>The advantage every campaign wishes it had.</h2>
       <p class="ld-lead">ROMULUS captures your opponent's entire public record, verifies every word against the official source, and hands you ranked opposition research — and your own winning message. A research team's month of work, running automatically, every day.</p>
       <div class="ld-what2">
-        <div><span class="w2-t">For the challenger</span> Incumbent-grade research that levels a field you were never supposed to win.</div>
-        <div><span class="w2-t">For the incumbent</span> Early-warning radar on every rival — and everything you need to defend your record.</div>
+        <div style="border:2px solid var(--gold);background:rgba(240,208,122,.07);border-radius:14px;padding:22px 24px;box-shadow:0 0 24px rgba(240,208,122,.10)">
+          <span class="w2-t" style="display:block;margin-bottom:7px;font-size:18px;color:var(--gold)">For the challenger</span>
+          Incumbent-grade research that levels a field you were never supposed to win.</div>
+        <div style="border:2px solid var(--gold);background:rgba(240,208,122,.07);border-radius:14px;padding:22px 24px;box-shadow:0 0 24px rgba(240,208,122,.10)">
+          <span class="w2-t" style="display:block;margin-bottom:7px;font-size:18px;color:var(--gold)">For the incumbent</span>
+          Early-warning radar on every rival — and everything you need to defend your record.</div>
       </div>
     </section>
 
@@ -525,14 +524,12 @@
       <h2>Everything ROMULUS does for you</h2>
       <p class="ld-lead">A complete research operation — automated, verifiable, and running while you sleep.</p>
       <div class="ld-grid">
-        <div class="ld-feat"><div class="ld-ico">▤</div><h3>Total record capture</h3><p>Every vote, motion, dissent and absence — straight from the official minutes.</p></div>
-        <div class="ld-feat"><div class="ld-ico">⚑</div><h3>Campaign-ready OPPO</h3><p>Tiered findings, each traced to a clickable primary source.</p></div>
-        <div class="ld-feat"><div class="ld-ico">★</div><h3>Your affirmative case</h3><p>Your message, built from real, sourced accomplishments — not talking points.</p></div>
-        <div class="ld-feat"><div class="ld-ico">✦</div><h3>Grounded AI analyst</h3><p>Ask anything. It answers from the record and cites every claim.</p></div>
-        <div class="ld-feat"><div class="ld-ico">◰</div><h3>News &amp; media radar</h3><p>Local news, auto-filtered and linked to every candidate.</p></div>
-        <div class="ld-feat"><div class="ld-ico">◱</div><h3>Opponent monitoring</h3><p>Rivals' websites, social posts (X, Instagram &amp; Facebook) and video — captured every morning and permanently archived, so even a deleted post is preserved.</p></div>
-        <div class="ld-feat"><div class="ld-ico">◲</div><h3>Political-ad tracking</h3><p>Every paid political ad — Facebook, Instagram &amp; YouTube — captured from the ad libraries: who's spending, on what message, and when.</p></div>
-        <div class="ld-feat"><div class="ld-ico">▦</div><h3>Sealed client silos</h3><p>Your intelligence in its own vault. It never crosses to another client.</p></div>
+        <div class="ld-feat" style="border:1px solid var(--gold)"><div class="ld-ico">▤</div><h3>Total record capture</h3><p>Every vote, motion, dissent and absence — straight from the official minutes, in a sealed vault that never crosses to another client.</p></div>
+        <div class="ld-feat" style="border:1px solid var(--gold)"><div class="ld-ico">⚑</div><h3>Campaign-ready OPPO</h3><p>Tiered findings, each traced to a clickable primary source.</p></div>
+        <div class="ld-feat" style="border:1px solid var(--gold)"><div class="ld-ico">★</div><h3>Your affirmative case</h3><p>Your message, built from real, sourced accomplishments — not talking points.</p></div>
+        <div class="ld-feat" style="border:1px solid var(--gold)"><div class="ld-ico">✦</div><h3>Grounded AI analyst</h3><p>Ask anything. It answers from the record and cites every claim.</p></div>
+        <div class="ld-feat" style="border:1px solid var(--gold)"><div class="ld-ico">◱</div><h3>Opponent &amp; media monitoring</h3><p>Rivals' sites, social posts (X, Instagram &amp; Facebook), video and local news — captured every morning and permanently archived, so even a deleted post is preserved.</p></div>
+        <div class="ld-feat" style="border:1px solid var(--gold)"><div class="ld-ico">◲</div><h3>Political-ad tracking</h3><p>Every paid political ad (Facebook, Instagram &amp; YouTube) from the ad libraries — who's spending, on what message, and when.</p></div>
       </div>
     </section>
 
@@ -758,6 +755,7 @@
   <div id="scrim"></div>
   <div id="client-intro">
     <video id="ci-vid" playsinline preload="auto"><source src="opener.mp4" type="video/mp4"></video>
+    <button id="ci-pause" type="button" style="display:none;position:absolute;bottom:24px;right:118px;z-index:6;background:rgba(0,0,0,.55);border:1px solid var(--line);color:#e8edf5;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;backdrop-filter:blur(6px)">❚❚ Pause</button>
     <button id="ci-skip">Skip ▸</button>
     <div class="ci-boot" id="ci-boot"></div>
   </div>
@@ -1740,15 +1738,26 @@ document.getElementById("nav").addEventListener("click",e=>{
   document.querySelector(".main").scrollTo(0,0);
   // Record each tab in browser history so the Back button steps through tabs instead of leaving the app.
   if(!window._navPop) history.pushState({app:"silo",tab:b.dataset.tab},"");
-  // Show the in-app Back arrow whenever we're inside a silo (hidden on the municipality picker).
+  // Back arrow is ALWAYS visible — it walks view → Overview → Municipality → hero page.
   var bb=document.getElementById("backBtn");
-  if(bb) bb.style.display=(typeof ACTIVE!=="undefined" && ACTIVE && b.dataset.tab!=="hq")?"flex":"none";
+  if(bb) bb.style.display="flex";
 });
 // ROMULUS wordmark/crest (top-left) → Overview, standard "home" behaviour when inside a silo.
 (function(){ var bl=document.getElementById("brandLogo"); if(bl) bl.onclick=function(){
   if(typeof ACTIVE!=="undefined" && ACTIVE){ var b=document.querySelector('button[data-tab="home"]'); if(b) b.click(); } }; })();
-// Visible in-app Back arrow — steps back through the app's own history (never leaves the page).
-(function(){ var bb=document.getElementById("backBtn"); if(bb) bb.onclick=function(){ history.back(); }; })();
+// Return to the public hero/landing page (re-show the landing overlay — same mechanism as the gate's "Back to site").
+function showLanding(){ var ld=document.getElementById('landing'); if(ld){ ld.style.display=''; } try{ window.scrollTo(0,0); }catch(e){} }
+// Visible in-app Back arrow — ALWAYS available; walks up one level each press:
+//   sub-view → Overview → Municipality picker → back to the hero/landing page. No hard refresh needed.
+(function(){ var bb=document.getElementById("backBtn"); if(!bb) return;
+  bb.style.display="flex";
+  bb.onclick=function(){
+    var a=document.querySelector(".nav button.active"); var tab=a?a.dataset.tab:"hq";
+    if(tab!=="home" && tab!=="hq"){ var h=document.querySelector('button[data-tab="home"]'); if(h) h.click(); }
+    else if(tab==="home"){ var q=document.querySelector('button[data-tab="hq"]'); if(q) q.click(); }
+    else { showLanding(); }
+  };
+})();
 // Back/Forward buttons navigate WITHIN the app (tab → tab → picker) rather than kicking the user out.
 window.addEventListener("popstate",function(e){
   var s=e.state; window._navPop=true;
@@ -1802,7 +1811,10 @@ function playClientIntro(cand, muni){
         skip=document.getElementById('ci-skip'), bootEl=document.getElementById('ci-boot');
     if(!wrap){ resolve(); return; }
     var done=false;
-    function finish(){ if(done) return; done=true; wrap.classList.remove('show','playing'); try{v.pause();}catch(e){} resolve(); }
+    var pauseBtn=document.getElementById('ci-pause');
+    function updatePause(){ if(pauseBtn) pauseBtn.textContent=v.paused?'▶ Play':'❚❚ Pause'; }
+    if(pauseBtn){ pauseBtn.onclick=function(){ if(v.paused){ v.play().catch(function(){}); } else { v.pause(); } updatePause(); }; }
+    function finish(){ if(done) return; done=true; wrap.classList.remove('show','playing'); if(pauseBtn) pauseBtn.style.display='none'; try{v.pause();}catch(e){} resolve(); }
     var lines=["▸ COUNCIL RECORDS ........ loading",
       "▸ VOTING RECORD .......... loading",
       "▸ OPPO FINDINGS .......... loading",
@@ -1817,8 +1829,10 @@ function playClientIntro(cand, muni){
     (function tick(){ if(i<lines.length){ var d=document.createElement('div'); d.className='ln'; d.textContent=lines[i]; ci.appendChild(d); i++; setTimeout(tick,220); }
       else { setTimeout(startVid,550); } })();
     function startVid(){ if(done) return; wrap.classList.add('playing'); skip.style.display='block';
+      if(pauseBtn){ pauseBtn.style.display='block'; }
       try{ v.currentTime=0; }catch(e){}
-      v.muted=false; v.play().catch(function(){ v.muted=true; v.play().catch(finish); }); }
+      v.muted=false; v.play().catch(function(){ v.muted=true; v.play().catch(finish); }); updatePause(); }
+    v.onplay=updatePause; v.onpause=updatePause;
     v.onended=finish;
     v.onerror=function(){ if(wrap.classList.contains('playing')) finish(); };
     skip.onclick=finish;
