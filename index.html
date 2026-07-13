@@ -1387,12 +1387,12 @@ function councilBlock(c){
 function renderCandidates(){
   const vidsBy={}; S.videos.forEach(v=>{(vidsBy[v.candidate_id]=vidsBy[v.candidate_id]||[]).push(v);});
   const buckets={}, order=[];
-  S.candidates.forEach(c=>{ const g=c.office_group||"_all"; if(!buckets[g]){buckets[g]=[]; order.push(g);} buckets[g].push(c); });
+  S.candidates.forEach(c=>{ const g=socRaceKey(c); if(!buckets[g]){buckets[g]=[]; order.push(g);} buckets[g].push(c); });
   order.sort((a,b)=>(GROUP_RANK[a]??45)-(GROUP_RANK[b]??45));
   const muni=(ACTIVE&&ACTIVE.muni)||"the race";
   const totalVids=S.videos.length;
   const card=c=>`
-    <div class="card">
+    <div class="card" id="cand-${esc(c.id)}">
       <div class="cand" style="align-items:flex-start">
         <div class="av">${esc((c.name||"?").split(" ").map(x=>x[0]).join("").slice(0,2))}</div>
         <div style="flex:1">
@@ -1415,12 +1415,23 @@ function renderCandidates(){
   const gchip=(k,l,n)=>`<button class="fbtn ${_cg===k?'on':''}" data-g="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
   const chips=order.length>1?`<div class="fbar">${gchip('all','All',S.candidates.length)}${order.map(g=>gchip(g,groupLabel(g),buckets[g].length)).join("")}</div>`:"";
   const shown=(_cg!=="all"&&buckets[_cg])?[_cg]:order;
+  // Quick-jump directory — every candidate as a clickable chip, grouped by race, jumps to their card.
+  const quickIndex=`<div class="candjump" style="display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start;margin:2px 0 6px">`
+    + shown.map(g=>`<span style="width:100%;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-top:8px">${esc(groupLabel(g))}</span>`
+        + buckets[g].map(c=>`<button class="fbtn cand-jump" data-jump="${esc(c.id)}">${esc(c.name)}</button>`).join("")).join("")
+    + `</div>`;
   document.getElementById("view-candidates").innerHTML=
     `<div class="pitch"><p style="margin:0"><b>${S.candidates.length}</b> candidates tracked across ${esc(muni)}${order.length>1?" · grouped by race — candidates running against each other are pooled together":""} · ${totalVids} campaign videos indexed. Each profile auto-builds from the campaign's own site and the public record, and refreshes as sites change.</p></div>`
     + chips
+    + quickIndex
     + shown.map(g=>`<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">${esc(groupLabel(g))} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[g].length}</span></div>`+buckets[g].map(card).join("")).join("");
   const fb=document.querySelector("#view-candidates .fbar");
   if(fb) fb.onclick=e=>{ const b=e.target.closest("button[data-g]"); if(!b)return; _cg=b.dataset.g; renderCandidates(); document.querySelector(".main").scrollTo(0,0); };
+  document.querySelectorAll("#view-candidates .cand-jump").forEach(b=>b.onclick=()=>{
+    const el=document.getElementById("cand-"+b.dataset.jump);
+    if(el){ el.scrollIntoView({behavior:"smooth",block:"start"});
+      el.style.transition="box-shadow .25s"; el.style.boxShadow="0 0 0 2px var(--gold)"; setTimeout(()=>{ el.style.boxShadow=""; },1400); }
+  });
   document.querySelectorAll("#view-candidates [data-council-cand]").forEach(b=>b.onclick=()=>{
     const raw=b.dataset.councilCand; _cf="all"; _cissue="all";
     const tb=document.querySelector('button[data-tab="council"]'); if(tb) tb.click();
