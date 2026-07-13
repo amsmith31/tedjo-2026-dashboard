@@ -9,11 +9,11 @@
 <title>ROMULUS — Campaign Intelligence Tool</title>
 <script>
 /* self-heal stale cache: if a newer build is live, silently reload fresh */
-(function(){ var BUILD='20260711-115432';
+(function(){ var BUILD='20260712-223052';
   try{ fetch('version.txt?_='+(new Date()).getTime(),{cache:'no-store'})
     .then(function(r){return r.ok?r.text():'';})
     .then(function(t){ t=(t||'').trim();
-      if(t && t!=='20260711-115432' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
+      if(t && t!=='20260712-223052' && t!==BUILD && location.search.indexOf('v='+t)===-1){ location.replace(location.pathname+'?v='+encodeURIComponent(t)); } })
     .catch(function(){}); }catch(e){}
 })();
 </script>
@@ -461,10 +461,26 @@
     vid.addEventListener('error',function(){ if(vid.style.display!=='none') nextVid(); });
     skip.onclick=nextVid; enter.onclick=startSeq;
   })();</script>
+  <!-- ROMULUS logomark: a hexagonal crest (authority/intelligence) + monogram R + a red "live" node. Reused via <use>. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <linearGradient id="rmg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f6e6ac"/><stop offset="1" stop-color="#cf9c2c"/></linearGradient>
+    <symbol id="romMark" viewBox="0 0 48 48">
+      <path d="M24 3 L41.5 13 V33 L24 45 L6.5 33 V13 Z" fill="none" stroke="url(#rmg)" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M24 9.5 L35.5 16 V30.5 L24 38.5 L12.5 30.5 V16 Z" fill="none" stroke="url(#rmg)" stroke-width="0.8" opacity="0.35"/>
+      <path d="M19.6 16 V33 M19.6 16 H26 a4.5 4.5 0 0 1 0 9 H19.6 M24.6 25 L29 33" fill="none" stroke="url(#rmg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="35.5" cy="13" r="2.4" fill="#f0616d"/>
+    </symbol>
+  </defs></svg>
+  <style>
+    .rmk{display:inline-block;vertical-align:middle;flex:none}
+    .backbtn{background:#141821;border:1px solid #2a3140;color:var(--muted);width:34px;height:34px;border-radius:9px;
+      cursor:pointer;font-size:17px;line-height:1;display:none;align-items:center;justify-content:center;transition:all .15s;flex:none;margin-right:4px}
+    .backbtn:hover{color:var(--gold);border-color:var(--gold-dim);transform:translateX(-2px)}
+  </style>
   <div id="landing">
     <canvas id="ld-rain"></canvas>
     <header class="ld-nav">
-      <div class="ld-logo">ROMULUS<span>●</span></div>
+      <div class="ld-logo"><svg class="rmk" width="26" height="26" style="margin-right:9px"><use href="#romMark"/></svg>ROMULUS</div>
       <nav class="ld-navlinks">
         <a href="#ld-what">What it is</a>
         <a href="#ld-cap">Capabilities</a>
@@ -476,10 +492,10 @@
     <section class="ld-hero">
       <div class="ld-hero-aurora"><span></span><span></span><span></span></div>
       <div class="ld-hero-inner">
-        <div class="ld-hero-brand">ROMULUS</div>
+        <div class="ld-hero-brand"><svg class="rmk" width="46" height="46" style="margin-right:14px"><use href="#romMark"/></svg>ROMULUS</div>
         <div class="ld-hero-brandtag">Campaign Intelligence Tool</div>
-        <h1>The war room, weaponized.</h1>
-        <p class="ld-sub">The next-generation intelligence platform for political campaigns — the entire public record, turned into a decisive, campaign-winning advantage. Refreshed every single day.</p>
+        <h1>Know more. Prove all of it.</h1>
+        <p class="ld-sub">ROMULUS turns the entire public record — votes, statements, filings, news and social — into clear, verifiable intelligence, refreshed every single day. Every finding traced to its official source. The best-prepared campaign in the room.</p>
         <div class="ld-herocta">
           <a href="#ld-demo" class="ld-btn">▶ Book a Demo</a>
           <a href="#ld-video" class="ld-btn ghost">▷ Watch the film</a>
@@ -507,7 +523,7 @@
     <section class="ld-section ld-cap" id="ld-cap">
       <div class="ld-kick">CAPABILITIES</div>
       <h2>Everything ROMULUS does for you</h2>
-      <p class="ld-lead">A full opposition-research war room — automated, verifiable, and running while you sleep.</p>
+      <p class="ld-lead">A complete research operation — automated, verifiable, and running while you sleep.</p>
       <div class="ld-grid">
         <div class="ld-feat"><div class="ld-ico">▤</div><h3>Total record capture</h3><p>Every vote, motion, dissent and absence — straight from the official minutes.</p></div>
         <div class="ld-feat"><div class="ld-ico">⚑</div><h3>Campaign-ready OPPO</h3><p>Tiered findings, each traced to a clickable primary source.</p></div>
@@ -746,9 +762,9 @@
     <div class="ci-boot" id="ci-boot"></div>
   </div>
   <aside class="sidebar">
-    <div class="brand">
-      <div class="logo" id="brandLogo" style="cursor:pointer" title="Back to Overview">ROMULUS</div>
-      <div class="sub">CAMPAIGN INTELLIGENCE</div>
+    <div class="brand" id="brandLogo" style="cursor:pointer;display:flex;align-items:center;gap:10px" title="Back to Overview">
+      <svg class="rmk" width="36" height="36"><use href="#romMark"/></svg>
+      <div style="line-height:1.15"><div class="logo">ROMULUS</div><div class="sub">CAMPAIGN INTELLIGENCE</div></div>
     </div>
     <nav class="nav" id="nav">
       <button data-tab="hq" class="active"><span class="ico">⌂</span> Municipality</button>
@@ -776,6 +792,7 @@
     <div id="tabscan"></div>
     <div class="topbar">
       <button id="menuBtn" aria-label="Open menu">☰</button>
+      <button id="backBtn" class="backbtn" aria-label="Back" title="Back">←</button>
       <div style="flex:1"><h2 id="viewTitle">Overview</h2><div class="crumb" id="viewCrumb">Demo intelligence dossier · primary-source verified</div></div>
       <div class="countdown" id="countdown"></div>
     </div>
@@ -1041,7 +1058,7 @@ function renderAttacks(){
       </div>
     </div>`; };
   document.getElementById("view-attacks").innerHTML=
-    `<div class="pitch"><p style="margin:0"><b>${S.attacks.length}</b> opposition findings, organized by target and ranked most-lethal first (Very Strong → Weak). <b>${linked}</b> link to a primary source. Pick a rival to load their file.</p></div>`
+    `<div class="pitch"><p style="margin:0"><b>${S.attacks.length}</b> opposition findings, organized by target and ranked strongest first (Very Strong → Weak). <b>${linked}</b> link to a primary source. Pick a rival to load their file.</p></div>`
     + `<div class="fbar">${chip('all','All',S.attacks.length)}${order.map(k=>chip(k,k+(raceOf(grp[k])?" · "+raceOf(grp[k]):""),buckets[k].length)).join("")}</div>`
     + shown.map(k=>{ const vs=buckets[k].filter(a=>tierRank(a.tier)<=1).length;
         return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${raceOf(grp[k])?` <span class="chip">${esc(raceOf(grp[k]))}</span>`:""}${ALLIES[k]?` <span class="chip" style="background:rgba(220,40,40,.16);color:var(--red);border-color:rgba(220,40,40,.35)" title="Strategic ally of a mayoral rival — damaging this target indirectly weakens ${esc(ALLIES[k])}">⚑ ${esc(ALLIES[k])} ally</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} findings · ${vs} strong+</span></div>`
@@ -1723,10 +1740,15 @@ document.getElementById("nav").addEventListener("click",e=>{
   document.querySelector(".main").scrollTo(0,0);
   // Record each tab in browser history so the Back button steps through tabs instead of leaving the app.
   if(!window._navPop) history.pushState({app:"silo",tab:b.dataset.tab},"");
+  // Show the in-app Back arrow whenever we're inside a silo (hidden on the municipality picker).
+  var bb=document.getElementById("backBtn");
+  if(bb) bb.style.display=(typeof ACTIVE!=="undefined" && ACTIVE && b.dataset.tab!=="hq")?"flex":"none";
 });
-// ROMULUS wordmark (top-left) → Overview, standard "home" behaviour when inside a silo.
+// ROMULUS wordmark/crest (top-left) → Overview, standard "home" behaviour when inside a silo.
 (function(){ var bl=document.getElementById("brandLogo"); if(bl) bl.onclick=function(){
   if(typeof ACTIVE!=="undefined" && ACTIVE){ var b=document.querySelector('button[data-tab="home"]'); if(b) b.click(); } }; })();
+// Visible in-app Back arrow — steps back through the app's own history (never leaves the page).
+(function(){ var bb=document.getElementById("backBtn"); if(bb) bb.onclick=function(){ history.back(); }; })();
 // Back/Forward buttons navigate WITHIN the app (tab → tab → picker) rather than kicking the user out.
 window.addEventListener("popstate",function(e){
   var s=e.state; window._navPop=true;
