@@ -449,7 +449,10 @@
           if(drops[k]*14>H && Math.random()>.975) drops[k]=0; drops[k]++; }
         if(!intro.classList.contains('gone')) requestAnimationFrame(draw); })();
     }catch(e){}
-    function toLanding(){ intro.classList.add('gone'); try{vid.pause();}catch(e){} setTimeout(function(){ intro.style.display='none'; },650); }
+    function toLanding(){ intro.classList.add('gone');
+      // Hard-stop the intro video: pause + mute + clear source aborts any pending play() so audio can't leak onto the hero/dashboard.
+      try{ vid.pause(); vid.muted=true; vid.currentTime=0; vid.removeAttribute('src'); vid.load(); }catch(e){}
+      setTimeout(function(){ intro.style.display='none'; },650); }
     // Enter -> launch clip -> avatar promo -> site (one after the other; Skip advances)
     var SEQ=['opener.mp4','opener-promo.mp4'], si=0;
     function playCurrent(){ vid.src=SEQ[si]; try{vid.load();}catch(e){} vid.muted=false;
@@ -733,7 +736,7 @@
         stage.style.display='none'; if(bar) bar.style.display='none';
         video.style.display='block'; if(lxPause) lxPause.style.display='block'; try{ video.currentTime=0; }catch(e){}
         video.muted=false; video.play().catch(function(){ video.muted=true; video.play().catch(function(){}); }); updateLxPause(); }
-      function resetFilm(){ if(!video) return; try{ video.pause(); }catch(e){} video.style.display='none'; box.classList.remove('filmon');
+      function resetFilm(){ if(!video) return; try{ video.pause(); video.muted=true; video.currentTime=0; }catch(e){} video.style.display='none'; box.classList.remove('filmon');
         if(lxPause) lxPause.style.display='none';
         stage.style.display=''; if(bar) bar.style.display=''; if(poster) poster.classList.remove('hide'); }
       if(poster) poster.onclick=playFilm;
@@ -1873,7 +1876,7 @@ function playClientIntro(cand, muni){
     var pauseBtn=document.getElementById('ci-pause');
     function updatePause(){ if(pauseBtn) pauseBtn.textContent=v.paused?'▶ Play':'❚❚ Pause'; }
     if(pauseBtn){ pauseBtn.onclick=function(){ if(v.paused){ v.play().catch(function(){}); } else { v.pause(); } updatePause(); }; }
-    function finish(){ if(done) return; done=true; wrap.classList.remove('show','playing'); if(pauseBtn) pauseBtn.style.display='none'; try{v.pause();}catch(e){} resolve(); }
+    function finish(){ if(done) return; done=true; wrap.classList.remove('show','playing'); if(pauseBtn) pauseBtn.style.display='none'; try{ v.pause(); v.muted=true; v.currentTime=0; }catch(e){} resolve(); }
     var lines=["▸ COUNCIL RECORDS ........ loading",
       "▸ VOTING RECORD .......... loading",
       "▸ OPPO FINDINGS .......... loading",
