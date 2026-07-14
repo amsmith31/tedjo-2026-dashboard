@@ -899,6 +899,14 @@ const COUNCIL_OPITZ = {
   q: raw => "/council_votes?candidate_name_raw=eq."+raw+"&select=vote,voted_on,agenda_item,title,committee,motion_type,result,vote_description,issue_area,source_url&order=voted_on.desc.nullslast,id.asc",
   map: r => ({ date:r.voted_on, item:r.agenda_item||"", topic:r.title||"", doc:r.motion_type||"",
                council:r.result||"", myVote:r.vote, minutes:r.source_url, issue:r.issue_area||"" }) };
+// Brampton Wards 7&8 (Monica Singh Soares silo): principal is a challenger, so the Council Record
+// tab tracks the RIVAL incumbent Rod Power's flat Brampton voting record. Same flat shape as Opitz.
+const COUNCIL_SINESOARES = {
+  perCandidate: true,
+  candidates: [ {raw:"rod-power", name:"Rod Power", note:"incumbent (2022– )"} ],
+  q: raw => "/council_votes?candidate_name_raw=eq."+raw+"&select=vote,voted_on,agenda_item,title,committee,motion_type,result,vote_description,issue_area,source_url&order=voted_on.desc.nullslast,id.asc",
+  map: r => ({ date:r.voted_on, item:r.agenda_item||"", topic:r.title||"", doc:r.motion_type||"",
+               council:r.result||"", myVote:r.vote, minutes:r.source_url, issue:r.issue_area||"" }) };
 const CLIENTS = {
   "Mississauga": { candidates: {
     "Alvin Tedjo": { office:"Mayor · 2026", status:"live", fn:"romulus", demo:true,
@@ -915,6 +923,12 @@ const CLIENTS = {
       url:"https://ofzfhrfjtoywniawkkua.supabase.co",
       key:"sb_publishable_Ou_zHp9PyY1d_66yDCGqyg_DHnSO-Zx",
       note:"Council record loaded for both incumbents (Morley + Grimes) — news, video and the AI analyst are still being provisioned." }
+  }},
+  "Brampton (Wards 7 & 8)": { candidates: {
+    "Monica Singh Soares": { office:"City Council · Wards 7 & 8 · 2026", status:"live", fn:"", council:COUNCIL_SINESOARES,
+      url:"https://jjqzzozpygaiptkjezbg.supabase.co",
+      key:"sb_publishable_vnfQelO0eVVZuqvbdbFnKQ_KEboRUU6",
+      note:"Challenger vs incumbent Rod Power. Rod Power's full Brampton voting record (63 votes) + 30 contentious items + the Pakistan-trip finding are loaded. AI analyst, news, video, social and the ROMULUS chat are still being provisioned." }
   }}
   // ➕ ADD A NEW CLIENT as they come online — just drop another entry:
   //   "Municipality": { candidates: { "Candidate Name": {
