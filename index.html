@@ -1146,6 +1146,7 @@ let _cissue="all";
 let _social="all";
 let _socRace="all";
 let _socPlat="all";
+let _socDel="all";   // "all" | "deleted" — the deleted-post archive view
 window.__op="all";
 // My Message: map raw messaging categories -> clean themed sections (case-insensitive)
 const MSG_SECTIONS = [
@@ -1328,8 +1329,11 @@ function renderSocial(){
   const pc={x:0,instagram:0,facebook:0};
   shownAll.forEach(e=>e.posts.forEach(p=>{ if(pc[p.platform]!=null) pc[p.platform]++; }));
   const psel=(_socPlat==="all"||pc[_socPlat])?_socPlat:"all";
-  const groups=shownAll.map(g=>({name:g.name, race:g.race, cid:g.cid,
-      fposts:psel==="all"?g.posts:g.posts.filter(p=>p.platform===psel)})).filter(g=>g.fposts.length);
+  const delCount=shownAll.reduce((a,e)=>a+e.posts.filter(p=>p.deleted).length,0);
+  const dsel=(_socDel==="deleted")?"deleted":"all";
+  const groups=shownAll.map(g=>{ let fp=psel==="all"?g.posts:g.posts.filter(p=>p.platform===psel);
+      if(dsel==="deleted") fp=fp.filter(p=>p.deleted);
+      return {name:g.name, race:g.race, cid:g.cid, fposts:fp}; }).filter(g=>g.fposts.length);
   const per=csel==="all"?3:200;
   const SS="background:#141821;color:#e8edf5;border:1px solid #2a3140;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;min-width:170px";
   const LBL="font-size:11px;letter-spacing:.6px;text-transform:uppercase";
@@ -1341,15 +1345,17 @@ function renderSocial(){
     + `<div style="display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap;margin:12px 0 6px;padding:11px 13px;background:#0e121a;border:1px solid #1e2430;border-radius:10px">`
     +   `<div style="display:flex;flex-direction:column;gap:5px"><label class="faint" style="${LBL}">Candidate</label><select id="soccand" style="${SS}">${candOpts}</select></div>`
     +   `<div style="display:flex;flex-direction:column;gap:5px"><label class="faint" style="${LBL}">Platform</label><select id="socplat" style="${SS}">${platOpts}</select></div>`
+    +   `<div style="display:flex;flex-direction:column;gap:5px"><label class="faint" style="${LBL}">Show</label><select id="socdel" style="${SS}"><option value="all">All posts</option><option value="deleted" ${dsel==="deleted"?"selected":""}>🗑 Deleted only (${delCount})</option></select></div>`
     + `</div>`
     + (groups.length?groups.map(g=>`<div class="sect-title" style="margin:18px 0 8px;font-size:15px;color:var(--gold)">${esc(g.name)} <span class="faint" style="font-weight:400;font-size:12px">· ${esc(groupLabel(g.race))} · ${g.fposts.length}${psel==="all"?"":" "+esc(PLAT_LABEL[psel])} posts · latest ${fmtD(g.fposts[0].posted_at)}</span></div>`
         + g.fposts.slice(0,per).map(postCard).join("")
         + (csel==="all"&&g.fposts.length>per?`<div class="faint" style="font-size:12px;margin:2px 0 4px">+ ${g.fposts.length-per} more — pick ${esc(g.name.split(" ").slice(-1)[0])} above to see all</div>`:"")).join("")
-       : `<div class="pitch" style="margin-top:10px"><p style="margin:0" class="faint">No ${esc(PLAT_LABEL[psel]||"")} posts in this selection yet.</p></div>`);
+       : `<div class="pitch" style="margin-top:10px"><p style="margin:0" class="faint">${dsel==="deleted"?"No deleted posts captured yet — when a tracked post is removed from its platform, it's preserved here automatically with its archived media, date and platform.":"No "+esc(PLAT_LABEL[psel]||"")+" posts in this selection yet."}</p></div>`);
   const fb=el.querySelector(".fbar");
   if(fb) fb.onclick=e=>{ const b=e.target.closest("button[data-socrace]"); if(!b) return; _socRace=b.dataset.socrace; _social="all"; renderSocial(); var m=document.querySelector(".main"); if(m) m.scrollTo(0,0); };
   const cs=el.querySelector("#soccand"); if(cs) cs.onchange=ev=>{ _social=ev.target.value; renderSocial(); };
   const ps=el.querySelector("#socplat"); if(ps) ps.onchange=ev=>{ _socPlat=ev.target.value; renderSocial(); };
+  const ds=el.querySelector("#socdel"); if(ds) ds.onchange=ev=>{ _socDel=ev.target.value; renderSocial(); };
 }
 // Community Watch — unverified third-party posts from monitored FB groups that name a candidate.
 // Archived evidence for a monitored post: media files we downloaded into our own storage + captured comments.
