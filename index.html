@@ -233,12 +233,15 @@
   .lx-kicker{position:absolute;top:16px;left:18px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:2px;color:var(--gold);opacity:.8;z-index:2}
   .lx-bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:#ffffff14}
   .lx-fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),#f0d98a);box-shadow:0 0 12px var(--gold)}
-  .lx-replay{position:absolute;bottom:14px;right:14px;background:#0a0e14cc;border:1px solid var(--gold-dim);color:var(--gold);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:12px;z-index:2}
+  /* shared video controls — identical geometry on BOTH players (hero film + client intro) */
+  .vid-ctl{position:absolute;bottom:18px;right:18px;z-index:4;display:flex;gap:10px;align-items:center}
+  .vid-btn{background:#0a0e14cc;border:1px solid var(--gold-dim);color:var(--gold);padding:9px 18px;border-radius:8px;cursor:pointer;font-size:14px;line-height:1;white-space:nowrap;backdrop-filter:blur(6px)}
+  .vid-btn:hover{background:var(--gold-dim)}
   .lx-note{text-align:center;color:var(--faint);font-size:12.5px;margin-top:12px}
   /* client-entry cinematic intro */
   #client-intro{position:fixed;inset:0;z-index:1050;background:#04060a;display:none;align-items:center;justify-content:center;overflow:hidden}
   #client-intro.show{display:flex}
-  #ci-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#04060a;opacity:0;transition:opacity .5s}
+  #ci-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#04060a;opacity:0;transition:opacity .5s}
   #client-intro.playing #ci-vid{opacity:1}
   .ci-boot{position:relative;text-align:center;transition:opacity .5s;z-index:1;padding:20px}
   #client-intro.playing .ci-boot{opacity:0}
@@ -246,7 +249,7 @@
   .ci-tag{color:var(--muted);letter-spacing:4px;font-size:12px;margin:8px 0 18px}
   .ci-lines{font-family:ui-monospace,monospace;color:var(--green);font-size:13px;text-align:left;display:inline-block;min-height:150px}
   .ci-lines .ln{opacity:0;animation:rsIn .35s forwards;padding:2px 0}
-  #ci-skip{position:absolute;bottom:16px;right:16px;z-index:3;background:#0a0e14cc;border:1px solid var(--gold-dim);color:var(--gold);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:12px;display:none}
+  /* #ci-skip / #ci-pause now use the shared .vid-btn styling above */
   @media (prefers-reduced-motion:reduce){.ld-hero *{animation:none!important;opacity:1!important} .reveal{opacity:1;transform:none}}
   .searchbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
   .searchbar input,.searchbar select{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:7px;font-size:13px}
@@ -292,9 +295,11 @@
     color:var(--muted);padding:7px 15px;border-radius:6px;cursor:pointer;font-size:12px}
   #pwgate{text-align:center;padding:20px;position:relative;z-index:2}
   .pw-row{display:flex;gap:10px;justify-content:center;margin-top:6px}
-  #pw-input{background:#0a0e14;border:1px solid var(--gold-dim);color:var(--gold);font-family:ui-monospace,Menlo,Consolas,monospace;
+  #pw-input,#pw-user{background:#0a0e14;border:1px solid var(--gold-dim);color:var(--gold);font-family:ui-monospace,Menlo,Consolas,monospace;
     padding:12px 18px;border-radius:9px;font-size:15px;letter-spacing:3px;width:min(300px,68vw);text-align:center}
-  #pw-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 18px rgba(224,184,76,.3)}
+  #pw-input:focus,#pw-user:focus{outline:none;border-color:var(--gold);box-shadow:0 0 18px rgba(224,184,76,.3)}
+  #pw-user{letter-spacing:1px}
+  .pw-row button:disabled{opacity:.5;cursor:default}
   .pw-row button{background:var(--gold);color:#05070b;border:none;padding:0 22px;border-radius:9px;font-weight:800;cursor:pointer;font-size:14px}
   #pw-err{color:var(--red);font-family:ui-monospace,monospace;font-size:13px;margin-top:16px;height:16px;letter-spacing:2px}
   #splash.shake{animation:rsShake .4s}
@@ -351,9 +356,8 @@
   @keyframes enterIn{to{opacity:1;transform:none}}
   @keyframes enterPulse{0%,100%{box-shadow:0 0 22px rgba(224,184,76,.4)}50%{box-shadow:0 0 42px rgba(224,184,76,.78)}}
   #intro-enter:hover{transform:scale(1.05)}
-  #intro-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#04060a;z-index:3}
-  #intro-skip{position:absolute;top:18px;right:22px;z-index:4;background:#0a0e14aa;border:1px solid var(--line);color:var(--muted);padding:8px 15px;border-radius:6px;cursor:pointer;font-size:12px}
-  #intro-skip:hover{color:var(--gold);border-color:var(--gold-dim)}
+  #intro-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#04060a;z-index:3}
+  /* #intro-skip now uses the shared .vid-ctl / .vid-btn styling (bottom-right, same as every other player) */
   /* bigger, present ROMULUS on the marketing hero */
   .ld-hero-brand{font-size:clamp(48px,11vw,112px);font-weight:900;letter-spacing:clamp(4px,2vw,16px);color:var(--gold);line-height:1;
     text-shadow:0 0 34px rgba(224,184,76,.4);margin-bottom:8px}
@@ -418,7 +422,9 @@
     <canvas id="mrain"></canvas>
     <div class="intro-bg"><span></span><span></span><span></span></div>
     <video id="intro-vid" playsinline preload="auto" style="display:none"></video>
-    <button id="intro-skip" style="display:none">⏭ Skip Intro</button>
+    <div class="vid-ctl">
+      <button class="vid-btn" id="intro-skip" type="button" style="display:none">⏭ Skip Intro</button>
+    </div>
     <div class="intro-inner" id="intro-inner">
       <div class="intro-logo">ROMULUS</div>
       <div class="intro-sub">Campaign Intelligence Tool</div>
@@ -488,7 +494,7 @@
         <a href="#ld-what">What it is</a>
         <a href="#ld-cap">Capabilities</a>
         <a href="#ld-video">The film</a>
-        <button id="ld-access" type="button">Developer Access →</button>
+        <button id="ld-access" type="button">Sign In →</button>
       </nav>
     </header>
 
@@ -566,8 +572,10 @@
         <div class="lx-kicker">ROMULUS ▸ CAMPAIGN INTELLIGENCE</div>
         <div class="lx-stage" id="lx-stage"></div>
         <div class="lx-bar"><div class="lx-fill" id="lx-fill"></div></div>
-        <button class="lx-pause" id="lx-pause" style="display:none;position:absolute;bottom:14px;right:104px;background:#0a0e14cc;border:1px solid var(--gold-dim);color:var(--gold);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:12px;z-index:3">❚❚ Pause</button>
-        <button class="lx-replay" id="lx-replay">▶ Replay</button>
+        <div class="vid-ctl">
+          <button class="vid-btn" id="lx-pause" type="button" style="display:none">❚❚ Pause</button>
+          <button class="vid-btn" id="lx-replay" type="button">▶ Replay</button>
+        </div>
         <div class="lx-poster" id="lx-poster"><div class="lx-play">▶</div><div class="lx-play-l">Play the film</div></div>
       </div>
       <div class="lx-note">▶ Turn your sound on — a 60-second overview of what ROMULUS does.</div>
@@ -767,19 +775,27 @@
   <div id="splash">
     <div id="pwgate">
       <div class="rs-logo">ROMULUS</div>
-      <div class="rs-tag">Developer Access · Authorized Personnel</div>
+      <div class="rs-tag">Secure Sign-In · Campaign Intelligence</div>
       <div class="rs-boot" id="pw-boot"></div>
       <div class="pw-row">
-        <input id="pw-input" type="password" placeholder="ACCESS CODE" autocomplete="off" spellcheck="false">
-        <button id="pw-enter">Enter ▸</button>
+        <input id="pw-user" type="email" placeholder="USERNAME" autocomplete="username" spellcheck="false" autocapitalize="off">
+      </div>
+      <div class="pw-row">
+        <input id="pw-input" type="password" placeholder="PASSWORD" autocomplete="current-password" spellcheck="false">
+        <button id="pw-enter" type="button">Sign In ▸</button>
       </div>
       <div id="pw-err"></div>
       <button id="pw-back" type="button" style="margin-top:18px;background:none;border:1px solid var(--line);color:var(--muted);padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12px">← Back to site</button>
     </div>
   </div>
   <script>(function(){
-    var PW="Satorus2026";
-    var sp=document.getElementById('splash'), boot=document.getElementById('pw-boot'), inp=document.getElementById('pw-input');
+    // NOTE: there is deliberately NO passcode in this file any more. Sign-in is a real
+    // Supabase Auth call against the client's own project (see romSignIn() further down).
+    // Each client's login exists ONLY inside their own silo, so isolation is enforced by
+    // the database — nothing here can be bypassed by reading the source.
+    var sp=document.getElementById('splash'), boot=document.getElementById('pw-boot'),
+        inp=document.getElementById('pw-input'), usr=document.getElementById('pw-user'),
+        btn=document.getElementById('pw-enter'), err=document.getElementById('pw-err');
     var lines=["▸ SECURE SESSION ......... established",
       "▸ COUNCIL RECORDS ........ indexed",
       "▸ VOTING RECORD .......... cross-verified",
@@ -789,24 +805,42 @@
       "▸ VIDEO INTEL ............ live",
       "▸ POLITICAL ADS .......... tracked",
       "▸ SOCIAL MEDIA ........... live",
-      "▸ AWAITING ACCESS CODE_"];
+      "▸ AWAITING SIGN-IN_"];
     var i=0;(function tick(){ if(i<lines.length){ var d=document.createElement('div'); d.className='ln';
       d.textContent=lines[i]; boot.appendChild(d); i++; setTimeout(tick,200);} })();
-    // #landing (z above #splash) is hidden by the Developer Access button, revealing this gate
+    // #landing (z above #splash) is hidden by the Sign In button, revealing this gate
     function enterTerminal(){ sp.style.display='none'; }   // #landing already hidden -> dashboard shows
-    function submit(){ if(inp.value===PW){ enterTerminal(); }
-      else { document.getElementById('pw-err').textContent='✖ ACCESS DENIED'; inp.value='';
-        sp.classList.add('shake'); setTimeout(function(){ sp.classList.remove('shake'); },420); try{inp.focus();}catch(e){} } }
-    document.getElementById('pw-enter').onclick=submit;
+    function deny(msg){ err.textContent=msg||'✖ ACCESS DENIED'; inp.value='';
+      sp.classList.add('shake'); setTimeout(function(){ sp.classList.remove('shake'); },420);
+      try{inp.focus();}catch(e){} }
+    var busy=false;
+    async function submit(){
+      if(busy) return;
+      var email=(usr.value||'').trim(), pw=inp.value||'';
+      if(!email||!pw){ deny('✖ USERNAME AND PASSWORD REQUIRED'); return; }
+      busy=true; btn.disabled=true; err.textContent=''; btn.textContent='…';
+      var res;
+      try{ res=await window.romSignIn(email,pw); }
+      catch(e){ res={ok:false,msg:'✖ NETWORK ERROR — TRY AGAIN'}; }
+      busy=false; btn.disabled=false; btn.textContent='Sign In ▸';
+      if(!res||!res.ok){ deny(res&&res.msg); return; }
+      inp.value=''; usr.value='';          // don't leave credentials sitting in the DOM
+      enterTerminal();
+      window.romAfterSignIn(res);
+    }
+    btn.onclick=submit;
     inp.addEventListener('keydown',function(e){ if(e.key==='Enter') submit(); });
+    usr.addEventListener('keydown',function(e){ if(e.key==='Enter'){ try{inp.focus();}catch(x){} } });
     document.getElementById('pw-back').onclick=function(){ var ld=document.getElementById('landing'); if(ld) ld.style.display=''; };
-    var acc=document.getElementById('ld-access'); if(acc) acc.addEventListener('click',function(){ setTimeout(function(){ try{inp.focus();}catch(e){} },60); });
+    var acc=document.getElementById('ld-access'); if(acc) acc.addEventListener('click',function(){ setTimeout(function(){ try{usr.focus();}catch(e){} },60); });
   })();</script>
   <div id="scrim"></div>
   <div id="client-intro">
     <video id="ci-vid" playsinline preload="auto"><source src="opener.mp4" type="video/mp4"></video>
-    <button id="ci-pause" type="button" style="display:none;position:absolute;bottom:24px;right:118px;z-index:6;background:rgba(0,0,0,.55);border:1px solid var(--line);color:#e8edf5;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;backdrop-filter:blur(6px)">❚❚ Pause</button>
-    <button id="ci-skip">Skip ▸</button>
+    <div class="vid-ctl">
+      <button class="vid-btn" id="ci-pause" type="button" style="display:none">❚❚ Pause</button>
+      <button class="vid-btn" id="ci-skip" type="button" style="display:none">Skip ▸</button>
+    </div>
     <div class="ci-boot" id="ci-boot"></div>
   </div>
   <aside class="sidebar">
@@ -909,23 +943,26 @@ const COUNCIL_SINESOARES = {
                council:r.result||"", myVote:r.vote, minutes:r.source_url, issue:r.issue_area||"" }) };
 const CLIENTS = {
   "Mississauga": { candidates: {
-    "Alvin Tedjo": { office:"Mayor · 2026", status:"live", fn:"romulus", demo:true,
+    "Alvin Tedjo": { office:"Mayor · 2026", status:"live", fn:"romulus", demo:true, login:"tedjo@romulus.vote",
       url:"https://lblxjbomfusfhsnwehez.supabase.co",
       key:"sb_publishable_aDVuWrjpxpn1Zo4Dyix3mw_nkTtxipb" }
   }},
   "Oakville": { candidates: {
     "Rob Burton": { office:"Mayor · 2026", status:"live", fn:"legatus", msgTable:"burton_messaging", council:COUNCIL_BURTON,
+      login:"burton@romulus.vote",
       url:"https://poddxshidtrulrsavxmy.supabase.co",
       key:"sb_publishable_0jVh2ndw3eHbbbDPpCnU2A_HjN78dIi" }
   }},
   "Etobicoke-Lakeshore": { candidates: {
     "Ted Opitz": { office:"City Council · 2026", status:"live", fn:"romulus", council:COUNCIL_OPITZ,
+      login:"opitz@romulus.vote",
       url:"https://ofzfhrfjtoywniawkkua.supabase.co",
       key:"sb_publishable_Ou_zHp9PyY1d_66yDCGqyg_DHnSO-Zx",
       note:"Council record loaded for both incumbents (Morley + Grimes) — news, video and the AI analyst are still being provisioned." }
   }},
   "Brampton (Wards 7 & 8)": { candidates: {
     "Monica Singh Soares": { office:"City Council · Wards 7 & 8 · 2026", status:"live", fn:"romulus", council:COUNCIL_SINESOARES,
+      login:"monica@romulus.vote",
       url:"https://jjqzzozpygaiptkjezbg.supabase.co",
       key:"sb_publishable_vnfQelO0eVVZuqvbdbFnKQ_KEboRUU6",
       note:"Challenger vs incumbent Rod Power. Rod Power's full Brampton voting record (63 votes) + 30 contentious items + the Pakistan-trip finding are loaded. AI analyst, news, video, social and the ROMULUS chat are still being provisioned." }
@@ -937,6 +974,104 @@ const CLIENTS = {
   // HQ renders every entry automatically and the dashboard adapts to whatever tables the silo has.
 };
 let SUPABASE_URL="", SUPABASE_KEY="", REST="", ROMULUS_FN="", ACTIVE=null;
+
+// ── AUTHENTICATION ─────────────────────────────────────────────────────────────
+// Every silo is a SEPARATE Supabase project with its own user table. A client's
+// login therefore does not exist in any other silo — cross-silo access isn't
+// "hidden", it is refused by the database. Nothing in this public file can be
+// read, edited or bypassed to change that.
+//
+//   admin@romulus.vote  → exists in ALL silos → HQ + every client (operator)
+//   <client>@romulus.vote → exists in ONE silo → that silo only, no HQ
+//
+// Passwords are never stored here; they're exchanged for a short-lived JWT.
+const MASTER_LOGIN="admin@romulus.vote";
+const SESS={};                 // project url -> { access, refresh }
+let AUTH_TOKEN="";             // access token for the ACTIVE silo
+let IS_MASTER=false;
+const siloKey = u => String(u||"").replace(/\/+$/,"");
+
+function findClientByLogin(email){
+  const e=String(email||"").trim().toLowerCase();
+  for(const m in CLIENTS){ for(const cand in CLIENTS[m].candidates){
+    const c=CLIENTS[m].candidates[cand];
+    if(c.login && c.login.toLowerCase()===e) return {muni:m, cand, c};
+  }}
+  return null;
+}
+async function sbSignIn(url, key, email, password){
+  try{
+    const r=await fetch(siloKey(url)+"/auth/v1/token?grant_type=password",
+      {method:"POST", headers:{apikey:key,"Content-Type":"application/json"},
+       body:JSON.stringify({email:email, password:password})});
+    if(!r.ok) return null;
+    const j=await r.json();
+    return j.access_token?{access:j.access_token, refresh:j.refresh_token}:null;
+  }catch(e){ return null; }
+}
+async function sbRefresh(url, key, refresh){
+  try{
+    const r=await fetch(siloKey(url)+"/auth/v1/token?grant_type=refresh_token",
+      {method:"POST", headers:{apikey:key,"Content-Type":"application/json"},
+       body:JSON.stringify({refresh_token:refresh})});
+    if(!r.ok) return null;
+    const j=await r.json();
+    return j.access_token?{access:j.access_token, refresh:j.refresh_token}:null;
+  }catch(e){ return null; }
+}
+// Single choke point for every authenticated request. A JWT is short-lived, so a
+// 401 mid-session means "expired", not "forbidden" — refresh once and retry before
+// surfacing an error, otherwise a long dashboard session would die on the user.
+async function authedFetch(url, opts){
+  opts=opts||{};
+  const hdrs=Object.assign({}, opts.headers||{},
+    {apikey:SUPABASE_KEY, Authorization:"Bearer "+(AUTH_TOKEN||SUPABASE_KEY)});
+  let r=await fetch(url, Object.assign({}, opts, {headers:hdrs}));
+  if(r.status===401 && AUTH_TOKEN){
+    const s=SESS[siloKey(SUPABASE_URL)];
+    if(s && s.refresh){
+      const fresh=await sbRefresh(SUPABASE_URL, SUPABASE_KEY, s.refresh);
+      if(fresh){
+        SESS[siloKey(SUPABASE_URL)]=fresh; AUTH_TOKEN=fresh.access;
+        hdrs.Authorization="Bearer "+fresh.access;
+        r=await fetch(url, Object.assign({}, opts, {headers:hdrs}));
+      }
+    }
+  }
+  return r;
+}
+// Called by the sign-in gate. Returns {ok, isMaster, muni, cand}.
+// The error message is deliberately identical for "no such user" and "wrong
+// password" — a distinct message would let anyone enumerate which logins exist.
+window.romSignIn = async function(email, pw){
+  const e=String(email||"").trim().toLowerCase();
+  if(e===MASTER_LOGIN){
+    const entries=[];
+    for(const m in CLIENTS) for(const cand in CLIENTS[m].candidates) entries.push(CLIENTS[m].candidates[cand]);
+    const out=await Promise.all(entries.map(c=>sbSignIn(c.url, c.key, e, pw)));
+    let ok=0;
+    out.forEach((s,i)=>{ if(s){ SESS[siloKey(entries[i].url)]=s; ok++; } });
+    if(!ok) return {ok:false};
+    IS_MASTER=true;
+    return {ok:true, isMaster:true};
+  }
+  const hit=findClientByLogin(e);
+  if(!hit) return {ok:false};
+  const s=await sbSignIn(hit.c.url, hit.c.key, e, pw);
+  if(!s) return {ok:false};
+  SESS[siloKey(hit.c.url)]=s;
+  IS_MASTER=false;
+  return {ok:true, isMaster:false, muni:hit.muni, cand:hit.cand};
+};
+// Master lands on HQ (the municipality picker). A client is taken straight into
+// their own silo and never sees HQ at all — it isn't merely hidden, the picker is
+// emptied and its nav entry removed, so there is nothing to navigate back to.
+window.romAfterSignIn = function(res){
+  if(res.isMaster) return;                       // master: default HQ view stands
+  const hqBtn=document.querySelector('button[data-tab="hq"]'); if(hqBtn) hqBtn.style.display="none";
+  const hqView=document.getElementById("view-hq"); if(hqView) hqView.innerHTML="";
+  connectClient(res.muni, res.cand, {intro:false});   // clients skip the cinematic
+};
 const ELECTION = new Date("2026-10-26T00:00:00-04:00");
 const FILING_DEADLINE = new Date("2026-08-21T14:00:00-04:00");
 
@@ -961,20 +1096,20 @@ function firstUrl(v){
   const m=String(v).match(/https?:\/\/[^\s'"\]\)}>]+/); return m?m[0]:null;
 }
 const fmtD = s => { if(!s) return ""; const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s)); const d=m?new Date(+m[1],+m[2]-1,+m[3]):new Date(s); return isNaN(d)?String(s).slice(0,10):d.toLocaleDateString("en-CA",{year:"numeric",month:"short",day:"numeric"}); };
-async function api(path){ const r=await fetch(REST+path,{headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY}}); if(!r.ok) throw new Error("HTTP "+r.status+" "+path+" — "+(await r.text()).slice(0,160)); return r.json(); }
-async function count(t,q=""){ const r=await fetch(REST+"/"+t+"?select=id"+(q?"&"+q:""),{headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,Prefer:"count=exact",Range:"0-0"}}); const cr=r.headers.get("content-range"); return cr?parseInt(cr.split("/")[1]):0; }
+async function api(path){ const r=await authedFetch(REST+path); if(!r.ok) throw new Error("HTTP "+r.status+" "+path+" — "+(await r.text()).slice(0,160)); return r.json(); }
+async function count(t,q=""){ const r=await authedFetch(REST+"/"+t+"?select=id"+(q?"&"+q:""),{headers:{Prefer:"count=exact",Range:"0-0"}}); const cr=r.headers.get("content-range"); return cr?parseInt(cr.split("/")[1]):0; }
 // Silo-tolerant variants: a client's schema may lack some tables (new/early clients).
 // Missing table or any error -> fall back to empty, so the dashboard still loads what exists.
 async function safeApi(path, fb){ try{ return await api(path); }catch(e){ console.warn("skip",path.split("?")[0],e.message); return fb!==undefined?fb:[]; } }
 async function safeCount(t,q=""){ try{ return await count(t,q); }catch(e){ return 0; } }
 // Exact count for an arbitrary REST path (PostgREST caps rows at 1000, but count=exact is always true).
 async function countPath(path){ const sep=path.includes("?")?"&":"?"; try{
-  const r=await fetch(REST+path+sep+"select=id",{headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,Prefer:"count=exact",Range:"0-0"}});
+  const r=await authedFetch(REST+path+sep+"select=id",{headers:{Prefer:"count=exact",Range:"0-0"}});
   const cr=r.headers.get("content-range"); return cr?parseInt(cr.split("/")[1]):0; }catch(e){ return 0; } }
 // Fetch every row of a large table via parallel Range pages (works around the 1000-row response cap).
 async function apiPaged(path, total){ const page=1000, pages=Math.max(1,Math.ceil((total||0)/page)); const reqs=[];
   for(let p=0;p<pages;p++){ const from=p*page;
-    reqs.push(fetch(REST+path,{headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+SUPABASE_KEY,"Range-Unit":"items",Range:from+"-"+(from+page-1)}}).then(r=>r.ok?r.json():[]).catch(()=>[])); }
+    reqs.push(authedFetch(REST+path,{headers:{"Range-Unit":"items",Range:from+"-"+(from+page-1)}}).then(r=>r.ok?r.json():[]).catch(()=>[])); }
   const chunks=await Promise.all(reqs); return [].concat.apply([],chunks); }
 // Count-based per-councillor summary (accurate regardless of the row cap) for profile breakdowns + issue filter.
 const ISSUE_AREAS=["Budget & Taxes","Development & Planning","Housing","Transit","Roads & Cycling","Policing & Safety","Environment & Parks","Governance & Integrity","Community & Social","Other / Procedural"];
@@ -1823,7 +1958,7 @@ async function askRomulus(){
   if(!ROMULUS_FN){ addMsg('bot','<span class="faint">The AI analyst isn\'t deployed for this client yet — check back soon. The council record, OPPO findings and candidate profiles are fully available in the tabs above.</span>'); chatHistory.pop(); document.getElementById('chatsend').disabled=false; return; }
   const think=addMsg('bot think','ROMULUS is analysing the dossier…');
   try{
-    const r=await fetch(ROMULUS_FN,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_KEY,'apikey':SUPABASE_KEY},body:JSON.stringify({messages:chatHistory.slice(-8)})});
+    const r=await authedFetch(ROMULUS_FN,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatHistory.slice(-8)})});
     const data=await r.json();
     if(!r.ok||data.error){ think.className='msg bot'; think.innerHTML='<span style="color:var(--red)">Error: '+esc(data.error||('HTTP '+r.status))+'</span>'; }
     else { think.className='msg bot'; think.innerHTML=md(data.reply||'(no reply)'); chatHistory.push({role:'assistant',content:data.reply||''}); }
@@ -1873,7 +2008,9 @@ function showLanding(){ var ld=document.getElementById('landing'); if(ld){ ld.st
   bb.onclick=function(){
     var a=document.querySelector(".nav button.active"); var tab=a?a.dataset.tab:"hq";
     if(tab!=="home" && tab!=="hq"){ var h=document.querySelector('button[data-tab="home"]'); if(h) h.click(); }
-    else if(tab==="home"){ var q=document.querySelector('button[data-tab="hq"]'); if(q) q.click(); }
+    // Only the operator has an HQ above Overview. For a client, Overview IS the top of
+    // their world, so Back goes to the hero page rather than exposing the picker.
+    else if(tab==="home" && IS_MASTER){ var q=document.querySelector('button[data-tab="hq"]'); if(q) q.click(); }
     else { showLanding(); }
   };
 })();
@@ -1882,7 +2019,7 @@ window.addEventListener("popstate",function(e){
   var s=e.state; window._navPop=true;
   try{
     if(s && s.app==="silo" && s.tab){ var b=document.querySelector('button[data-tab="'+s.tab+'"]'); if(b) b.click(); }
-    else { var h=document.querySelector('button[data-tab="hq"]'); if(h) h.click(); }   // back past the silo → municipality picker
+    else { var h=document.querySelector('button[data-tab="'+(IS_MASTER?"hq":"home")+'"]'); if(h) h.click(); }   // back past the silo → picker (operator) / Overview (client)
   } finally { window._navPop=false; }
 });
 function openNav(){ document.body.classList.add("nav-open");
@@ -1957,9 +2094,13 @@ function playClientIntro(cand, muni){
     skip.onclick=finish;
   });
 }
-function connectClient(muni, cand){
+function connectClient(muni, cand, opts){
+  opts=opts||{};
   const c=CLIENTS[muni].candidates[cand];
   SUPABASE_URL=c.url.replace(/\/+$/,""); SUPABASE_KEY=c.key;
+  // Swap in the session for THIS silo. Master holds one per project; a client holds
+  // exactly one, so there is nothing else here to switch to.
+  AUTH_TOKEN=(SESS[siloKey(c.url)]||{}).access||"";
   REST=SUPABASE_URL+"/rest/v1"; ROMULUS_FN=c.fn?SUPABASE_URL+"/functions/v1/"+c.fn:"";
   ACTIVE={muni,cand,office:c.office,msgTable:c.msgTable||"candidate_messaging",council:c.council||COUNCIL_DEFAULT,demo:!!c.demo};
   document.getElementById("activeClient").innerHTML=(c.demo?'<span style="color:var(--gold)">DEMONSTRATION</span><br>':'')+"Client: <b>"+esc(cand)+"</b><br>"+esc(muni)+" · "+esc(c.office||"");
@@ -1968,7 +2109,9 @@ function connectClient(muni, cand){
   chatHistory.length=0; const cl=document.getElementById("chatlog"); if(cl) cl.innerHTML="";
   document.querySelector('button[data-tab="home"]').click();
   init();                          // load the client's data behind the intro
-  playClientIntro(cand, muni);     // black ROMULUS page -> launch video -> reveal populated dashboard
+  // Clients sign straight into their own dashboard — the cinematic is an operator/demo
+  // flourish, not something a client should sit through on every sign-in.
+  if(opts.intro!==false) playClientIntro(cand, muni);
 }
 renderHQ();
 </script>
