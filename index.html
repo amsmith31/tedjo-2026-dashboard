@@ -986,11 +986,11 @@ let SUPABASE_URL="", SUPABASE_KEY="", REST="", ROMULUS_FN="", ACTIVE=null;
 // "hidden", it is refused by the database. Nothing in this public file can be
 // read, edited or bypassed to change that.
 //
-//   admin@romulus.vote  → exists in ALL silos → HQ + every client (operator)
+//   romulus@romulus.vote  → exists in ALL silos → HQ + every client (operator)
 //   <client>@romulus.vote → exists in ONE silo → that silo only, no HQ
 //
 // Passwords are never stored here; they're exchanged for a short-lived JWT.
-const MASTER_LOGIN="admin@romulus.vote";
+const MASTER_LOGIN="romulus@romulus.vote";
 const SESS={};                 // project url -> { access, refresh }
 let AUTH_TOKEN="";             // access token for the ACTIVE silo
 let IS_MASTER=false;
