@@ -1446,6 +1446,13 @@ function renderCandidates(){
   const buckets={}, order=[];
   S.candidates.forEach(c=>{ const g=socRaceKey(c); if(!buckets[g]){buckets[g]=[]; order.push(g);} buckets[g].push(c); });
   order.sort((a,b)=>(GROUP_RANK[a]??45)-(GROUP_RANK[b]??45));
+  // Each silo is about ONE race: show only the principal's own race. Other races (e.g. a Regional
+  // council race) stay in the DB for background monitoring but off the public view; this also removes
+  // the redundant "All races" filter. Safe fallback: if no principal is flagged, behave as before.
+  const _principal=S.candidates.find(c=>c&&c.is_principal);
+  const _myRace=_principal?socRaceKey(_principal):null;
+  const races=(_myRace&&buckets[_myRace])?[_myRace]:order;
+  const visCands=races.reduce((a,g)=>a.concat(buckets[g]||[]),[]);
   const muni=(ACTIVE&&ACTIVE.muni)||"the race";
   const totalVids=S.videos.length;
   const card=c=>`
@@ -1470,15 +1477,15 @@ function renderCandidates(){
       ${vidsBy[c.id]&&vidsBy[c.id].length?videoStrip(vidsBy[c.id]):""}
     </div>`;
   const gchip=(k,l,n)=>`<button class="fbtn ${_cg===k?'on':''}" data-g="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
-  const chips=order.length>1?`<div class="fbar">${gchip('all','All',S.candidates.length)}${order.map(g=>gchip(g,groupLabel(g),buckets[g].length)).join("")}</div>`:"";
-  const shown=(_cg!=="all"&&buckets[_cg])?[_cg]:order;
+  const chips=races.length>1?`<div class="fbar">${gchip('all','All',visCands.length)}${races.map(g=>gchip(g,groupLabel(g),buckets[g].length)).join("")}</div>`:"";
+  const shown=(_cg!=="all"&&buckets[_cg]&&races.includes(_cg))?[_cg]:races;
   // Quick-jump directory — every candidate as a clickable chip, grouped by race, jumps to their card.
   const quickIndex=`<div class="candjump" style="display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start;margin:2px 0 6px">`
     + shown.map(g=>`<span style="width:100%;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--gold);margin-top:8px">${esc(groupLabel(g))}</span>`
         + buckets[g].map(c=>`<button class="fbtn cand-jump" data-jump="${esc(c.id)}">${esc(c.name)}</button>`).join("")).join("")
     + `</div>`;
   document.getElementById("view-candidates").innerHTML=
-    `<div class="pitch"><p style="margin:0"><b>${S.candidates.length}</b> candidates tracked across ${esc(muni)}${order.length>1?" · grouped by race — candidates running against each other are pooled together":""} · ${totalVids} campaign videos indexed. Each profile auto-builds from the campaign's own site and the public record, and refreshes as sites change.</p></div>`
+    `<div class="pitch"><p style="margin:0"><b>${visCands.length}</b> candidates tracked in ${esc(muni)}${races.length>1?" · grouped by race — candidates running against each other are pooled together":""} · ${totalVids} campaign videos indexed. Each profile auto-builds from the campaign's own site and the public record, and refreshes as sites change.</p></div>`
     + chips
     + quickIndex
     + shown.map(g=>`<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">${esc(groupLabel(g))} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[g].length}</span></div>`+buckets[g].map(card).join("")).join("");
