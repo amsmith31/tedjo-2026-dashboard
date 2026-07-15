@@ -1223,8 +1223,10 @@ function renderEvidence(){
   items.forEach(e=>{ const k=e.target; if(!buckets[k]){buckets[k]=[]; order.push(k);} buckets[k].push(e); });
   order.sort((a,b)=>{ const ga=GROUP_RANK[(buckets[a][0]||{}).grp]??45, gb=GROUP_RANK[(buckets[b][0]||{}).grp]??45;
     return ga-gb || buckets[b].length-buckets[a].length; });
-  const shown=(_ev!=="all"&&buckets[_ev])?[_ev]:order;
-  const chip=(k,l,n)=>`<button class="fbtn ${_ev===k?'on':''}" data-ev="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
+  // Per-candidate navigation — no "All" bucket; default to the target with the most findings.
+  const _esel=buckets[_ev]?_ev:(order[0]||"");
+  const shown=(_esel&&buckets[_esel])?[_esel]:order;
+  const chip=(k,l,n)=>`<button class="fbtn ${_esel===k?'on':''}" data-ev="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
   const raceOf=g=>({mayor:"Mayor",regional:"Regional",school_board:"School Board"}[g]||(/^ward(\d+)$/.test(g)?"Ward "+g.slice(4):""));
   const card=e=>`
     <div class="card">
@@ -1241,7 +1243,7 @@ function renderEvidence(){
     </div>`;
   document.getElementById("view-evidence").innerHTML=
     `<div class="pitch"><p style="margin:0"><b>${items.length}</b> scored, ready-to-use findings — organized by who each one targets. Every item shows the political angle, how to deploy it, and a direct link to the primary source.</p></div>`
-    + `<div class="fbar">${chip('all','All targets',items.length)}${order.map(k=>chip(k,k+(raceOf((buckets[k][0]||{}).grp)?" · "+raceOf((buckets[k][0]||{}).grp):""),buckets[k].length)).join("")}</div>`
+    + (order.length?`<div class="fbar">${order.map(k=>chip(k,k+(raceOf((buckets[k][0]||{}).grp)?" · "+raceOf((buckets[k][0]||{}).grp):""),buckets[k].length)).join("")}</div>`:"")
     + shown.map(k=>{ const g=(buckets[k][0]||{}).grp, top=Math.max.apply(null,buckets[k].map(e=>+e.political_utility_score||0));
         return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${raceOf(g)?` <span class="chip">${esc(raceOf(g))}</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} findings · top score ${top}</span></div>`
           + buckets[k].slice(0,40).map(card).join("")
@@ -1678,13 +1680,15 @@ function renderPromises(){
   S.promises.forEach(p=>{ const c=idc[p.candidate_id]||{}; const k=c.name||"Unattributed";
     if(!buckets[k]){ buckets[k]=[]; grp[k]=c.grp||"other"; order.push(k); } buckets[k].push(p); });
   order.sort((a,b)=>(GROUP_RANK[grp[a]]??45)-(GROUP_RANK[grp[b]]??45) || buckets[b].length-buckets[a].length);
-  const shown=(_pr!=="all"&&buckets[_pr])?[_pr]:order;
-  const chip=(k,l,n)=>`<button class="fbtn ${_pr===k?'on':''}" data-pr="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
+  // Per-candidate navigation — no "All"; default to the candidate with the most promises.
+  const _psel=buckets[_pr]?_pr:(order[0]||"");
+  const shown=(_psel&&buckets[_psel])?[_psel]:order;
+  const chip=(k,l,n)=>`<button class="fbtn ${_psel===k?'on':''}" data-pr="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
   const raceOf=g=>({mayor:"Mayor",regional:"Regional",school_board:"School Board"}[g]||(/^ward(\d+)$/.test(g)?"Ward "+g.slice(4):""));
   const sourced=S.promises.filter(p=>isUrl(p.source_url)).length;
   box.innerHTML=
     `<div class="pitch"><p style="margin:0"><b>${S.promises.length}</b> tracked promises across <b>${order.length}</b> candidates — <b>${sourced}</b> linked to a primary source. Pick a candidate to see everything they've pledged. <span class="faint">After the Aug 21 nomination deadline, new campaign promises are auto-captured, attributed and sourced.</span></p></div>`
-    + `<div class="fbar">${chip('all','All',S.promises.length)}${order.map(k=>chip(k,k+(raceOf(grp[k])?" · "+raceOf(grp[k]):""),buckets[k].length)).join("")}</div>`
+    + `<div class="fbar">${order.map(k=>chip(k,k+(raceOf(grp[k])?" · "+raceOf(grp[k]):""),buckets[k].length)).join("")}</div>`
     + shown.map(k=>`<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🗳️ ${esc(k)}${raceOf(grp[k])?` <span class="chip">${esc(raceOf(grp[k]))}</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} promises</span></div>`
         + buckets[k].map(p=>promiseCard(p)).join("")).join("");
   const fb=document.querySelector("#view-promises .fbar");
