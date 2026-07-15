@@ -295,10 +295,19 @@
     color:var(--muted);padding:7px 15px;border-radius:6px;cursor:pointer;font-size:12px}
   #pwgate{text-align:center;padding:20px;position:relative;z-index:2}
   .pw-row{display:flex;gap:10px;justify-content:center;margin-top:10px}
-  #pw-input,#pw-user{background:#0a0e14;border:1px solid var(--gold-dim);color:var(--gold);font-family:ui-monospace,Menlo,Consolas,monospace;
+  #pw-input{background:#0a0e14;border:1px solid var(--gold-dim);color:var(--gold);font-family:ui-monospace,Menlo,Consolas,monospace;
     padding:12px 18px;border-radius:9px;font-size:15px;letter-spacing:3px;width:min(300px,68vw);text-align:center}
-  #pw-input:focus,#pw-user:focus{outline:none;border-color:var(--gold);box-shadow:0 0 18px rgba(224,184,76,.3)}
-  #pw-user{letter-spacing:1px}
+  #pw-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 18px rgba(224,184,76,.3)}
+  /* Username = surname only; "@romulus.vote" is fixed chrome inside the same box, so the
+     control stays one 300px unit and keeps the same centre axis as the password + button. */
+  .pw-user-wrap{display:flex;align-items:center;background:#0a0e14;border:1px solid var(--gold-dim);
+    border-radius:9px;width:min(300px,68vw);overflow:hidden}
+  .pw-user-wrap:focus-within{border-color:var(--gold);box-shadow:0 0 18px rgba(224,184,76,.3)}
+  #pw-user{flex:1;min-width:0;background:none;border:none;color:var(--gold);font-family:ui-monospace,Menlo,Consolas,monospace;
+    padding:12px 4px 12px 14px;font-size:15px;letter-spacing:1px;text-align:right}
+  #pw-user:focus{outline:none}
+  .pw-suffix{color:var(--muted);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;
+    padding:0 14px 0 0;white-space:nowrap;user-select:none}
   .pw-row button:disabled{opacity:.5;cursor:default}
   /* Sign In sits on its own row so the two inputs stack and centre on the same axis —
      when the button shared the password row, flex centred the pair and pushed the field left. */
@@ -781,7 +790,10 @@
       <div class="rs-tag">Secure Sign-In · Campaign Intelligence</div>
       <div class="rs-boot" id="pw-boot"></div>
       <div class="pw-row">
-        <input id="pw-user" type="email" placeholder="USERNAME" autocomplete="username" spellcheck="false" autocapitalize="off">
+        <label class="pw-user-wrap" for="pw-user">
+          <input id="pw-user" type="text" placeholder="LAST NAME" autocomplete="username" spellcheck="false" autocapitalize="off" autocorrect="off">
+          <span class="pw-suffix">@romulus.vote</span>
+        </label>
       </div>
       <div class="pw-row">
         <input id="pw-input" type="password" placeholder="PASSWORD" autocomplete="current-password" spellcheck="false">
@@ -822,7 +834,7 @@
     async function submit(){
       if(busy) return;
       var email=(usr.value||'').trim(), pw=inp.value||'';
-      if(!email||!pw){ deny('✖ USERNAME AND PASSWORD REQUIRED'); return; }
+      if(!email||!pw){ deny('✖ LAST NAME AND PASSWORD REQUIRED'); return; }
       busy=true; btn.disabled=true; err.textContent=''; btn.textContent='…';
       var res;
       try{ res=await window.romSignIn(email,pw); }
@@ -967,7 +979,7 @@ const CLIENTS = {
   }},
   "Brampton (Wards 7 & 8)": { candidates: {
     "Monica Singh Soares": { office:"City Council · Wards 7 & 8 · 2026", status:"live", fn:"romulus", council:COUNCIL_SINESOARES,
-      login:"monica@romulus.vote",
+      login:"soares@romulus.vote",
       url:"https://jjqzzozpygaiptkjezbg.supabase.co",
       key:"sb_publishable_vnfQelO0eVVZuqvbdbFnKQ_KEboRUU6",
       note:"Challenger vs incumbent Rod Power. Rod Power's full Brampton voting record (63 votes) + 30 contentious items + the Pakistan-trip finding are loaded. AI analyst, news, video, social and the ROMULUS chat are still being provisioned." }
@@ -1048,8 +1060,22 @@ async function authedFetch(url, opts){
 // Called by the sign-in gate. Returns {ok, isMaster, muni, cand}.
 // The error message is deliberately identical for "no such user" and "wrong
 // password" — a distinct message would let anyone enumerate which logins exist.
+// The gate asks for a surname and appends the domain. Be tolerant of what people
+// actually type: stray case, spaces, a surname with a space in it, or a pasted full
+// address (password managers fill the whole thing). Anything that isn't a legal
+// local-part character is dropped rather than sent upstream.
+//   "Burton" / " burton " / "burton@romulus.vote"  ->  burton@romulus.vote
+window.romLoginToEmail = function(v){
+  let s=String(v||"").trim().toLowerCase();
+  if(!s) return "";
+  s=s.replace(/@romulus\.vote$/,"");       // pasted the full address
+  s=s.replace(/\s+/g,"");                  // "singh soares" -> "singhsoares"
+  s=s.replace(/[^a-z0-9._%+-]/g,"");       // legal local-part chars only
+  return s?s+"@romulus.vote":"";
+};
 window.romSignIn = async function(email, pw){
-  const e=String(email||"").trim().toLowerCase();
+  const e=window.romLoginToEmail(email);
+  if(!e) return {ok:false};
   if(e===MASTER_LOGIN){
     const entries=[];
     for(const m in CLIENTS) for(const cand in CLIENTS[m].candidates) entries.push(CLIENTS[m].candidates[cand]);
