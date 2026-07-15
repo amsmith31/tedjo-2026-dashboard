@@ -1101,7 +1101,7 @@ window.romAfterSignIn = function(res){
   if(res.isMaster) return;                       // master: default HQ view stands
   const hqBtn=document.querySelector('button[data-tab="hq"]'); if(hqBtn) hqBtn.style.display="none";
   const hqView=document.getElementById("view-hq"); if(hqView) hqView.innerHTML="";
-  connectClient(res.muni, res.cand, {intro:false});   // clients skip the cinematic
+  connectClient(res.muni, res.cand);
 };
 const ELECTION = new Date("2026-10-26T00:00:00-04:00");
 const FILING_DEADLINE = new Date("2026-08-21T14:00:00-04:00");
@@ -2125,8 +2125,7 @@ function playClientIntro(cand, muni){
     skip.onclick=finish;
   });
 }
-function connectClient(muni, cand, opts){
-  opts=opts||{};
+function connectClient(muni, cand){
   const c=CLIENTS[muni].candidates[cand];
   SUPABASE_URL=c.url.replace(/\/+$/,""); SUPABASE_KEY=c.key;
   // Swap in the session for THIS silo. Master holds one per project; a client holds
@@ -2139,10 +2138,10 @@ function connectClient(muni, cand, opts){
   for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="all"; _cg="all"; _ev="all"; _msgSec="all"; _pr="all"; _ward="All"; _chartSel=""; window.__op="all";
   chatHistory.length=0; const cl=document.getElementById("chatlog"); if(cl) cl.innerHTML="";
   document.querySelector('button[data-tab="home"]').click();
-  init();                          // load the client's data behind the intro
-  // Clients sign straight into their own dashboard — the cinematic is an operator/demo
-  // flourish, not something a client should sit through on every sign-in.
-  if(opts.intro!==false) playClientIntro(cand, muni);
+  init();
+  // The client-intro cinematic no longer plays on entering a silo — not for clients,
+  // not for the operator. Signing in goes straight to the populated dashboard.
+  // #client-intro and playClientIntro() are consequently unused.
 }
 renderHQ();
 </script>
