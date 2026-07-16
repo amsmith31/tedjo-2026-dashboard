@@ -140,6 +140,17 @@ serves all silos and every future client. Burton is the standard to match.
   (Burton: clean `mayor`/`ward1`; Opitz renders "Ward 3 Etobicoke Lakeshore"; Monica "Councillor,
   City - Wards 7, 8"). That is a DATA normalisation job for each silo's own chat, not a fix for
   this file — `groupLabel()` already prettifies whatever it is given.
+- **OPPO video pins are a STANDARD for EVERY candidate in EVERY silo, present and future.** Any OPPO
+  finding whose `source_citations` contains a YouTube URL renders a thumbnail pin (bottom-right, above
+  the primary-source row), deep-linked to the timestamp. The DISPLAY is already universal — `renderAttacks()`
+  builds pins from `allUrls(source_citations)` filtered by `ytId()`, with no per-silo/per-candidate gating
+  (Opitz/Morley is the reference). So pins appear automatically the moment the DATA exists. What makes them
+  exist is each silo chat's job: OPPO findings backed by an interview/video MUST cite a real
+  `https://www.youtube.com/watch?v=<id>&t=<sec>s` URL (several moments space-separated = several pins),
+  NEVER a `brief:Section N` stub. The transcript→timestamp→citation pipeline (see the Burton silo:
+  `mine_transcripts.py` / `mine_transcripts_whisper.py` / `generate_oppo.py`) is the reference for
+  producing them. Opitz + Monica already do; Burton + Tedjo are being backfilled. Nothing to change in
+  THIS file — it's a data-population standard the silo chats own.
 - **Same tab set, order, naming, and card styling for every silo.** No silo-specific layout drift.
 - **Improve once, apply everywhere.** Verify on all four silos in preview before pushing.
 
