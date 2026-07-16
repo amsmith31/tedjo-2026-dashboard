@@ -19,21 +19,42 @@ multiple candidate "silos". Everything below maps the file so a fresh chat can w
 ## PAGE FLOW (three stages)
 1. **`#landing` — the hero / marketing page** (sections `ld-*`): hero → `ld-what` (the emphasized
    **challenger / incumbent** boxes) → `ld-cap` (**6** capability boxes, gold borders) → `ld-how`
-   → `ld-why` → `ld-video` (the 60-sec film) → `ld-demo`. The **"Developer Access →"** button
-   (`#ld-access`, ~line 488) hides `#landing` and reveals the gate.
-2. **`#splash` / `#pwgate` — passcode gate.** Admin code `PW="Satorus2026"` (~line 738; client-side
-   only — NOT real security). Correct code → `enterTerminal()` hides the splash → dashboard shows.
-   **"← Back to site"** (`#pw-back`) re-shows `#landing`.
+   → `ld-why` → `ld-video` (the 60-sec film) → `ld-pricing` → `ld-demo` → `ld-contact` → footer
+   (footer carries the **ROMULUS & CO** registration + Ontario BIN, linked to the ONBIS registry).
+   The **"Sign In →"** button (`#ld-access`) hides `#landing` and reveals the gate.
+2. **`#splash` / `#pwgate` — REAL sign-in (Supabase Auth).** ⚠️ **There is NO passcode in this file
+   any more.** Until 2026-07-15 the gate was `PW="Satorus2026"` in plaintext — and worse, every
+   silo was world-readable regardless of it, so anyone could Ctrl+U and read all four clients'
+   data. Both are fixed. Users now type a **surname only**; `romLoginToEmail()` appends
+   `@romulus.vote`, and `romSignIn()` exchanges it for a JWT at that silo's own `/auth/v1/token`.
+   - `romulus@romulus.vote` (master) → sessions in ALL silos → keeps HQ.
+   - `<surname>@romulus.vote` (client) → their silo ONLY → HQ nav hidden, picker emptied,
+     Back/popstate routed to Overview. Straight to their dashboard; no cinematic.
+   - **Never add a `fetch()` to Supabase that bypasses `authedFetch()`** — it is the single choke
+     point that attaches the JWT and refreshes it on a 401.
+   See the `memory/` notes for the full architecture and the traps.
 3. **Dashboard shell** — sidebar nav (`button[data-tab=...]`) + `<section class="view" id="view-*">`
    (hq, home, romulus, message, promises, attacks, council, evidence, candidates, news, web, ads,
-   social, mentions). Starts on **`hq`** (Municipality → candidate picker).
+   social, mentions). Master starts on **`hq`**; a client never sees it.
 
-## THE TWO VIDEOS (both now have pause)
+## THE VIDEO PLAYERS — there are **THREE**, not two
+(This file used to say "two". It cost a chat real time on 2026-07-15. There are three.)
+- **Intro sequence** — `#intro-vid` inside `#intro`, the FIRST thing every visitor sees. Clicking
+  **Enter ▸** plays BOTH films back-to-back (`opener.mp4` → `opener-promo.mp4`); the `<video>` has no
+  `<source>` in the markup because the JS sets `.src` from a `SEQ` array. Control: **Skip**
+  (`#intro-skip`) — advances to the next film, then to the hero page.
 - **Hero 60-second film** — `#lx-video` (`opener-promo.mp4`) inside `#ld-explainer` (ld-video
   section). Ambient scripted scenes render in `#lx-stage`; clicking the poster/Replay plays the mp4.
-  Controls: **Replay** (`#lx-replay`) + **Pause/Play** (`#lx-pause`) — player logic ~line 660.
-- **Client-intro cinematic** — `#ci-vid` (`opener.mp4`), plays via `playClientIntro()` (~line 1815)
-  when you enter a client silo. Controls: **Skip** (`#ci-skip`) + **Pause/Play** (`#ci-pause`).
+  Controls: **Replay** (`#lx-replay`) + **Pause/Play** (`#lx-pause`).
+- **Client-intro cinematic** — `#ci-vid` (`opener.mp4`) via `playClientIntro()`. **No longer played**
+  as of 2026-07-15 — entering a silo goes straight to the dashboard. The function and markup remain
+  but nothing calls them.
+
+**All controls are uniform: `.vid-ctl` (bottom:18px right:18px, flex) + `.vid-btn` (14px).** Keep any
+new player on that pattern. All three videos are `object-fit:cover` — `contain` letterboxes, which is
+what the black bars were. Note `.ld-film::before/::after` are a *deliberate* 8% cinematic letterbox on
+the hero film, hidden during playback via `.filmon` — leave them alone. `#splash-vid` CSS is dead code
+(no such element).
 
 ## NAVIGATION (fixed — no hard refresh needed)
 - `#backBtn` (top bar) is **always visible** and walks up one level per press:
@@ -65,13 +86,38 @@ Current clients:
 - Only publishable/anon keys in this HTML — NEVER a service/secret key (this file is public).
 - Each client = its own Supabase silo. Never mix client data.
 
-## RECENT CHANGES (2026-07)
-Removed the 4 hero stat boxes; condensed capabilities 8→6 (matching gold borders); emphasized the
-challenger/incumbent boxes; added Pause/Play to BOTH videos; made the back arrow always-visible and
-walk all the way to the hero page.
+## RECENT CHANGES
+**2026-07-15 — the security rebuild (see SECURITY above; this was the big one).**
+Replaced the plaintext passcode with real Supabase Auth (surname login, per-silo isolation, master
+`romulus@romulus.vote`); locked 78 open `SELECT`-to-`public` policies across all four silos; added
+`callerRole()` guards to all four chat functions. Also: "Developer Access" → "Sign In"; removed the
+client-intro cinematic from silo entry entirely; unified all video controls to one `.vid-ctl` /
+`.vid-btn` pattern (bottom-right, 14px) across **three** players — `#intro-vid`, `#lx-video`,
+`#ci-vid` — and set all three to `object-fit:cover` (the intro Skip button used to sit top-right and
+two players letterboxed). Added `#ld-contact` + the ROMULUS & CO / Ontario BIN footer registration.
+NOTE: `playClientIntro()` / `#client-intro` are now unused; `#splash-vid` CSS is dead (no element).
+
+**2026-07 (earlier).** Removed the 4 hero stat boxes; condensed capabilities 8→6 (matching gold
+borders); emphasized the challenger/incumbent boxes; added Pause/Play to BOTH videos; made the back
+arrow always-visible and walk all the way to the hero page.
 
 ## DEFERRED (do not touch until asked)
-- The hero-page contact email on file = the operator's Gmail; a change is planned LATER.
+- ~~The hero-page contact email = the operator's Gmail~~ — **done**; it is `andrew.smith@romulus.vote`
+  everywhere (footer, contact bar, `#ld-contact`, and the FormSubmit target on the demo form).
+
+## SECURITY — DO NOT REGRESS (2026-07-15)
+- **Never put a password, passcode or secret key in `index.html`.** It is a public file; View Source
+  is two keystrokes. Only publishable keys belong here — and they are useless on their own now.
+- **Every silo's tables are `SELECT` to `authenticated` only.** Do not "fix" a blank tab by opening a
+  policy back up to `public`/`anon` — that reopens the leak on every client at once.
+- **Each silo's chat Edge Function carries a `callerRole()` guard** rejecting any caller whose JWT
+  role isn't `authenticated`. `verify_jwt=true` is **NOT** sufficient by itself — it accepts the
+  publishable key printed in this very file. Proven: with `verify_jwt` on, a stranger using the
+  scraped key was handed a full OPPO briefing on a client's own opponent. Never remove that guard.
+- **Two things that look like dead code but are load-bearing:** Tedjo's `leads` table must keep
+  `INSERT` to `anon` (the public demo form writes to it, and that visitor is never logged in — it has
+  no SELECT policy, so it is already write-only and correct); and Burton's Edge Function is still
+  *named* `legatus` (an old slug for what the UI calls "ROMULUS Chat") — deleting it kills his chat.
 
 ## ROMULUS UNIFORMITY STANDARD (Burton is the reference — applies to EVERY silo)
 This is the ONE shared file that renders EVERY client silo, so all UI must be uniform — a fix here

@@ -213,6 +213,17 @@
   .ld-form .ld-btn{width:100%;margin-top:6px}
   .ld-msg{margin-top:14px;font-size:14px;color:var(--muted);min-height:18px} .ld-msg.ok{color:var(--green)}
   .ld-foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center;padding:26px 6vw;border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+  /* Legal / business registration sits on its own full-width row under the footer
+     items, so adding it doesn't squeeze the existing space-between layout. */
+  .ld-biz{flex-basis:100%;text-align:center;padding-top:16px;margin-top:4px;border-top:1px solid var(--line);font-size:12px;color:var(--faint)}
+  .ld-biz a{color:var(--muted)} .ld-biz a:hover{color:var(--gold)}
+  /* Contact */
+  .ld-contact-grid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:26px}
+  .ld-contact-card{flex:1 1 220px;max-width:280px;background:var(--panel);border:1px solid var(--gold-dim);border-radius:12px;padding:20px 18px;text-align:center}
+  .cc-label{color:var(--gold);letter-spacing:2px;font-size:11px;font-weight:700;margin-bottom:8px}
+  .ld-contact-card a{color:var(--text);font-size:14px;word-break:break-word}
+  .ld-contact-card a:hover{color:var(--gold)}
+  .cc-val{color:var(--text);font-size:14px}
   @media (max-width:760px){ .ld-navlinks a:not(.ld-cta-sm){display:none} .ld-demo-wrap{grid-template-columns:1fr} .ld-row2{grid-template-columns:1fr} .ld-hero{padding:48px 6vw 38px} .ld-section{padding:48px 6vw} }
   /* landing animations */
   .ld-hero .ld-eyebrow,.ld-hero h1,.ld-hero .ld-sub,.ld-hero .ld-herocta{opacity:0;animation:ldUp .8s cubic-bezier(.2,.7,.2,1) forwards}
@@ -506,6 +517,7 @@
         <a href="#ld-what">What it is</a>
         <a href="#ld-cap">Capabilities</a>
         <a href="#ld-video">The film</a>
+        <a href="#ld-contact">Contact</a>
         <button id="ld-access" type="button">Sign In →</button>
       </nav>
     </header>
@@ -673,10 +685,36 @@
       <a href="mailto:andrew.smith@romulus.vote" class="ld-btn">Email ROMULUS</a>
     </section>
 
+    <section class="ld-section" id="ld-contact">
+      <div class="ld-kick">CONTACT</div>
+      <h2>Get in touch</h2>
+      <p class="ld-lead">Based in Halton Region — serving campaigns across all of Ontario.</p>
+      <div class="ld-contact-grid">
+        <div class="ld-contact-card">
+          <div class="cc-label">EMAIL</div>
+          <a href="mailto:andrew.smith@romulus.vote">andrew.smith@romulus.vote</a>
+        </div>
+        <div class="ld-contact-card">
+          <div class="cc-label">LOCATION</div>
+          <div class="cc-val">Halton Region, Ontario</div>
+        </div>
+        <div class="ld-contact-card">
+          <div class="cc-label">SERVICE AREA</div>
+          <div class="cc-val">All of Ontario</div>
+        </div>
+      </div>
+    </section>
+
     <footer class="ld-foot">
       <div class="ld-logo" style="font-size:18px">ROMULUS<span>●</span></div>
       <div>Campaign Intelligence · Municipal Elections</div>
+      <div>Halton Region · Serving all of Ontario</div>
       <div>Contact: <a href="mailto:andrew.smith@romulus.vote">andrew.smith@romulus.vote</a></div>
+      <div class="ld-biz">
+        <a href="https://www.appmybizaccount.gov.on.ca/onbis/businessnames/viewInstance/view.pub?id=185e6c856f92f2744af3ee5b87a9ed2f209e5f129ec8d329c5383568b397de89&amp;_timestamp=2196005640888014"
+           target="_blank" rel="noopener noreferrer"
+           title="View the ROMULUS &amp; CO registration on the Ontario Business Registry">ROMULUS &amp; CO · Ontario BIN 1001678387</a>
+      </div>
     </footer>
   </div>
   <script>
