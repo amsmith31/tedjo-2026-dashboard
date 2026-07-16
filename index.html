@@ -321,6 +321,19 @@
   #pw-input{background:#0a0e14;border:1px solid var(--gold-dim);color:var(--gold);font-family:ui-monospace,Menlo,Consolas,monospace;
     padding:12px 18px;border-radius:9px;font-size:15px;letter-spacing:3px;width:min(300px,68vw);text-align:center}
   #pw-input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 18px rgba(224,184,76,.3)}
+  /* Browser autofill paints its own light background + dark text over saved logins, which is
+     what looked "broken/white" on the master sign-in. Chromium won't let CSS set background on
+     an autofilled field directly, so overpaint it with a giant inset box-shadow and force the
+     text colour. transition delay keeps it from flashing white on load. */
+  #pw-input:-webkit-autofill, #pw-user:-webkit-autofill,
+  #pw-input:-webkit-autofill:focus, #pw-user:-webkit-autofill:focus,
+  #pw-input:-webkit-autofill:hover, #pw-user:-webkit-autofill:hover{
+    -webkit-box-shadow:0 0 0 1000px #0a0e14 inset !important;
+    -webkit-text-fill-color:var(--gold) !important;
+    caret-color:var(--gold);
+    font-family:ui-monospace,Menlo,Consolas,monospace !important;
+    transition:background-color 9999s ease-in-out 0s !important;
+  }
   /* Username = surname only; "@romulus.vote" is fixed chrome inside the same box, so the
      control stays one 300px unit and keeps the same centre axis as the password + button. */
   .pw-user-wrap{display:flex;align-items:center;background:#0a0e14;border:1px solid var(--gold-dim);
