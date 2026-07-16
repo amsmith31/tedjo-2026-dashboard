@@ -948,6 +948,7 @@
       <button data-tab="romulus"><span class="ico">✦</span> ROMULUS Chat</button>
       <button data-tab="message"><span class="ico">★</span> My Message <span class="ct" id="ct-message"></span></button>
       <button data-tab="attacks"><span class="ico">⚑</span> OPPO <span class="ct" id="ct-attacks"></span></button>
+      <button data-tab="review" id="rvBtn"><span class="ico">⧗</span> Review <span class="ct" id="ct-review"></span></button>
       <button data-tab="promises"><span class="ico">◎</span> Promises <span class="ct" id="ct-promises"></span></button>
       <button data-tab="council"><span class="ico">▤</span> Council Record <span class="ct" id="ct-council"></span></button>
       <button data-tab="evidence"><span class="ico">◈</span> Evidence <span class="ct" id="ct-evidence"></span></button>
@@ -986,6 +987,7 @@
     <section class="view hidden" id="view-message"></section>
     <section class="view hidden" id="view-promises"></section>
     <section class="view hidden" id="view-attacks"></section>
+    <section class="view hidden" id="view-review"></section>
     <section class="view hidden" id="view-council"></section>
     <section class="view hidden" id="view-evidence"></section>
     <section class="view hidden" id="view-candidates"></section>
@@ -1194,6 +1196,7 @@ window.romSignIn = async function(email, pw){
 window.romAfterSignIn = function(res){
   if(res.isMaster) return;                       // master: default HQ view stands
   const hqBtn=document.querySelector('button[data-tab="hq"]'); if(hqBtn) hqBtn.style.display="none";
+  const rvBtn=document.getElementById("rvBtn"); if(rvBtn) rvBtn.style.display="none";   // staged-card review is operator-only
   const hqView=document.getElementById("view-hq"); if(hqView) hqView.innerHTML="";
   connectClient(res.muni, res.cand);
 };
@@ -1295,7 +1298,7 @@ async function init(){
     document.getElementById("ct-social").textContent=social.length||"";
     const nmB=document.getElementById("nav-mentions");
     if(nmB){ nmB.style.display=(S.mentions.length)?"":"none"; document.getElementById("ct-mentions").textContent=S.mentions.length||""; }
-    renderHome(); renderAttacks(); renderCouncil(); renderEvidence(); renderCandidates(); renderWeb(); renderMessage(); renderPromises(); renderNews(); renderAds(); renderSocial(); renderMentions();
+    renderHome(); renderAttacks(); renderCouncil(); renderEvidence(); renderCandidates(); renderWeb(); renderMessage(); renderPromises(); renderNews(); renderAds(); renderSocial(); renderMentions(); refreshReviewCount();
   }catch(e){
     document.getElementById("view-home").innerHTML='<div class="loading"><h2>Could not load data</h2><p class="muted">'+esc(e.message)+'</p></div>';
     document.getElementById("conn").innerHTML='<span style="color:var(--red)">● error</span>';
@@ -1347,6 +1350,52 @@ function renderHome(){
   document.querySelectorAll('#view-home .inv[data-go]').forEach(el=>el.onclick=()=>{ const b=document.querySelector('button[data-tab="'+el.dataset.go+'"]'); if(b) b.click(); });
 }
 
+// Operator-only staged-card review. AI-generated OPPO findings land as is_active=false and are
+// invisible on the OPPO tab until approved here. Approve -> is_active=true (publishes). Discard ->
+// deletes the staged row. Per-active-silo (master reviews each silo after clicking into it).
+async function refreshReviewCount(){
+  if(!IS_MASTER){ return; }
+  try{ const n=await count("attack_messaging","is_active=eq.false");
+    const el=document.getElementById("ct-review"); if(el) el.textContent=n?("("+n+")"):""; }catch(e){}
+}
+async function renderReview(){
+  const box=document.getElementById("view-review");
+  box.innerHTML=`<div class="loading"><div class="spinner"></div>Loading staged cards…</div>`;
+  let staged=[];
+  // No DB-side order (silos differ on created_at/generated_at columns) — sort by tier client-side.
+  try{ staged=await api("/attack_messaging?is_active=eq.false&select=*&limit=500"); staged.sort((a,b)=>tierRank(a.tier)-tierRank(b.tier)); }catch(e){ staged=[]; }
+  const idm={}; S.candidates.forEach(c=>idm[c.id]=c.name);
+  if(!staged.length){
+    box.innerHTML=`<div class="pitch"><p style="margin:0">Nothing awaiting review. When a silo's AI generates new OPPO findings they land here <b>unpublished</b> for your approval before they ever appear on the public OPPO tab.</p></div>`;
+    return;
+  }
+  const card=a=>{ const tgt=idm[a.target_candidate_id]||"target"; const src=allUrls(a.source_citations); const vids=src.filter(u=>ytId(u));
+    return `<div class="atk" data-rid="${esc(a.id)}">
+      <div class="hd"><div style="flex:1"><h3>${esc(a.headline)}</h3>
+        <div class="meta"><span class="tier ${tierClass(a.tier)}">${esc(tierLabel(a.tier))}</span>
+        <span class="chip">🎯 ${esc(tgt)}</span><span class="chip">${esc(a.issue_area||"")}</span></div></div></div>
+      <div class="bd"><div>${esc(a.body||"")}</div>
+        ${a.key_quote?`<div class="quote">"${esc(String(a.key_quote).slice(0,280))}"</div>`:""}</div>
+      ${vids.length?`<div class="oppo-pins">${vids.map(u=>{const t=ytTime(u);return `<a class="oppo-pin" href="${esc(u)}" target="_blank" rel="noopener"><img loading="lazy" src="https://img.youtube.com/vi/${esc(ytId(u))}/mqdefault.jpg" alt=""><span>▶ ${t!=null?esc(mmss(t)):"watch"}</span></a>`;}).join("")}</div>`:""}
+      <div class="foot"><span>${src.length} source${src.length!==1?"s":""}${src.length?"":" · analytical"}</span>
+        <span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+          <button class="rv-approve" data-rid="${esc(a.id)}" style="background:#1f8f4e;color:#fff;border:none;padding:7px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">✓ Approve → publish</button>
+          <button class="rv-discard" data-rid="${esc(a.id)}" style="background:none;border:1px solid var(--red);color:var(--red);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px">✕ Discard</button>
+        </span></div>
+    </div>`; };
+  box.innerHTML=`<div class="pitch"><p style="margin:0"><b>${staged.length}</b> staged card${staged.length!==1?"s":""} awaiting review for <b>${esc((ACTIVE&&ACTIVE.cand)||"this silo")}</b>. <span style="color:#2fae63">Approve</span> publishes to the public OPPO tab; <span style="color:var(--red)">Discard</span> deletes it. Nothing here is public until you approve it.</p></div>`
+    + staged.map(card).join("");
+  const patch=async (rid,method,body)=>authedFetch(REST+"/attack_messaging?id=eq."+encodeURIComponent(rid),
+    {method,headers:Object.assign({"Prefer":"return=minimal"}, body?{"Content-Type":"application/json"}:{}), body:body?JSON.stringify(body):undefined});
+  box.querySelectorAll(".rv-approve").forEach(btn=>btn.onclick=async()=>{ btn.disabled=true; btn.textContent="…";
+    const r=await patch(btn.dataset.rid,"PATCH",{is_active:true});
+    if(r.ok){ const el=box.querySelector('.atk[data-rid="'+btn.dataset.rid.replace(/"/g,'')+'"]'); if(el) el.remove(); refreshReviewCount(); }
+    else { btn.disabled=false; btn.textContent="✓ Approve → publish"; alert("Approve failed: HTTP "+r.status); } });
+  box.querySelectorAll(".rv-discard").forEach(btn=>btn.onclick=async()=>{ if(!confirm("Discard this staged card? It will be permanently deleted (the AI can regenerate it later).")) return; btn.disabled=true;
+    const r=await patch(btn.dataset.rid,"DELETE",null);
+    if(r.ok){ const el=box.querySelector('.atk[data-rid="'+btn.dataset.rid.replace(/"/g,'')+'"]'); if(el) el.remove(); refreshReviewCount(); }
+    else { btn.disabled=false; alert("Discard failed: HTTP "+r.status); } });
+}
 function renderAttacks(){
   // Strategic-alliance flags: a target who is a known ally of a mayoral rival (name-keyed → scoped per silo).
   const ALLIES={"Jonathan McNeice":"Sean O'Meara"};
@@ -2188,9 +2237,10 @@ document.getElementById("nav").addEventListener("click",e=>{
   b.classList.add("active");
   document.getElementById("view-"+b.dataset.tab).classList.remove("hidden");
   const _cand=(ACTIVE&&ACTIVE.cand)||"your candidate";
-  const titles={hq:["Municipality","Select a municipality → candidate silo"],home:["Overview",(ACTIVE&&ACTIVE.demo?"Demonstration dossier":"Intelligence dossier")+" · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message",_cand+"'s affirmative case — sourced"],promises:["Promises","Documented positions, tracked over time"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],council:["Council Record","Recorded votes, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","Every candidate in the race, grouped"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"],social:["Social Media","Candidates' own public posts — X, Instagram, Facebook"],mentions:["Community Watch","Unverified community-group chatter mentioning candidates"]};
+  const titles={hq:["Municipality","Select a municipality → candidate silo"],home:["Overview",(ACTIVE&&ACTIVE.demo?"Demonstration dossier":"Intelligence dossier")+" · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message",_cand+"'s affirmative case — sourced"],promises:["Promises","Documented positions, tracked over time"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],review:["Review Queue","Staged AI cards — approve before they publish (operator only)"],council:["Council Record","Recorded votes, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","Every candidate in the race, grouped"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"],social:["Social Media","Candidates' own public posts — X, Instagram, Facebook"],mentions:["Community Watch","Unverified community-group chatter mentioning candidates"]};
   document.getElementById("viewTitle").textContent=titles[b.dataset.tab][0];
   document.getElementById("viewCrumb").textContent=titles[b.dataset.tab][1];
+  if(b.dataset.tab==="review") renderReview();
   var ts=document.getElementById("tabscan"); if(ts){ ts.classList.remove("go"); void ts.offsetWidth; ts.classList.add("go"); }
   closeNav();   // close drawer after picking a tab (mobile)
   document.querySelector(".main").scrollTo(0,0);

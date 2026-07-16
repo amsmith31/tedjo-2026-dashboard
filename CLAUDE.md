@@ -151,6 +151,12 @@ serves all silos and every future client. Burton is the standard to match.
   `mine_transcripts.py` / `mine_transcripts_whisper.py` / `generate_oppo.py`) is the reference for
   producing them. Opitz + Monica already do; Burton + Tedjo are being backfilled. Nothing to change in
   THIS file — it's a data-population standard the silo chats own.
+- **Every silo's ROMULUS chat Edge Function must identify its OWN candidate.** New silo functions
+  are copy-pasted from an existing one; if the `SYSTEM` prompt + dossier `ctx` headers aren't fully
+  relabelled, the chat introduces itself as the wrong client (a cross-client bleed). This actually
+  happened: Monica's function said "analyst for TED OPITZ's 2026 campaign for Toronto City Council,
+  Ward 3" (2026-07-16). Before deploying ANY silo's `romulus`/`legatus` function, grep its source for
+  every OTHER candidate/city name and confirm zero foreign references. The silo chats own this.
 - **Same tab set, order, naming, and card styling for every silo.** No silo-specific layout drift.
 - **Improve once, apply everywhere.** Verify on all four silos in preview before pushing.
 
