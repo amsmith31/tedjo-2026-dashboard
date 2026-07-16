@@ -1035,6 +1035,16 @@ const COUNCIL_SINESOARES = {
   q: raw => "/council_votes?candidate_name_raw=eq."+raw+"&select=vote,voted_on,agenda_item,title,committee,motion_type,result,vote_description,issue_area,source_url&order=voted_on.desc.nullslast,id.asc",
   map: r => ({ date:r.voted_on, item:r.agenda_item||"", topic:r.title||"", doc:r.motion_type||"",
                council:r.result||"", myVote:r.vote, minutes:r.source_url, issue:r.issue_area||"" }) };
+// Milton Ward 3 (Sammy Ijaz silo): principal is a challenger, so the Council Record tab tracks the
+// RIVAL incumbent Rick Di Lorenzo, plus Ijaz's own record for his defensive self-audit. NOTE: this
+// silo's candidate_name_raw slugs contain spaces/periods, so encodeURIComponent them in the query.
+const COUNCIL_IJAZ = {
+  perCandidate: true,
+  candidates: [ {raw:"Councillor R. Di Lorenzo", name:"Rick Di Lorenzo", note:"incumbent (rival)"},
+                {raw:"Sammy Ijaz", name:"Sammy Ijaz", note:"principal (self-audit)"} ],
+  q: raw => "/council_votes?candidate_name_raw=eq."+encodeURIComponent(raw)+"&select=vote,voted_on,agenda_item,title,committee,motion_type,result,vote_description,issue_area,source_url&order=voted_on.desc.nullslast,id.asc",
+  map: r => ({ date:r.voted_on, item:r.agenda_item||"", topic:r.title||"", doc:r.motion_type||"",
+               council:r.result||"", myVote:r.vote, minutes:r.source_url, issue:r.issue_area||"" }) };
 const CLIENTS = {
   "Mississauga": { candidates: {
     "Alvin Tedjo": { office:"Mayor · 2026", status:"live", fn:"romulus", demo:true, login:"tedjo@romulus.vote",
@@ -1060,6 +1070,13 @@ const CLIENTS = {
       url:"https://jjqzzozpygaiptkjezbg.supabase.co",
       key:"sb_publishable_vnfQelO0eVVZuqvbdbFnKQ_KEboRUU6",
       note:"Challenger vs incumbent Rod Power. Rod Power's full Brampton voting record (63 votes) + 30 contentious items + the Pakistan-trip finding are loaded. AI analyst, news, video, social and the ROMULUS chat are still being provisioned." }
+  }},
+  "Milton (Ward 3)": { candidates: {
+    "Sammy Ijaz": { office:"Regional Councillor · 2026", status:"live", fn:"", council:COUNCIL_IJAZ,
+      login:"ijaz@romulus.vote",
+      url:"https://felffmdjmptbrvyziuyc.supabase.co",
+      key:"sb_publishable_ikQQY_PX8Y1RSLWq8IUL3g_WBpKJ3pB",
+      note:"Challenger vs incumbent Rick Di Lorenzo. Council record loaded (Di Lorenzo's 36 votes + Ijaz's own 17) plus 10 news items and candidate dossiers. OPPO cards, AI analyst, video and the ROMULUS chat are still being provisioned." }
   }}
   // ➕ ADD A NEW CLIENT as they come online — just drop another entry:
   //   "Municipality": { candidates: { "Candidate Name": {
