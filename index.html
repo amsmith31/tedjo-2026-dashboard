@@ -254,7 +254,7 @@
   #client-intro.show{display:flex}
   /* Same 16:9-into-any-screen problem as #intro-vid above — see that note. */
   #ci-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#04060a;opacity:0;transition:opacity .5s}
-  @media (min-aspect-ratio:3/2) and (max-aspect-ratio:2/1){
+  @media (min-aspect-ratio:5/4){
     #ci-vid{object-fit:cover}
   }
   #client-intro.playing #ci-vid{opacity:1}
@@ -383,16 +383,19 @@
   @keyframes enterIn{to{opacity:1;transform:none}}
   @keyframes enterPulse{0%,100%{box-shadow:0 0 22px rgba(224,184,76,.4)}50%{box-shadow:0 0 42px rgba(224,184,76,.78)}}
   #intro-enter:hover{transform:scale(1.05)}
-  /* Both films are 16:9. A full-viewport player has to choose: crop the frame to fill
-     the screen (cover), or show the whole frame with bands (contain). On a portrait
-     phone (~9:16) cover throws away ~74% of the WIDTH — the ROMULUS title card loses
-     its first letters. So: contain is the safe default, and cover is switched on ONLY
-     when the viewport is close enough to 16:9 that the crop costs nothing (~<15%).
-       16:9 desktop 1.78 -> cover, 0% loss      phone portrait 0.46 -> contain, nothing lost
-       16:10 laptop 1.60 -> cover, ~10% loss    iPad portrait  0.75 -> contain
-       ultrawide    2.37 -> contain             iPad landscape 1.33 -> contain          */
+  /* Both films are 16:9. A full-viewport player must choose: crop to fill the screen
+     (cover) or show the whole frame with bands (contain).
+     The two crops are NOT equivalent, so the rule is deliberately asymmetric:
+       - viewport WIDER than the film  -> cover trims a sliver of sky. Harmless.
+       - viewport NARROWER (portrait)  -> cover eats the SIDES. At 9:16 that is ~74% of
+         the width and the ROMULUS title card loses its first letters.
+     So: cover on anything landscape (no upper bound — ultrawide must still fill, or it
+     pillarboxes with black bars down both sides), contain only once the screen is
+     portrait/near-square, where the whole frame matters more than filling.
+       1.78 desktop -> cover, 0% loss       0.46 phone portrait -> contain, nothing lost
+       2.37 ultrawide -> cover, height only 0.75 iPad portrait  -> contain              */
   #intro-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#04060a;z-index:3}
-  @media (min-aspect-ratio:3/2) and (max-aspect-ratio:2/1){
+  @media (min-aspect-ratio:5/4){
     #intro-vid{object-fit:cover}
   }
   /* #intro-skip now uses the shared .vid-ctl / .vid-btn styling (bottom-right, same as every other player) */
