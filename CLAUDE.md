@@ -128,8 +128,20 @@ serves all silos and every future client. Burton is the standard to match.
   when `office_group` is missing** (e.g. Mississauga rows are `office="Mayor of Mississauga"` with no
   office_group — they must still land under "Mayor", not "Other"). This mirrors the Social tab's existing
   race-grouping (`socRaceKey`/`groupLabel`) — reuse that pattern for Candidates.
+- **OPPO tab — pick a race, then a candidate. No "All".** Same cascade as Candidates/Evidence/
+  Promises (`_opRace` → `_opCand`); nothing renders until both are chosen. Race key comes from
+  `socRaceKey()` — **never** `office_group` alone. (Until 2026-07-15 OPPO used `office_group||"other"`,
+  which filed Mississauga's entire mayoral race — Tedjo AND Crombie, both `office_group=null`,
+  `office="Mayor of Mississauga"` — under "Other Races".)
+- **The principal appearing in their OWN silo's OPPO list is INTENTIONAL** — self-opposition research
+  (know your own vulnerabilities) is deliberate campaign practice. Rob Burton has 13 findings on
+  himself in his own silo. **Do not "fix" this.** Confirmed by Andrew 2026-07-15.
+- **Race LABELS are not uniform across silos**, because each silo's `office_group` values differ
+  (Burton: clean `mayor`/`ward1`; Opitz renders "Ward 3 Etobicoke Lakeshore"; Monica "Councillor,
+  City - Wards 7, 8"). That is a DATA normalisation job for each silo's own chat, not a fix for
+  this file — `groupLabel()` already prettifies whatever it is given.
 - **Same tab set, order, naming, and card styling for every silo.** No silo-specific layout drift.
-- **Improve once, apply everywhere.** Verify on all three silos in preview before pushing.
+- **Improve once, apply everywhere.** Verify on all four silos in preview before pushing.
 
 ## HOW TO WORK IN HERE (safety)
 - **Test locally before every push:** `python -m http.server 8790` in this folder → open
