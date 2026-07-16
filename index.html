@@ -1309,16 +1309,23 @@ function renderHome(){
 function renderAttacks(){
   // Strategic-alliance flags: a target who is a known ally of a mayoral rival (name-keyed → scoped per silo).
   const ALLIES={"Jonathan McNeice":"Sean O'Meara"};
-  const idm={}; S.candidates.forEach(c=>idm[c.id]={name:c.name, grp:c.office_group||"other"});
+  // Race key via socRaceKey(), NOT office_group alone: some silos (e.g. Mississauga) store
+  // office="Mayor of Mississauga" with no office_group, which would otherwise dump the
+  // mayoral race into "Other". socRaceKey falls back to parsing the office string.
+  const idm={}; S.candidates.forEach(c=>idm[c.id]={name:c.name, grp:socRaceKey(c)});
   // group by TARGET candidate, then rank by tier (most lethal first)
   const buckets={}, grp={}, order=[];
   S.attacks.forEach(a=>{ const c=idm[a.target_candidate_id]||{}; const k=c.name||"Unattributed";
     if(!buckets[k]){ buckets[k]=[]; grp[k]=c.grp||"other"; order.push(k); } buckets[k].push(a); });
   Object.keys(buckets).forEach(k=>buckets[k].sort((a,b)=>tierRank(a.tier)-tierRank(b.tier)));
   order.sort((a,b)=>(GROUP_RANK[grp[a]]??45)-(GROUP_RANK[grp[b]]??45) || buckets[b].length-buckets[a].length);
-  const OP=window.__op||"all";
-  const shown=(OP!=="all"&&buckets[OP])?[OP]:order;
-  const chip=(k,l,n)=>`<button class="fbtn ${OP===k?'on':''}" data-op="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
+  // Pick a race, then a candidate — never a flat scroll of every trustee and councillor
+  // at once. Mirrors the Candidates/Evidence/Promises tabs: no "All" default.
+  const races=[...new Set(order.map(k=>grp[k]))].sort((a,b)=>(GROUP_RANK[a]??45)-(GROUP_RANK[b]??45));
+  if(_opRace && !races.includes(_opRace)){ _opRace=""; _opCand=""; }        // silo has no such race
+  const inRace = _opRace ? order.filter(k=>grp[k]===_opRace) : [];
+  if(_opCand && !inRace.includes(_opCand)) _opCand="";                       // stale pick after race change
+  const shown = _opCand ? [_opCand] : [];
   const raceOf=g=>({mayor:"Mayor",regional:"Regional",school_board:"School Board"}[g]||(/^ward(\d+)$/.test(g)?"Ward "+g.slice(4):""));
   const linked=S.attacks.filter(a=>firstUrl(a.source_citations)).length;
   const card=a=>{
@@ -1338,14 +1345,33 @@ function renderAttacks(){
         ${src?`<a class="srcbtn" href="${esc(src)}" target="_blank" rel="noopener">📎 primary source ↗</a>`:'<span class="chip faint" title="Analytical inference (e.g. an absence of record) — no single citable source">analytical</span>'}
       </div>
     </div>`; };
+  const raceOpts=races.map(g=>`<option value="${esc(g)}"${_opRace===g?' selected':''}>${esc(groupLabel(g))} (${order.filter(k=>grp[k]===g).length})</option>`).join("");
+  const candOpts=inRace.map(k=>`<option value="${esc(k)}"${_opCand===k?' selected':''}>${esc(k)} (${buckets[k].length})</option>`).join("");
+  const prompt = !_opRace
+    ? `<div class="loading" style="padding:48px">Select a <b>race</b> above to begin.</div>`
+    : (!_opCand ? `<div class="loading" style="padding:48px">Select a <b>candidate</b> in ${esc(groupLabel(_opRace))} to load their file.</div>` : "");
+
   document.getElementById("view-attacks").innerHTML=
-    `<div class="pitch"><p style="margin:0"><b>${S.attacks.length}</b> opposition findings, organized by target and ranked strongest first (Very Strong → Weak). <b>${linked}</b> link to a primary source. Pick a rival to load their file.</p></div>`
-    + `<div class="fbar">${chip('all','All',S.attacks.length)}${order.map(k=>chip(k,k+(raceOf(grp[k])?" · "+raceOf(grp[k]):""),buckets[k].length)).join("")}</div>`
+    `<div class="pitch"><p style="margin:0"><b>${S.attacks.length}</b> opposition findings, organized by target and ranked strongest first (Very Strong → Weak). <b>${linked}</b> link to a primary source. Pick a race, then a rival, to load their file.</p></div>`
+    + `<div class="searchbar">
+         <select id="op-race" style="flex:1;min-width:200px">
+           <option value="">— Select a race —</option>${raceOpts}
+         </select>
+         <select id="op-cand" style="flex:1;min-width:220px"${_opRace?"":" disabled"}>
+           <option value="">${_opRace?"— Select a candidate —":"— Select a race first —"}</option>${candOpts}
+         </select>
+       </div>`
+    + prompt
     + shown.map(k=>{ const vs=buckets[k].filter(a=>tierRank(a.tier)<=1).length;
         return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${raceOf(grp[k])?` <span class="chip">${esc(raceOf(grp[k]))}</span>`:""}${ALLIES[k]?` <span class="chip" style="background:rgba(220,40,40,.16);color:var(--red);border-color:rgba(220,40,40,.35)" title="Strategic ally of a mayoral rival — damaging this target indirectly weakens ${esc(ALLIES[k])}">⚑ ${esc(ALLIES[k])} ally</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} findings · ${vs} strong+</span></div>`
           + buckets[k].map(card).join(""); }).join("");
-  const vc=document.getElementById("view-attacks");
-  if(vc && !vc.__opBound){ vc.__opBound=true; vc.addEventListener("click",function(e){ const b=e.target.closest("button[data-op]"); if(!b) return; window.__op=b.dataset.op; renderAttacks(); var m=document.querySelector(".main"); if(m) m.scrollTo(0,0); }); }
+  // Re-bound each render because innerHTML replaces the <select> elements every time.
+  const rs=document.getElementById("op-race");
+  if(rs) rs.onchange=e=>{ _opRace=e.target.value; _opCand=""; renderAttacks();
+    const m=document.querySelector(".main"); if(m) m.scrollTo(0,0); };
+  const cs=document.getElementById("op-cand");
+  if(cs) cs.onchange=e=>{ _opCand=e.target.value; renderAttacks();
+    const m=document.querySelector(".main"); if(m) m.scrollTo(0,0); };
 }
 
 function posCat(v){ v=String(v||"").toUpperCase();
@@ -1357,6 +1383,8 @@ function posCat(v){ v=String(v||"").toUpperCase();
 let _cf="all";
 let _cg="all";
 let _ev="all";
+let _opRace="";   // OPPO tab: chosen race — "" means nothing picked yet (deliberately no "All")
+let _opCand="";   // OPPO tab: chosen candidate within that race
 let _msgSec="all";
 let _pr="all";
 let _ward="All";
@@ -1367,7 +1395,6 @@ let _socRace="all";
 let _socPlat="all";
 let _socDel="all";   // "all" | "deleted" — the deleted-post archive view
 let _chartSel="";    // The Numbers: id of the chart to show, "__all", or "" = first chart
-window.__op="all";
 // My Message: map raw messaging categories -> clean themed sections (case-insensitive)
 const MSG_SECTIONS = [
   {label:"Brand & Vision", short:"Brand", cats:["brand","pillar","bio","vision"]},
@@ -2188,7 +2215,7 @@ function connectClient(muni, cand){
   ACTIVE={muni,cand,office:c.office,msgTable:c.msgTable||"candidate_messaging",council:c.council||COUNCIL_DEFAULT,demo:!!c.demo};
   document.getElementById("activeClient").innerHTML=(c.demo?'<span style="color:var(--gold)">DEMONSTRATION</span><br>':'')+"Client: <b>"+esc(cand)+"</b><br>"+esc(muni)+" · "+esc(c.office||"");
   document.getElementById("conn").textContent="connecting…";
-  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="all"; _cg="all"; _ev="all"; _msgSec="all"; _pr="all"; _ward="All"; _chartSel=""; window.__op="all";
+  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="all"; _cg="all"; _ev="all"; _msgSec="all"; _pr="all"; _ward="All"; _chartSel=""; _opRace=""; _opCand="";
   chatHistory.length=0; const cl=document.getElementById("chatlog"); if(cl) cl.innerHTML="";
   document.querySelector('button[data-tab="home"]').click();
   init();
