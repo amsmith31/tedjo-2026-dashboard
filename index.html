@@ -252,7 +252,11 @@
   /* client-entry cinematic intro */
   #client-intro{position:fixed;inset:0;z-index:1050;background:#04060a;display:none;align-items:center;justify-content:center;overflow:hidden}
   #client-intro.show{display:flex}
-  #ci-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#04060a;opacity:0;transition:opacity .5s}
+  /* Same 16:9-into-any-screen problem as #intro-vid above — see that note. */
+  #ci-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#04060a;opacity:0;transition:opacity .5s}
+  @media (min-aspect-ratio:3/2) and (max-aspect-ratio:2/1){
+    #ci-vid{object-fit:cover}
+  }
   #client-intro.playing #ci-vid{opacity:1}
   .ci-boot{position:relative;text-align:center;transition:opacity .5s;z-index:1;padding:20px}
   #client-intro.playing .ci-boot{opacity:0}
@@ -379,7 +383,18 @@
   @keyframes enterIn{to{opacity:1;transform:none}}
   @keyframes enterPulse{0%,100%{box-shadow:0 0 22px rgba(224,184,76,.4)}50%{box-shadow:0 0 42px rgba(224,184,76,.78)}}
   #intro-enter:hover{transform:scale(1.05)}
-  #intro-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#04060a;z-index:3}
+  /* Both films are 16:9. A full-viewport player has to choose: crop the frame to fill
+     the screen (cover), or show the whole frame with bands (contain). On a portrait
+     phone (~9:16) cover throws away ~74% of the WIDTH — the ROMULUS title card loses
+     its first letters. So: contain is the safe default, and cover is switched on ONLY
+     when the viewport is close enough to 16:9 that the crop costs nothing (~<15%).
+       16:9 desktop 1.78 -> cover, 0% loss      phone portrait 0.46 -> contain, nothing lost
+       16:10 laptop 1.60 -> cover, ~10% loss    iPad portrait  0.75 -> contain
+       ultrawide    2.37 -> contain             iPad landscape 1.33 -> contain          */
+  #intro-vid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#04060a;z-index:3}
+  @media (min-aspect-ratio:3/2) and (max-aspect-ratio:2/1){
+    #intro-vid{object-fit:cover}
+  }
   /* #intro-skip now uses the shared .vid-ctl / .vid-btn styling (bottom-right, same as every other player) */
   /* bigger, present ROMULUS on the marketing hero */
   .ld-hero-brand{font-size:clamp(48px,11vw,112px);font-weight:900;letter-spacing:clamp(4px,2vw,16px);color:var(--gold);line-height:1;
