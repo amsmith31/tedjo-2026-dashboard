@@ -127,6 +127,14 @@
   .atk .quote{border-left:2px solid var(--gold-dim);padding:4px 0 4px 12px;color:var(--muted);font-style:italic;margin:8px 0}
   .atk .foot{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:12px 20px;background:var(--panel2);border-top:1px solid var(--line);font-size:12px;color:var(--faint)}
   .srcbtn{background:var(--gold-dim);color:var(--gold)!important;border:1px solid var(--gold-dim);padding:6px 12px;border-radius:6px;font-weight:600;font-size:12px}
+  /* OPPO video pins: one per cited moment, deep-linked to the second. Sits bottom-right,
+     directly above the primary-source row. Thumbnails come straight from YouTube by video
+     id (img.youtube.com) — no API key, nothing to provision per silo. */
+  .oppo-pins{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding:0 20px 12px}
+  .oppo-pin{position:relative;display:block;width:104px;border:1px solid var(--gold-dim);border-radius:6px;overflow:hidden;line-height:0;transition:border-color .15s,transform .15s}
+  .oppo-pin img{width:100%;height:58px;object-fit:cover;display:block}
+  .oppo-pin span{position:absolute;right:4px;bottom:4px;background:rgba(0,0,0,.78);color:var(--gold);font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;line-height:1.5}
+  .oppo-pin:hover{border-color:var(--gold);transform:translateY(-1px)}
   .srcbtn:hover{background:#a886321f;text-decoration:none}
   .chip{font-size:11px;color:var(--muted);background:#0e1620;border:1px solid var(--line);padding:2px 9px;border-radius:12px}
 
@@ -1322,17 +1330,31 @@ function renderAttacks(){
     if(!buckets[k]){ buckets[k]=[]; grp[k]=c.grp||"other"; order.push(k); } buckets[k].push(a); });
   Object.keys(buckets).forEach(k=>buckets[k].sort((a,b)=>tierRank(a.tier)-tierRank(b.tier)));
   order.sort((a,b)=>(GROUP_RANK[grp[a]]??45)-(GROUP_RANK[grp[b]]??45) || buckets[b].length-buckets[a].length);
-  // Pick a race, then a candidate — never a flat scroll of every trustee and councillor
-  // at once. Mirrors the Candidates/Evidence/Promises tabs: no "All" default.
+  // Pick a race, then a candidate — never a flat scroll of every trustee and councillor at
+  // once. A ward/trustee silo only HAS one race, so asking it to "pick a race" is a wasted
+  // click: in that case skip straight to the candidates. Mayoral silos see every race.
   const races=[...new Set(order.map(k=>grp[k]))].sort((a,b)=>(GROUP_RANK[a]??45)-(GROUP_RANK[b]??45));
-  if(_opRace && !races.includes(_opRace)){ _opRace=""; _opCand=""; }        // silo has no such race
+  const singleRace = races.length===1;
+  if(singleRace) _opRace=races[0];                                           // implicit — no race step
+  if(_opRace && !races.includes(_opRace)){ _opRace=""; _opCand=""; }         // silo has no such race
   const inRace = _opRace ? order.filter(k=>grp[k]===_opRace) : [];
   if(_opCand && !inRace.includes(_opCand)) _opCand="";                       // stale pick after race change
   const shown = _opCand ? [_opCand] : [];
-  const raceOf=g=>({mayor:"Mayor",regional:"Regional",school_board:"School Board"}[g]||(/^ward(\d+)$/.test(g)?"Ward "+g.slice(4):""));
+  const raceOf=g=>groupLabel(g);
   const linked=S.attacks.filter(a=>firstUrl(a.source_citations)).length;
   const card=a=>{
-    const src=firstUrl(a.source_citations);
+    // A finding may cite several sources, and often cites the SAME video at more than one
+    // moment. Show every one: video moments as thumbnail pins (deep-linked to the second),
+    // everything else as a source button. Previously firstUrl() kept only the first URL, so
+    // a reader could land at 12:45 when the quote they'd just read is at 4:48.
+    const srcs=allUrls(a.source_citations);
+    const vids=srcs.filter(u=>ytId(u));
+    const docs=srcs.filter(u=>!ytId(u));
+    const pins=vids.map(u=>{
+      const t=ytTime(u);
+      return `<a class="oppo-pin" href="${esc(u)}" target="_blank" rel="noopener" title="${t!=null?'Jump to '+mmss(t)+' in this video':'Watch the source video'}">
+        <img loading="lazy" src="https://img.youtube.com/vi/${esc(ytId(u))}/mqdefault.jpg" alt="">
+        <span>▶ ${t!=null?esc(mmss(t)):"watch"}</span></a>`; }).join("");
     return `<div class="atk">
       <div class="hd"><div style="flex:1">
         <h3>${esc(a.headline)}</h3>
@@ -1343,38 +1365,40 @@ function renderAttacks(){
         <div>${esc(a.body||"")}</div>
         ${a.key_quote?`<div class="quote">"${esc(String(a.key_quote).slice(0,260))}…"</div>`:""}
       </div>
+      ${vids.length?`<div class="oppo-pins">${pins}</div>`:""}
       <div class="foot">
         <span>Audience: ${esc(a.audience||"—")} · Tone: ${esc(a.delivery_tone||"—")}</span>
-        ${src?`<a class="srcbtn" href="${esc(src)}" target="_blank" rel="noopener">📎 primary source ↗</a>`:'<span class="chip faint" title="Analytical inference (e.g. an absence of record) — no single citable source">analytical</span>'}
+        <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+        ${docs.length?docs.map((u,i)=>`<a class="srcbtn" href="${esc(u)}" target="_blank" rel="noopener">📎 primary source${docs.length>1?" "+(i+1):""} ↗</a>`).join("")
+          :(vids.length?"":'<span class="chip faint" title="Analytical inference (e.g. an absence of record) — no single citable source">analytical</span>')}
+        </span>
       </div>
     </div>`; };
-  const raceOpts=races.map(g=>`<option value="${esc(g)}"${_opRace===g?' selected':''}>${esc(groupLabel(g))} (${order.filter(k=>grp[k]===g).length})</option>`).join("");
-  const candOpts=inRace.map(k=>`<option value="${esc(k)}"${_opCand===k?' selected':''}>${esc(k)} (${buckets[k].length})</option>`).join("");
+  const rchip=(k,l,n)=>`<button class="fbtn ${_opRace===k?'on':''}" data-oprace="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
+  const cchip=(k,n)=>`<button class="fbtn ${_opCand===k?'on':''}" data-opcand="${esc(k)}">${esc(k)} (${n})</button>`;
+  const raceBar = singleRace ? "" : `<div class="fbar">${races.map(g=>rchip(g,groupLabel(g),order.filter(k=>grp[k]===g).length)).join("")}</div>`;
+  const candBar = _opRace ? `<div class="fbar">${inRace.map(k=>cchip(k,buckets[k].length)).join("")}</div>` : "";
   const prompt = !_opRace
     ? `<div class="loading" style="padding:48px">Select a <b>race</b> above to begin.</div>`
-    : (!_opCand ? `<div class="loading" style="padding:48px">Select a <b>candidate</b> in ${esc(groupLabel(_opRace))} to load their file.</div>` : "");
+    : (!_opCand ? `<div class="loading" style="padding:48px">Select a <b>candidate</b>${singleRace?"":" in "+esc(groupLabel(_opRace))} to load their file.</div>` : "");
 
   document.getElementById("view-attacks").innerHTML=
-    `<div class="pitch"><p style="margin:0"><b>${S.attacks.length}</b> opposition findings, organized by target and ranked strongest first (Very Strong → Weak). <b>${linked}</b> link to a primary source. Pick a race, then a rival, to load their file.</p></div>`
-    + `<div class="searchbar">
-         <select id="op-race" style="flex:1;min-width:200px">
-           <option value="">— Select a race —</option>${raceOpts}
-         </select>
-         <select id="op-cand" style="flex:1;min-width:220px"${_opRace?"":" disabled"}>
-           <option value="">${_opRace?"— Select a candidate —":"— Select a race first —"}</option>${candOpts}
-         </select>
-       </div>`
+    `<div class="pitch"><p style="margin:0"><b>${S.attacks.length}</b> opposition findings, organized by target and ranked strongest first (Very Strong → Weak). <b>${linked}</b> link to a primary source. ${singleRace?"Pick a rival":"Pick a race, then a rival"} to load their file.</p></div>`
+    + raceBar + candBar
     + prompt
     + shown.map(k=>{ const vs=buckets[k].filter(a=>tierRank(a.tier)<=1).length;
         return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${raceOf(grp[k])?` <span class="chip">${esc(raceOf(grp[k]))}</span>`:""}${ALLIES[k]?` <span class="chip" style="background:rgba(220,40,40,.16);color:var(--red);border-color:rgba(220,40,40,.35)" title="Strategic ally of a mayoral rival — damaging this target indirectly weakens ${esc(ALLIES[k])}">⚑ ${esc(ALLIES[k])} ally</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} findings · ${vs} strong+</span></div>`
           + buckets[k].map(card).join(""); }).join("");
-  // Re-bound each render because innerHTML replaces the <select> elements every time.
-  const rs=document.getElementById("op-race");
-  if(rs) rs.onchange=e=>{ _opRace=e.target.value; _opCand=""; renderAttacks();
-    const m=document.querySelector(".main"); if(m) m.scrollTo(0,0); };
-  const cs=document.getElementById("op-cand");
-  if(cs) cs.onchange=e=>{ _opCand=e.target.value; renderAttacks();
-    const m=document.querySelector(".main"); if(m) m.scrollTo(0,0); };
+  // Delegated once; innerHTML replaces the chips on every render.
+  const vc=document.getElementById("view-attacks");
+  if(vc && !vc.__opBound){ vc.__opBound=true; vc.addEventListener("click",function(e){
+    const r=e.target.closest("button[data-oprace]");
+    if(r){ _opRace=r.dataset.oprace; _opCand=""; renderAttacks();
+           const m=document.querySelector(".main"); if(m) m.scrollTo(0,0); return; }
+    const c=e.target.closest("button[data-opcand]");
+    if(c){ _opCand=c.dataset.opcand; renderAttacks();
+           const m=document.querySelector(".main"); if(m) m.scrollTo(0,0); }
+  }); }
 }
 
 function posCat(v){ v=String(v||"").toUpperCase();
@@ -1520,9 +1544,15 @@ function videoStrip(vids){ return `<div class="sect-title" style="margin:14px 0 
   vids.slice(0,8).map(v=>`<a class="vid" href="${esc(v.video_url)}" target="_blank" rel="noopener">${v.thumbnail_url?`<img loading="lazy" src="${esc(v.thumbnail_url)}">`:""}<div class="vt">${esc((v.title||"").slice(0,58))}</div><div class="vm">${fmtViews(v.view_count)}${v.published_at?" · "+fmtD(v.published_at):""}</div></a>`).join("")+`</div>`; }
 function groupLabel(g){ if(g==="_all") return "Candidates"; if(g==="mayor") return "Mayor";
   if(g==="regional") return "Regional Council"; if(g==="school_board") return "School Board Trustees";
+  if(g==="school_public") return "Trustees · Public";
+  if(g==="school_catholic") return "Trustees · Catholic";
+  if(g==="school_fr_public") return "Trustees · French Public";
+  if(g==="school_fr_catholic") return "Trustees · French Catholic";
   if(g==="other") return "Other Races"; const m=/^ward(\d+)$/.exec(g); if(m) return "Ward "+m[1];
   return String(g).replace(/_/g," ").replace(/\b\w/g,x=>x.toUpperCase()); }
-const GROUP_RANK={mayor:0,regional:1,ward1:11,ward2:12,ward3:13,ward4:14,ward5:15,ward6:16,ward7:17,ward8:18,ward9:19,school_board:30,other:40,_all:50};
+// Mayor -> Regional -> Wards in order -> Trustees (public, catholic, french) -> Other.
+const GROUP_RANK={mayor:0,regional:1,ward1:11,ward2:12,ward3:13,ward4:14,ward5:15,ward6:16,ward7:17,ward8:18,ward9:19,
+  school_public:30,school_catholic:31,school_fr_public:32,school_fr_catholic:33,school_board:34,other:40,_all:50};
 // ── Social media: post card, the Social Media tab, and the per-profile feed block.
 function socNum(n){ n=+n||0; return n>=1000?(n/1000).toFixed(n>=10000?0:1).replace(/\.0$/,"")+"k":String(n); }
 function platIcon(p){ return ({x:"𝕏",twitter:"𝕏",instagram:"📷",facebook:"f",tiktok:"♪"}[String(p||"").toLowerCase()]||"◱"); }
@@ -1546,15 +1576,45 @@ function postCard(p){
 }
 // Race key for grouping — prefer office_group; fall back to parsing `office` (silos whose
 // candidates table has no office_group column, e.g. Mississauga mayor) so grouping stays uniform.
+// Canonical race key for a candidate — shared by OPPO, Social, Candidates and Ads so all
+// four group identically. Two things it must handle:
+//   1. office_group is missing in some silos (Mississauga: office="Mayor of Mississauga",
+//      office_group=null) -> parse the office string rather than dumping it in "other".
+//   2. EVERY trustee shares office_group="school_board", but a trustee seat is per-board:
+//      a Halton Catholic seat is a different race from a Halton public one. Only the
+//      office text distinguishes them, so split on it.
 function socRaceKey(c){
-  if(c && c.office_group) return c.office_group;
   const o=String((c&&c.office)||"").toLowerCase();
+  const og=String((c&&c.office_group)||"");
+  if(og==="school_board" || o.includes("school") || o.includes("trustee") || o.includes("conseil scolaire")){
+    if(o.includes("catholique")||o.includes("monavenir")) return "school_fr_catholic";   // Conseil scolaire catholique MonAvenir
+    if(o.includes("viamonde")||o.includes("conseil scolaire")) return "school_fr_public"; // Conseil scolaire Viamonde
+    if(o.includes("catholic")) return "school_catholic";                                  // Halton Catholic DSB
+    if(o.includes("school")||o.includes("trustee")) return "school_public";               // Halton DSB
+    return "school_board";                                                                // office_group says school, office text unhelpful
+  }
+  if(og) return og;
   if(o.includes("mayor")) return "mayor";
   if(o.includes("regional")) return "regional";
-  if(o.includes("school")||o.includes("trustee")) return "school_board";
   const m=/ward\s*(\d+)/.exec(o); if(m) return "ward"+m[1];
   return "other";
 }
+// Every URL in a citation, not just the first. A finding often cites the SAME video at
+// several moments (e.g. "...&t=765s ...&t=288s") — keeping only the first sends the reader
+// to the wrong part of the clip with no hint the other moment existed.
+function allUrls(v){
+  const out=[];
+  (function walk(x){
+    if(x==null) return;
+    if(Array.isArray(x)) return x.forEach(walk);
+    if(typeof x==="object") return Object.values(x).forEach(walk);
+    const m=String(x).match(/https?:\/\/[^\s'"\]\)}>]+/g); if(m) out.push(...m);
+  })(v);
+  return [...new Set(out)];
+}
+const ytId   = u => (String(u||"").match(/(?:[?&]v=|youtu\.be\/|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})/)||[])[1]||null;
+const ytTime = u => { const m=String(u||"").match(/[?&](?:t|start)=(\d+)/); return m?+m[1]:null; };
+const mmss   = s => Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
 function renderSocial(){
   const el=document.getElementById("view-social"); if(!el) return;
   const idm={}; S.candidates.forEach(c=>idm[c.id]=c);
