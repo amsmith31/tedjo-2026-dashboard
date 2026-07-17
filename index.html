@@ -1378,7 +1378,7 @@ async function renderReview(){
   try{ staged=await api("/attack_messaging?is_active=eq.false&select=*&limit=500"); staged.sort((a,b)=>tierRank(a.tier)-tierRank(b.tier)); }catch(e){ staged=[]; }
   const idm={}; S.candidates.forEach(c=>idm[c.id]=c.name);
   if(!staged.length){
-    box.innerHTML=`<div class="pitch"><p style="margin:0">Nothing awaiting review. When a silo's AI generates new OPPO findings they land here <b>unpublished</b> for your approval before they ever appear on the public OPPO tab.</p></div>`;
+    box.innerHTML=`<div class="pitch"><p style="margin:0">Nothing awaiting review. When new OPPO findings are detected they land here <b>unpublished</b> for your approval before they ever appear on the public OPPO tab.</p></div>`;
     return;
   }
   const card=a=>{ const tgt=idm[a.target_candidate_id]||"target"; const src=allUrls(a.source_citations); const vids=src.filter(u=>ytId(u));
