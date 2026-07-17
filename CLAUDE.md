@@ -159,7 +159,12 @@ serves all silos and every future client. Burton is the standard to match.
   validated 2026-07-16 — never in `index.html`, never pasted into chat), search the Ad Library by
   candidate NAME (`search_terms`), **never by page-id** — page-id search fails for personal profiles
   and under-captures (Burton's name-search found 437 ads; Monica's early page-id script under-caught
-  and should be switched). Create the `political_ads` table, push the token as that repo's GitHub secret, add
+  and should be switched). **RELEVANCE & SCOPE (operator standard 2026-07-17):** each silo's tab is
+  scoped to its OWN municipal race; keep every candidate on the ballot (current + past ads) plus any
+  resident association / party riding association / group advertising ABOUT that municipal election,
+  and drop provincial/federal/other-city ads even when they name-drop the municipality. It's free, so
+  the constraint is relevance not cost. Full rule + Oakville worked example: `~/.romulus/ROMULUS-SILO-STANDARDS.md`
+  "Meta Ad Library → Relevance & Scope" and `PENDING-BRIEFS.md` block ⓽. Create the `political_ads` table, push the token as that repo's GitHub secret, add
   the daily `political-ads.yml` workflow, backfill. Reference: Burton (437 ads); guide:
   `~/.romulus/META-ADLIB-SETUP.md`. Nothing to change in THIS file — it's a data-population standard.
 - **Every silo's ROMULUS chat Edge Function must identify its OWN candidate.** New silo functions
