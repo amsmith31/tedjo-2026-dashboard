@@ -157,7 +157,9 @@ serves all silos and every future client. Burton is the standard to match.
   no per-silo gating in this file. What makes them exist is each silo chat's job: source the shared
   `META_ACCESS_TOKEN` from `~/.romulus/shared.env` (a low-privilege read-only Ad Library token,
   validated 2026-07-16 — never in `index.html`, never pasted into chat), search the Ad Library by
-  candidate NAME, create the `political_ads` table, push the token as that repo's GitHub secret, add
+  candidate NAME (`search_terms`), **never by page-id** — page-id search fails for personal profiles
+  and under-captures (Burton's name-search found 437 ads; Monica's early page-id script under-caught
+  and should be switched). Create the `political_ads` table, push the token as that repo's GitHub secret, add
   the daily `political-ads.yml` workflow, backfill. Reference: Burton (437 ads); guide:
   `~/.romulus/META-ADLIB-SETUP.md`. Nothing to change in THIS file — it's a data-population standard.
 - **Every silo's ROMULUS chat Edge Function must identify its OWN candidate.** New silo functions
