@@ -1067,9 +1067,10 @@ const COUNCIL_IJAZ = {
                council:r.result||"", myVote:r.vote, minutes:r.source_url, issue:r.issue_area||"" }) };
 const CLIENTS = {
   "Mississauga": { candidates: {
-    "Alvin Tedjo": { office:"Mayor · 2026", status:"live", fn:"romulus", demo:true, login:"tedjo@romulus.vote",
+    "Bonnie Crombie": { office:"Mayor · 2026", status:"live", fn:"romulus", login:"crombie@romulus.vote",
       url:"https://lblxjbomfusfhsnwehez.supabase.co",
-      key:"sb_publishable_aDVuWrjpxpn1Zo4Dyix3mw_nkTtxipb" }
+      key:"sb_publishable_aDVuWrjpxpn1Zo4Dyix3mw_nkTtxipb",
+      note:"Repurposed from the Alvin Tedjo demo 2026-07-17 — now a live client (Bonnie Crombie, Mayor of Mississauga). Tedjo is a rival in her race." }
   }},
   "Oakville": { candidates: {
     "Rob Burton": { office:"Mayor · 2026", status:"live", fn:"legatus", msgTable:"burton_messaging", council:COUNCIL_BURTON,
@@ -1270,7 +1271,7 @@ async function candSummary(raw){ const base="/council_votes?candidate_name_raw=e
   const s={total,YES,NO,ABSENT,byIssue:{}}; ISSUE_AREAS.forEach((i,k)=>{ if(iss[k]) s.byIssue[i]=iss[k]; }); return s; }
 
 const S = { attacks:[], evidence:[], candidates:[], dissents:[], web:[], message:[], promises:[], news:[], newsLinks:[], sources:[], ads:[], videos:[], social:[], mentions:[], counts:{} };
-const CAND_ORDER = {"alvin-tedjo":0,"carolyn-parrish":1};
+const CAND_ORDER = {"bonnie-crombie":0};
 
 async function init(){
   try{
@@ -1294,7 +1295,7 @@ async function init(){
     ]);
     S.attacks=attacks; S.evidence=evidence; S.web=web; S.message=message; S.promises=promises;
     S.news=news; S.newsLinks=newsLinks; S.sources=sources; S.ads=ads; S.videos=vids; S.social=social; S.mentions=mentions||[];
-    const rank=c=>(c.is_principal?0:c.slug==="alvin-tedjo"?0:1);
+    const rank=c=>(c.is_principal?0:1);
     S.candidates=candidates.sort((a,b)=>rank(a)-rank(b)||(b.is_incumbent?1:0)-(a.is_incumbent?1:0)||(a.name||"").localeCompare(b.name||""));
     const _cfg=(ACTIVE&&ACTIVE.council?ACTIVE.council:COUNCIL_DEFAULT);
     S.dissents=(dissents||[]).map(_cfg.map);
@@ -1664,7 +1665,6 @@ function renderEvidence(){
 
 function badge(c){
   if(c.is_principal) return '<span class="chip" style="color:var(--gold)">★ OUR CLIENT</span>';
-  if(c.slug==="alvin-tedjo") return '<span class="chip" style="color:var(--red)">● DEMO SUBJECT</span>';
   if(c.is_incumbent) return '<span class="chip" style="color:var(--gold)">INCUMBENT</span>';
   return '<span class="chip">CANDIDATE</span>';
 }
