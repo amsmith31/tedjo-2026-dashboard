@@ -2228,16 +2228,59 @@ async function siloFnUp(silo){
   try{ const r=await fetch(siloKey(silo.url)+"/functions/v1/"+silo.fn, {method:"OPTIONS"}); return r.ok; }
   catch(e){ return false; }
 }
+// Pipeline health from scrape_runs — the false-green killer.
+// Row counts alone CANNOT tell a live silo from one whose scraper died last week: the old rows sit
+// there looking healthy while nothing new arrives. Every failure found on 2026-07-17 was invisible
+// to a count — cloud_web_monitor billed for 9 runs and added 0 rows EVER; a purge destroyed 149
+// videos reporting errors=0/success; Ijaz's social scraper runs daily into an empty table.
+// scrape_runs exists in all five silos, but only these columns are common to all of them
+// (completed_at vs finished_at diverge) — read the core only.
+async function siloJobs(silo){
+  try{
+    const r=await siloFetch(silo, "/scrape_runs?select=scraper_name,status,started_at,records_added&order=started_at.desc&limit=400");
+    if(!r.ok) return null;                       // table absent in this silo
+    const rows=await r.json();
+    if(!Array.isArray(rows)) return null;
+    const now=Date.now(), by={};
+    rows.forEach(x=>{
+      const k=x.scraper_name||"(unnamed)";
+      const b=by[k]=by[k]||{name:k,runs:0,added:0,last:null,lastStatus:""};
+      b.runs++; b.added+=(+x.records_added||0);
+      const t=x.started_at?Date.parse(x.started_at):NaN;
+      if(!isNaN(t)&&(b.last===null||t>b.last)){ b.last=t; b.lastStatus=String(x.status||"").toLowerCase(); }
+    });
+    return Object.values(by).map(b=>{
+      const ageH=b.last===null?null:(now-b.last)/36e5;
+      const ago=h=>h==null?"never":(h<48?Math.round(h)+"h":Math.round(h/24)+"d");
+      const issues=[];
+      // A job that dies mid-run never writes a terminal status — it just sits in `running` forever.
+      if(b.lastStatus==="running"&&ageH!=null&&ageH>6)
+        issues.push({sev:"red",t:"stuck in `running` for "+ago(ageH),fix:"Died without writing a terminal status — it's dead, not slow."});
+      if(b.lastStatus==="failed")
+        issues.push({sev:"red",t:"last run FAILED "+ago(ageH)+" ago",fix:"Check that workflow's log."});
+      if(ageH!=null&&ageH>72&&b.lastStatus!=="running")
+        issues.push({sev:"amber",t:"no run in "+ago(ageH),fix:"Cron disabled or broken — intentional?"});
+      // Billing for nothing is worse than not running: it also manufactures false confidence.
+      if(b.runs>=3&&b.added===0)
+        issues.push({sev:"amber",t:b.runs+" runs, 0 rows added — ever",fix:"Produces nothing while it bills. Delete it, don't debug it."});
+      return {name:b.name,runs:b.runs,added:b.added,ageH,ago:ago(ageH),lastStatus:b.lastStatus,issues};
+    }).sort((x,y)=>y.issues.length-x.issues.length||x.name.localeCompare(y.name));
+  }catch(e){ return null; }
+}
 async function siloHealth(muni, cand, c){
   const signedIn=!!(SESS[siloKey(c.url)]||{}).access;
   const [candidates,oppo,staged,message,promises,evidence,votes,ads,news]=await Promise.all([
     siloCount(c,"candidates"), siloCount(c,"attack_messaging"), siloCount(c,"attack_messaging","is_active=eq.false"),
     siloCount(c,"candidate_messaging"), siloCount(c,"promises"), siloCount(c,"council_evidence"),
     siloCount(c,"council_votes"), siloCount(c,"political_ads"), siloCount(c,"news") ]);
-  const fn=await siloFnUp(c);
+  const [fn,jobs]=await Promise.all([siloFnUp(c), siloJobs(c)]);
+  const jobsBad=Array.isArray(jobs)?jobs.filter(j=>j.issues.length).length:0;
   const metrics=[{k:"Candidates",v:candidates},{k:"OPPO",v:oppo},{k:"My Message",v:message},{k:"Promises",v:promises},
-    {k:"Evidence",v:evidence},{k:"Council votes",v:votes},{k:"Political ads",v:ads},{k:"News",v:news}];
+    {k:"Evidence",v:evidence},{k:"Council votes",v:votes},{k:"Political ads",v:ads},{k:"News",v:news},
+    {k:"Pipelines",v:Array.isArray(jobs)?((jobs.length-jobsBad)+"/"+jobs.length):null}];
   const flags=[];
+  // Pipeline failures rank above data gaps: a count can look healthy while nothing new is arriving.
+  if(Array.isArray(jobs)) jobs.forEach(j=>j.issues.forEach(i=>flags.push({sev:i.sev,t:j.name+" — "+i.t,fix:i.fix})));
   if(!signedIn) flags.push({sev:"red",t:"No session for this silo",fix:"Sign out and back in as master, or confirm the master login exists in this project."});
   if(candidates===null) flags.push({sev:"red",t:"candidates unreachable",fix:"Silo down or RLS mis-set — this client's whole dashboard will be empty."});
   else if(candidates===0) flags.push({sev:"amber",t:"No candidates loaded",fix:"Silo chat: load the race's candidates."});
@@ -2249,7 +2292,7 @@ async function siloHealth(muni, cand, c){
   if(oppo===null||oppo===0) flags.push({sev:"amber",t:"No OPPO findings",fix:"Silo chat: run the OPPO generator."});
   if(typeof staged==="number"&&staged>0) flags.push({sev:"info",t:staged+" finding"+(staged===1?"":"s")+" awaiting Review",fix:"Enter this silo → Review tab → approve or discard."});
   const sev=flags.some(f=>f.sev==="red")?"red":flags.some(f=>f.sev==="amber")?"amber":"green";
-  return {muni,cand,office:c.office||"",demo:!!c.demo,signedIn,metrics,flags,sev};
+  return {muni,cand,office:c.office||"",demo:!!c.demo,signedIn,metrics,flags,sev,jobs};
 }
 async function renderStatus(){
   const box=document.getElementById("view-status");
