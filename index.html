@@ -1044,10 +1044,17 @@ const COUNCIL_OPITZ = {
 // tab tracks the RIVAL incumbent Rod Power's flat Brampton voting record. Same flat shape as Opitz.
 const COUNCIL_SINESOARES = {
   perCandidate: true,
-  candidates: [ {raw:"rod-power", name:"Rod Power", note:"incumbent (2022– )"} ],
+  candidates: [ {raw:"rod-power", name:"Rod Power", note:"incumbent (2022– )"},
+                {raw:"__pre_rod", name:"Pre-Rod Power (2018–2022)", note:"all-council record", motions:true} ],
   q: raw => "/council_votes?candidate_name_raw=eq."+raw+"&select=vote,voted_on,agenda_item,title,committee,motion_type,result,vote_description,issue_area,source_url&order=voted_on.desc.nullslast,id.asc",
   map: r => ({ date:r.voted_on, item:r.agenda_item||"", topic:r.title||"", doc:r.motion_type||"",
-               council:r.result||"", myVote:r.vote, minutes:r.source_url, issue:r.issue_area||"" }) };
+               council:r.result||"", myVote:r.vote, minutes:r.source_url, issue:r.issue_area||"" }),
+  // Pre-incumbent ALL-COUNCIL record: council_motions from before Rod Power's 2022 term, dated via
+  // their meeting (inner join drops the 266 undated motions — a silo data gap, not a render bug).
+  motionsQ: "/council_motions?select=title,description,motion_type,outcome,vote_for_count,vote_against_count,source_url,council_meetings!inner(meeting_date,committee,minutes_url,source_url)&council_meetings.meeting_date=lt.2022-11-15&limit=1500",
+  motionsMap: r => { const m=r.council_meetings||{}; return { date:m.meeting_date||"", committee:m.committee||"",
+    topic:r.title||r.description||"", doc:r.motion_type||"", outcome:r.outcome||"",
+    forCount:r.vote_for_count, againstCount:r.vote_against_count, minutes:r.source_url||m.minutes_url||m.source_url }; } };
 // Milton Ward 3 (Sammy Ijaz silo): principal is a challenger, so the Council Record tab tracks the
 // RIVAL incumbent Rick Di Lorenzo, plus Ijaz's own record for his defensive self-audit. NOTE: this
 // silo's candidate_name_raw slugs contain spaces/periods, so encodeURIComponent them in the query.
@@ -1292,7 +1299,7 @@ async function init(){
     const _cfg=(ACTIVE&&ACTIVE.council?ACTIVE.council:COUNCIL_DEFAULT);
     S.dissents=(dissents||[]).map(_cfg.map);
     if(_cfg.perCandidate){ _councilCand=_cfg.candidates[0].raw; S.councilSummary={};
-      await Promise.all(_cfg.candidates.map(async cc=>{ S.councilSummary[cc.raw]=await candSummary(cc.raw); }));
+      await Promise.all(_cfg.candidates.filter(cc=>!cc.motions).map(async cc=>{ S.councilSummary[cc.raw]=await candSummary(cc.raw); }));
       const dflt=await apiPaged(_cfg.q(_councilCand), (S.councilSummary[_councilCand]||{}).total);
       S.dissents=dflt.map(_cfg.map); }
     const _dissCount=_cfg.perCandidate ? Object.values(S.councilSummary).reduce((a,s)=>a+(s.NO||0),0) : S.dissents.filter(d=>posCat(d.myVote)==="NO").length;
@@ -1539,7 +1546,10 @@ function summarizeVotes(rows){ rows=rows||[]; const s={total:rows.length,YES:0,N
   return s; }
 // Multi-councillor silos fetch one incumbent's full record on demand, then re-render the Council tab.
 async function loadCouncilCand(raw){ const cf=ACTIVE&&ACTIVE.council; if(!cf||!cf.perCandidate) return;
-  _councilCand=raw; const tot=((S.councilSummary||{})[raw]||{}).total||2000;
+  _councilCand=raw;
+  const sel=(cf.candidates||[]).find(x=>x.raw===raw);
+  if(sel&&sel.motions&&cf.motionsQ){ const rows=await apiPaged(cf.motionsQ, 1500); S.dissents=(rows||[]).map(cf.motionsMap); renderCouncil(); return; }
+  const tot=((S.councilSummary||{})[raw]||{}).total||2000;
   const rows=await apiPaged(cf.q(raw), tot); S.dissents=(rows||[]).map(cf.map); renderCouncil(); }
 function renderCouncil(){
   const cf=ACTIVE&&ACTIVE.council, perC=cf&&cf.perCandidate;
@@ -1561,6 +1571,30 @@ function renderCouncil(){
       <label class="faint" style="font-size:12px${showCandPicker?';margin-left:6px':''}">Issue</label>
       <select id="cissuesel" style="background:#141821;color:#e8edf5;border:1px solid #2a3140;border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600"><option value="all">All issues</option>${issueOpts.map(([k,n])=>`<option value="${esc(k)}" ${k===_cissue?"selected":""}>${esc(k)} (${n})</option>`).join("")}</select>
     </div>` : "";
+  // Pre-Rod all-council record: a different shape (no per-candidate vote) — render the motions with
+  // their outcome + vote split instead of the dissent view. candSel (the councillor dropdown) is
+  // reused so the reviewer can switch back to Rod Power's record.
+  if(perC && selCand && selCand.motions){
+    const rows=all;   // S.dissents already mapped via motionsMap, sorted by date desc
+    document.getElementById("view-council").innerHTML=candSel+`
+      <div class="pitch"><p style="margin:0">The council's <b>recorded decisions before Rod Power took office</b> — every dated motion from the pre-2022 term, its outcome and vote split, linked to the minutes. <b>${rows.length}</b> recorded motions.</p></div>
+      <div class="searchbar"><input id="csearch" placeholder="Filter by motion or committee…"></div>
+      <table><thead><tr><th>Date</th><th>Committee</th><th>Motion</th><th>Result</th><th>For–Against</th><th>Source</th></tr></thead><tbody id="ctbody"></tbody></table>`;
+    const drawM=()=>{ const qv=(document.getElementById("csearch").value||"").toLowerCase();
+      const list=rows.filter(r=>!qv||String(r.topic||"").toLowerCase().includes(qv)||String(r.committee||"").toLowerCase().includes(qv));
+      document.getElementById("ctbody").innerHTML=list.slice(0,600).map(r=>`<tr>
+        <td class="muted" style="white-space:nowrap">${esc(fmtD(r.date))}</td>
+        <td class="muted">${esc(r.committee||"—")}</td>
+        <td>${esc(String(r.topic||"").slice(0,160))}</td>
+        <td>${esc(r.outcome||"—")}</td>
+        <td class="muted" style="white-space:nowrap">${r.forCount!=null?esc(String(r.forCount)):"–"}–${r.againstCount!=null?esc(String(r.againstCount)):"–"}</td>
+        <td>${isUrl(r.minutes)?`<a href="${esc(r.minutes)}" target="_blank" rel="noopener">minutes ↗</a>`:"—"}</td></tr>`).join("")
+        ||'<tr><td colspan="6" class="muted" style="padding:16px">No matching motions.</td></tr>'; };
+    document.getElementById("csearch").oninput=drawM;
+    const cscM=document.getElementById("ccandsel"); if(cscM) cscM.onchange=e=>{ _cf="all"; _cissue="all"; loadCouncilCand(e.target.value); };
+    drawM();
+    return;
+  }
   const srcHdr = perC ? "Source" : "Minutes";
   document.getElementById("view-council").innerHTML=candSel+`
     <div class="pitch"><p style="margin:0">Every recorded <b>${esc(selCand?selCand.name:who)}</b> vote, matched to how council ruled and linked to the primary source — <b>${c.NO}</b> dissents (NO) · <b>${c.ABSENT}</b> absences · <b>${c.YES}</b> supported (YES). Two columns: the council result, and ${esc(who)}'s own position.</p></div>
