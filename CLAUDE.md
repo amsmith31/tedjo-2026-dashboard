@@ -72,7 +72,7 @@ Tier values are normalized across silos ("Very Strong" | `VERY_STRONG` | integer
 Current clients:
 | Client | Municipality | Supabase ref | Edge fn | Notes |
 |---|---|---|---|---|
-| **Alvin Tedjo** | Mississauga | `lblxjbomfusfhsnwehez` | `romulus` | **DEMONSTRATION** |
+| **Bonnie Crombie** | Mississauga | `lblxjbomfusfhsnwehez` | `romulus` | Mayor race; repurposed from the Alvin Tedjo demo 2026-07-17 (Tedjo now a rival) |
 | **Rob Burton** | Oakville | `poddxshidtrulrsavxmy` | `legatus` | operational; `msgTable=burton_messaging` |
 | **Ted Opitz** | Etobicoke-Lakeshore | `ofzfhrfjtoywniawkkua` | _(none yet)_ | council loaded (Morley+Grimes); news/video/AI being provisioned |
 
