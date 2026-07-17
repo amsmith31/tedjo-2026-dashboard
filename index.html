@@ -2177,7 +2177,16 @@ function renderAds(){
   // Map each ad to a candidate (by numeric page id, else page name) and group by race → candidate — uniform with the rest of the site.
   const byPage={}, byName={};
   S.candidates.forEach(c=>{ if(c.facebook_page_id) byPage[String(c.facebook_page_id)]=c; if(c.name) byName[c.name.toLowerCase()]=c; });
-  const candOf=a=>byPage[String(a.page_id)]||byName[String(a.page_name||"").toLowerCase()]||null;
+  // Candidates often run ads under several page names ("Sammy Ijaz Regional Councillor",
+  // "Sammy Ijaz - Regional Councillor-Elect", "MichaelReid4Oakville"). Exact-name matching files each
+  // as its OWN group — the same person shown several times. Fuzzy fallback: attribute an ad to a
+  // candidate when ALL of that candidate's name tokens appear in the page_name, so every page they
+  // use collapses under one candidate group.
+  const candList=S.candidates.filter(c=>c&&c.name);
+  const fuzzyCand=pn=>{ pn=String(pn||"").toLowerCase(); if(!pn) return null;
+    for(const c of candList){ const toks=String(c.name).toLowerCase().split(/\s+/).filter(t=>t.length>2);
+      if(toks.length && toks.every(t=>pn.includes(t))) return c; } return null; };
+  const candOf=a=>byPage[String(a.page_id)]||byName[String(a.page_name||"").toLowerCase()]||fuzzyCand(a.page_name)||null;
   const groups={};
   ads.forEach(a=>{ const c=candOf(a); const key=c?c.name:(a.page_name||a.page_id||"Unknown page");
     (groups[key]=groups[key]||{race:c?socRaceKey(c):"other", ads:[]}).ads.push(a); });
