@@ -44,8 +44,25 @@ META AD TRACKING — the cross-silo standard for EVERY client (present and futur
 - The dashboard's "Political Ads" tab renders political_ads AUTOMATICALLY (like OPPO pins) —
   nothing to change in ../tedjo-2026-dashboard. Ads appear the moment your table has rows.
 
+COST & CADENCE DISCIPLINE — "the program" (read ~/.romulus/ROMULUS-SILO-STANDARDS.md,
+section "Cost & cadence discipline"). Non-optional, applies to every silo:
+- Clients buy 24/7 MONITORING, not 24/7 POLLING. Cadence must match how fast the source really
+  changes. DAILY is protected for news, social, YouTube discovery and political ads — that IS the
+  product. Everything else justifies itself.
+- Council scrape/parse follows the municipality's real meeting calendar + minutes-publication lag,
+  never blind-daily. Candidate websites 2x/week.
+- AI (Anthropic/Gemini) jobs are EVENT-driven, never time-driven: guard every run with "did new
+  source rows land since last run? No -> exit 0". Biggest cost lever there is.
+- One job owns one table. Check nothing already writes it before adding a workflow. Duplicates are
+  2x cost for 1x value and hide each other's failures.
+- Never pay for what's free. ScraperAPI only for sites a plain fetch genuinely can't render — prove
+  it first. Meta Ad Library + YouTube Data API (within quota) are free.
+- Audit scrape_runs: a scraper stuck in `running` with records_added=0 is DEAD, not slow. Delete a
+  dead paid job; don't debug it. (cloud_web_monitor billed for 9 runs in Burton and added 0 rows.)
+- State the arithmetic (units/run, $/run) BEFORE enabling any cron.
+
 Confirm: (1) you are the SOLE chat on this repo, (2) your read scripts use the service
-key. Then continue.
+key, (3) you've read the cost & cadence rules above. Then continue.
 ```
 
 ## Registry
