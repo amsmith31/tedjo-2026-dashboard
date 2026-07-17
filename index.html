@@ -1207,7 +1207,8 @@ window.romSignIn = async function(email, pw){
 window.romAfterSignIn = function(res){
   if(res.isMaster) return;                       // master: default HQ view stands
   const hqBtn=document.querySelector('button[data-tab="hq"]'); if(hqBtn) hqBtn.style.display="none";
-  const rvBtn=document.getElementById("rvBtn"); if(rvBtn) rvBtn.style.display="none";   // staged-card review is operator-only
+  // Review IS shown to the client now (they verify staged cards + open primary sources); the
+  // approve/discard actions inside it stay operator-only (gated on IS_MASTER in renderReview).
   const stBtn=document.getElementById("stBtn"); if(stBtn) stBtn.style.display="none";   // cross-silo system status is operator-only
   const hqView=document.getElementById("view-hq"); if(hqView) hqView.innerHTML="";
   connectClient(res.muni, res.cand);
@@ -1362,11 +1363,12 @@ function renderHome(){
   document.querySelectorAll('#view-home .inv[data-go]').forEach(el=>el.onclick=()=>{ const b=document.querySelector('button[data-tab="'+el.dataset.go+'"]'); if(b) b.click(); });
 }
 
-// Operator-only staged-card review. AI-generated OPPO findings land as is_active=false and are
-// invisible on the OPPO tab until approved here. Approve -> is_active=true (publishes). Discard ->
-// deletes the staged row. Per-active-silo (master reviews each silo after clicking into it).
+// Staged-card review. AI-generated OPPO findings land as is_active=false and are invisible on the
+// public OPPO tab until approved here. Shown to BOTH the operator and the client — the client
+// verifies each card against its primary source; only the operator (IS_MASTER) sees Approve/Discard,
+// and RLS enforces that server-side regardless. Approve -> is_active=true (publishes). Discard ->
+// deletes the staged row. Per-active-silo.
 async function refreshReviewCount(){
-  if(!IS_MASTER){ return; }
   try{ const n=await count("attack_messaging","is_active=eq.false");
     const el=document.getElementById("ct-review"); if(el) el.textContent=n?("("+n+")"):""; }catch(e){}
 }
@@ -1381,7 +1383,7 @@ async function renderReview(){
     box.innerHTML=`<div class="pitch"><p style="margin:0">Nothing awaiting review. When new OPPO findings are detected they land here <b>unpublished</b> for your approval before they ever appear on the public OPPO tab.</p></div>`;
     return;
   }
-  const card=a=>{ const tgt=idm[a.target_candidate_id]||"target"; const src=allUrls(a.source_citations); const vids=src.filter(u=>ytId(u));
+  const card=a=>{ const tgt=idm[a.target_candidate_id]||"target"; const src=allUrls(a.source_citations); const vids=src.filter(u=>ytId(u)); const docs=src.filter(u=>!ytId(u));
     return `<div class="atk" data-rid="${esc(a.id)}">
       <div class="hd"><div style="flex:1"><h3>${esc(a.headline)}</h3>
         <div class="meta"><span class="tier ${tierClass(a.tier)}">${esc(tierLabel(a.tier))}</span>
@@ -1389,13 +1391,18 @@ async function renderReview(){
       <div class="bd"><div>${esc(a.body||"")}</div>
         ${a.key_quote?`<div class="quote">"${esc(String(a.key_quote).slice(0,280))}"</div>`:""}</div>
       ${vids.length?`<div class="oppo-pins">${vids.map(u=>{const t=ytTime(u);return `<a class="oppo-pin" href="${esc(u)}" target="_blank" rel="noopener"><img loading="lazy" src="https://img.youtube.com/vi/${esc(ytId(u))}/mqdefault.jpg" alt=""><span>▶ ${t!=null?esc(mmss(t)):"watch"}</span></a>`;}).join("")}</div>`:""}
-      <div class="foot"><span>${src.length} source${src.length!==1?"s":""}${src.length?"":" · analytical"}</span>
+      <div class="foot">
+        <span style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${docs.map((u,i)=>`<a class="srcbtn" href="${esc(u)}" target="_blank" rel="noopener">📎 primary source${docs.length>1?" "+(i+1):""} ↗</a>`).join("")
+            || (vids.length?'<span class="faint" style="font-size:11.5px">▶ video source above</span>':'<span class="chip faint" title="Analytical inference — no single citable source">analytical</span>')}
+        </span>
         <span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-          <button class="rv-approve" data-rid="${esc(a.id)}" style="background:#1f8f4e;color:#fff;border:none;padding:7px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">✓ Approve → publish</button>
-          <button class="rv-discard" data-rid="${esc(a.id)}" style="background:none;border:1px solid var(--red);color:var(--red);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px">✕ Discard</button>
+          ${IS_MASTER?`<button class="rv-approve" data-rid="${esc(a.id)}" style="background:#1f8f4e;color:#fff;border:none;padding:7px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">✓ Approve → publish</button>
+          <button class="rv-discard" data-rid="${esc(a.id)}" style="background:none;border:1px solid var(--red);color:var(--red);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px">✕ Discard</button>`
+            :`<span class="faint" style="font-size:11.5px">Awaiting your operator's approval</span>`}
         </span></div>
     </div>`; };
-  box.innerHTML=`<div class="pitch"><p style="margin:0"><b>${staged.length}</b> staged card${staged.length!==1?"s":""} awaiting review for <b>${esc((ACTIVE&&ACTIVE.cand)||"this silo")}</b>. <span style="color:#2fae63">Approve</span> publishes to the public OPPO tab; <span style="color:var(--red)">Discard</span> deletes it. Nothing here is public until you approve it.</p></div>`
+  box.innerHTML=`<div class="pitch"><p style="margin:0"><b>${staged.length}</b> staged finding${staged.length!==1?"s":""} for <b>${esc((ACTIVE&&ACTIVE.cand)||"this silo")}</b>, each linked to its primary source so you can verify it. ${IS_MASTER?`<span style="color:#2fae63">Approve</span> publishes to the public OPPO tab; <span style="color:var(--red)">Discard</span> deletes it. Nothing is public until you approve it.`:`Nothing here is public — your ROMULUS operator approves what gets published.`}</p></div>`
     + staged.map(card).join("");
   const patch=async (rid,method,body)=>authedFetch(REST+"/attack_messaging?id=eq."+encodeURIComponent(rid),
     {method,headers:Object.assign({"Prefer":"return=minimal"}, body?{"Content-Type":"application/json"}:{}), body:body?JSON.stringify(body):undefined});
@@ -1545,10 +1552,13 @@ function renderCouncil(){
   const sets={notable:r=>r.cat==="NO"||r.cat==="ABSENT", NO:r=>r.cat==="NO", ABSENT:r=>r.cat==="ABSENT", YES:r=>r.cat==="YES", all:()=>true};
   const chip=(k,l)=>`<button class="fbtn ${_cf===k?'on':''}" data-f="${k}">${l}</button>`;
   const issueOpts=(perC&&S.councilSummary&&S.councilSummary[_councilCand])?Object.entries(S.councilSummary[_councilCand].byIssue).sort((a,b)=>b[1]-a[1]):[];
+  // Mirror the chart-picker's 0/1/2+ rule: only show the councillor dropdown when there are 2+ to
+  // choose between; with a single councillor it's a redundant one-option select. (Issue filter stays.)
+  const showCandPicker = perC && cf.candidates.length > 1;
   const candSel = perC ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-      <label class="faint" style="font-size:12px">Councillor</label>
-      <select id="ccandsel" style="background:#141821;color:#e8edf5;border:1px solid #2a3140;border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600">${cf.candidates.map(x=>`<option value="${esc(x.raw)}" ${x.raw===_councilCand?"selected":""}>${esc(x.name)} — ${esc(x.note||"")}</option>`).join("")}</select>
-      <label class="faint" style="font-size:12px;margin-left:6px">Issue</label>
+      ${showCandPicker?`<label class="faint" style="font-size:12px">Councillor</label>
+      <select id="ccandsel" style="background:#141821;color:#e8edf5;border:1px solid #2a3140;border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600">${cf.candidates.map(x=>`<option value="${esc(x.raw)}" ${x.raw===_councilCand?"selected":""}>${esc(x.name)} — ${esc(x.note||"")}</option>`).join("")}</select>`:""}
+      <label class="faint" style="font-size:12px${showCandPicker?';margin-left:6px':''}">Issue</label>
       <select id="cissuesel" style="background:#141821;color:#e8edf5;border:1px solid #2a3140;border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600"><option value="all">All issues</option>${issueOpts.map(([k,n])=>`<option value="${esc(k)}" ${k===_cissue?"selected":""}>${esc(k)} (${n})</option>`).join("")}</select>
     </div>` : "";
   const srcHdr = perC ? "Source" : "Minutes";
