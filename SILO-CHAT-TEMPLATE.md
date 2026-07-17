@@ -33,6 +33,17 @@ OPPO VIDEO PINS — the cross-silo standard for EVERY candidate:
   ../burton-silo-tools.
 - tier values allowed by attack_messaging: VERY_STRONG | STRONG | MEDIUM | WEAK.
 
+META AD TRACKING — the cross-silo standard for EVERY client (present and future):
+- Set up Meta Ad Library political-ad tracking exactly like Burton did (proven — 437 live ads).
+  Full guide: ~/.romulus/META-ADLIB-SETUP.md. Reference impl: Burton's fetch_political_ads.py.
+- The shared META_ACCESS_TOKEN is already in ~/.romulus/shared.env — SOURCE it, never paste it
+  (it is a low-privilege read-only Ad Library token, validated working 2026-07-16).
+- Search the Ad Library by candidate NAME, not page-id. Create the political_ads table if it
+  doesn't exist. Push the token as THIS repo's GitHub secret via gh (without printing it), add
+  the daily political-ads.yml workflow, then run once to backfill. Work one step at a time.
+- The dashboard's "Political Ads" tab renders political_ads AUTOMATICALLY (like OPPO pins) —
+  nothing to change in ../tedjo-2026-dashboard. Ads appear the moment your table has rows.
+
 Confirm: (1) you are the SOLE chat on this repo, (2) your read scripts use the service
 key. Then continue.
 ```
@@ -49,7 +60,10 @@ key. Then continue.
 ## New-client sequence (the dashboard chat, not the silo chat, does the last two)
 1. Silo chat: create the Supabase project, load candidates + council record + run the
    video/OPPO pipeline (copy tools from ../burton-silo-tools).
-2. Silo chat: hand the project ref + publishable key to the dashboard chat.
-3. Dashboard chat: add the client to `CLIENTS` in index.html.
-4. Dashboard chat: create the client's Supabase Auth login (surname@romulus.vote).
-Only after 3+4 does the client appear on romulus.vote.
+2. Silo chat: set up Meta ad tracking (see META AD TRACKING above) — standard for every client;
+   the token is already in ~/.romulus/shared.env, so this is a per-repo wire-up + backfill.
+3. Silo chat: hand the project ref + publishable key to the dashboard chat.
+4. Dashboard chat: add the client to `CLIENTS` in index.html.
+5. Dashboard chat: create the client's Supabase Auth login (surname@romulus.vote).
+Only after 4+5 does the client appear on romulus.vote. Steps 1–2 (data, OPPO pins, ad tracking)
+are all the silo chat's; the dashboard renders whatever they populate.

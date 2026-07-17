@@ -151,6 +151,15 @@ serves all silos and every future client. Burton is the standard to match.
   `mine_transcripts.py` / `mine_transcripts_whisper.py` / `generate_oppo.py`) is the reference for
   producing them. Opitz + Monica already do; Burton + Tedjo are being backfilled. Nothing to change in
   THIS file — it's a data-population standard the silo chats own.
+- **Meta Ad Library political-ad tracking is a STANDARD for EVERY silo, present and future.** The
+  dashboard's **Political Ads** tab (`view-ads` / `renderAds()`, querying `political_ads`) is already
+  universal — like OPPO pins, ads appear the moment a silo populates its `political_ads` table, with
+  no per-silo gating in this file. What makes them exist is each silo chat's job: source the shared
+  `META_ACCESS_TOKEN` from `~/.romulus/shared.env` (a low-privilege read-only Ad Library token,
+  validated 2026-07-16 — never in `index.html`, never pasted into chat), search the Ad Library by
+  candidate NAME, create the `political_ads` table, push the token as that repo's GitHub secret, add
+  the daily `political-ads.yml` workflow, backfill. Reference: Burton (437 ads); guide:
+  `~/.romulus/META-ADLIB-SETUP.md`. Nothing to change in THIS file — it's a data-population standard.
 - **Every silo's ROMULUS chat Edge Function must identify its OWN candidate.** New silo functions
   are copy-pasted from an existing one; if the `SYSTEM` prompt + dossier `ctx` headers aren't fully
   relabelled, the chat introduces itself as the wrong client (a cross-client bleed). This actually
