@@ -148,6 +148,11 @@
   .vote-YES{color:var(--muted)}
   .fbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
   .fbtn{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:6px 13px;border-radius:16px;font-size:12.5px;cursor:pointer}
+  /* "pick" chips = the choose-a-candidate/race selectors (OPPO, Promises). Made prominent —
+     gold border, larger — because the plain grey pills were easy to miss entirely. */
+  .fbtn.pick{border:1.5px solid var(--gold-dim);color:var(--gold);padding:10px 20px;font-size:14px;font-weight:600;border-radius:10px}
+  .fbtn.pick:hover{border-color:var(--gold);background:rgba(224,184,76,.08)}
+  .fbtn.pick.on{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
   .fbtn:hover{border-color:var(--gold-dim);color:var(--text)}
   .fbtn.on{background:var(--gold-dim);color:var(--gold);border-color:var(--gold-dim);font-weight:600}
   /* HQ (multi-tenant selector) */
@@ -1453,8 +1458,8 @@ function renderAttacks(){
         </span>
       </div>
     </div>`; };
-  const rchip=(k,l,n)=>`<button class="fbtn ${_opRace===k?'on':''}" data-oprace="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
-  const cchip=(k,n)=>`<button class="fbtn ${_opCand===k?'on':''}" data-opcand="${esc(k)}">${esc(k)} (${n})</button>`;
+  const rchip=(k,l,n)=>`<button class="fbtn pick ${_opRace===k?'on':''}" data-oprace="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
+  const cchip=(k,n)=>`<button class="fbtn pick ${_opCand===k?'on':''}" data-opcand="${esc(k)}">${esc(k)} (${n})</button>`;
   const raceBar = singleRace ? "" : `<div class="fbar">${races.map(g=>rchip(g,groupLabel(g),order.filter(k=>grp[k]===g).length)).join("")}</div>`;
   const candBar = _opRace ? `<div class="fbar">${inRace.map(k=>cchip(k,buckets[k].length)).join("")}</div>` : "";
   const prompt = !_opRace
@@ -1933,8 +1938,11 @@ function renderMessage(){
   S.message.forEach(m=>{ const k=secOf(m); (buckets[k]=buckets[k]||[]).push(m); });
   const order=MSG_SECTIONS.map(s=>s.label).concat("More").filter(l=>buckets[l]&&buckets[l].length);
   order.forEach(l=>buckets[l].sort((a,b)=>(+a.priority_order||99)-(+b.priority_order||99)));
-  const shown=(_msgSec!=="all"&&buckets[_msgSec])?[_msgSec]:order;
-  const chip=(k,l,n)=>`<button class="fbtn ${_msgSec===k?'on':''}" data-ms="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
+  // No "All" default — pick a section (Brand / Accomplishments / Numbers / …), matching the
+  // OPPO/Promises pattern. Default to the first section that has data.
+  const _mssel=buckets[_msgSec]?_msgSec:(order[0]||"");
+  const shown=_mssel?[_mssel]:[];
+  const chip=(k,l,n)=>`<button class="fbtn pick ${_mssel===k?'on':''}" data-ms="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
   const statTile=m=>{ const inner=`<div class="n" style="font-size:20px">${esc(m.stat_value)}</div><div class="l">${esc(m.stat_label||m.title||"")}</div>${isUrl(m.source_url)?'<div class="faint" style="font-size:10px;margin-top:5px;color:var(--gold)">📎 source ↗</div>':''}`;
     return isUrl(m.source_url)?`<a class="tile" href="${esc(m.source_url)}" target="_blank" rel="noopener" style="text-decoration:none;display:block">${inner}</a>`:`<div class="tile">${inner}</div>`; };
   const card=m=>{
@@ -1954,7 +1962,7 @@ function renderMessage(){
   document.getElementById("view-message").innerHTML=
     `<div class="pitch"><h3>The affirmative case for ${esc(cand)}</h3>
       <p>${esc(cand)}'s brand, record, accomplishments and platform — the message to lead with, organized by theme. <b>${sourced}</b> of ${S.message.length} claims link to a primary source.</p></div>`
-    + `<div class="fbar">${chip('all','All',S.message.length)}${order.map(l=>chip(l,shortOf[l]||l,buckets[l].length)).join("")}</div>`
+    + `<div class="fbar">${order.map(l=>chip(l,shortOf[l]||l,buckets[l].length)).join("")}</div>`
     + shown.map(l=>{
         const isNums=(l==="The Numbers");
         const items=buckets[l];
@@ -2103,7 +2111,7 @@ function renderPromises(){
   // Per-candidate navigation — no "All"; default to the candidate with the most promises.
   const _psel=buckets[_pr]?_pr:(order[0]||"");
   const shown=(_psel&&buckets[_psel])?[_psel]:order;
-  const chip=(k,l,n)=>`<button class="fbtn ${_psel===k?'on':''}" data-pr="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
+  const chip=(k,l,n)=>`<button class="fbtn pick ${_psel===k?'on':''}" data-pr="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
   const raceOf=g=>({mayor:"Mayor",regional:"Regional",school_board:"School Board"}[g]||(/^ward(\d+)$/.test(g)?"Ward "+g.slice(4):""));
   const sourced=S.promises.filter(p=>isUrl(p.source_url)).length;
   box.innerHTML=
