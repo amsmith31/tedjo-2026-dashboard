@@ -2313,8 +2313,8 @@ async function siloJobs(silo){
     const now=Date.now(), by={};
     rows.forEach(x=>{
       const k=x.scraper_name||"(unnamed)";
-      const b=by[k]=by[k]||{name:k,runs:0,added:0,last:null,lastStatus:""};
-      b.runs++; b.added+=(+x.records_added||0);
+      const b=by[k]=by[k]||{name:k,runs:0,added:0,ok:0,last:null,lastStatus:""};
+      b.runs++; b.added+=(+x.records_added||0); if(String(x.status||"").toLowerCase()==="success") b.ok++;
       const t=x.started_at?Date.parse(x.started_at):NaN;
       if(!isNaN(t)&&(b.last===null||t>b.last)){ b.last=t; b.lastStatus=String(x.status||"").toLowerCase(); }
     });
@@ -2327,11 +2327,17 @@ async function siloJobs(silo){
         issues.push({sev:"red",t:"stuck in `running` for "+ago(ageH),fix:"Died without writing a terminal status — it's dead, not slow."});
       if(b.lastStatus==="failed")
         issues.push({sev:"red",t:"last run FAILED "+ago(ageH)+" ago",fix:"Check that workflow's log."});
-      if(ageH!=null&&ageH>72&&b.lastStatus!=="running")
-        issues.push({sev:"amber",t:"no run in "+ago(ageH),fix:"Cron disabled or broken — intentional?"});
-      // Billing for nothing is worse than not running: it also manufactures false confidence.
-      if(b.runs>=3&&b.added===0)
-        issues.push({sev:"amber",t:b.runs+" runs, 0 rows added — ever",fix:"Produces nothing while it bills. Delete it, don't debug it."});
+      // 8-day threshold: many jobs are weekly (promise tracking, some council refreshes), so "no run
+      // in 3 days" is normal. Only flag a job that hasn't run even once in over a week. (Per-cadence
+      // precision is the silo's own health_check.py; this board is the coarse cross-silo view.)
+      if(ageH!=null&&ageH>192&&b.lastStatus!=="running")
+        issues.push({sev:"amber",t:"no run in "+ago(ageH),fix:"Even a weekly job should have run — cron disabled or broken?"});
+      // "0 rows added" is only a problem if the job has NEVER succeeded. A change-detection monitor
+      // (registry watcher, evidence promoter, dedup upsert) legitimately adds 0 rows when there is
+      // nothing new AND reports success — that's healthy idle, not billing-for-nothing. Only flag a
+      // job that has billed for 3+ runs and never once succeeded.
+      if(b.runs>=3&&b.added===0&&!b.ok)
+        issues.push({sev:"amber",t:b.runs+" runs, never succeeded, 0 rows",fix:"Never worked and produces nothing — check or delete it."});
       return {name:b.name,runs:b.runs,added:b.added,ageH,ago:ago(ageH),lastStatus:b.lastStatus,issues};
     }).sort((x,y)=>y.issues.length-x.issues.length||x.name.localeCompare(y.name));
   }catch(e){ return null; }
