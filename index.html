@@ -1490,7 +1490,7 @@ function renderAttacks(){
         <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
         ${docs.length?docs.map((u,i)=>`<a class="srcbtn" href="${esc(u)}" target="_blank" rel="noopener">📎 primary source${docs.length>1?" "+(i+1):""} ↗</a>`).join("")
           :(vids.length?"":(noLinkButCited(a)
-            ?'<span class="chip" style="color:#e0b84c;border-color:#e0b84c" title="No verifiable primary-source link yet — ROMULUS is actively locating it (recurring source-backfill runs daily). The finding is held from full verification until a citable link is attached, at which point this clears automatically.">⚠ locating source</span>'
+            ?'<span class="chip" style="color:#e0b84c;border-color:#e0b84c" title="No verifiable primary-source link yet — the finding is held from full verification and queued for source-backfill (ROMULUS keeps searching for a citable primary source). Clears automatically the moment a link is attached.">⚠ locating source</span>'
             :'<span class="chip faint" title="Analytical inference (e.g. an absence of record) — no single citable source">analytical</span>'))}
         </span>
       </div>
