@@ -1288,7 +1288,7 @@ const CAND_ORDER = {"bonnie-crombie":0};
 async function init(){
   try{
     const [attacks, evidence, candidates, dissents, web, message, promises, news, newsLinks, sources, ads, vids, social, mentions, meetings, votes] = await Promise.all([
-      safeApi("/attack_messaging?select=*&is_active=eq.true"),
+      safeApi("/attack_messaging?select=*&is_active=eq.true&is_approved=eq.true"),  // live⟹approved: a card only reaches the client OPPO tab if it was human-approved in Review (guards legacy is_active=true/is_approved=false residue, e.g. Burton's 415)
       safeApi("/council_evidence?select=*&order=political_utility_score.desc.nullslast&limit=1500"),
       safeApi("/candidates?select=*"),
       safeApi((()=>{const cf=(ACTIVE&&ACTIVE.council?ACTIVE.council:COUNCIL_DEFAULT); return cf.perCandidate?cf.q(cf.candidates[0].raw):cf.q;})()),
