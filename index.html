@@ -1687,6 +1687,7 @@ function groupLabel(g){ if(g==="_all") return "Candidates"; if(g==="mayor") retu
   return String(g).replace(/_/g," ").replace(/\b\w/g,x=>x.toUpperCase()); }
 // Mayor -> Regional -> Wards in order -> Trustees (public, catholic, french) -> Other.
 const GROUP_RANK={mayor:0,regional:1,ward1:11,ward2:12,ward3:13,ward4:14,ward5:15,ward6:16,ward7:17,ward8:18,ward9:19,
+  ward10:20,ward11:21,ward12:22,ward13:23,ward14:24,ward15:25,
   school_public:30,school_catholic:31,school_fr_public:32,school_fr_catholic:33,school_board:34,other:40,_all:50};
 // ── Social media: post card, the Social Media tab, and the per-profile feed block.
 function socNum(n){ n=+n||0; return n>=1000?(n/1000).toFixed(n>=10000?0:1).replace(/\.0$/,"")+"k":String(n); }
@@ -1904,7 +1905,10 @@ function renderCandidates(){
   // the redundant "All races" filter. Safe fallback: if no principal is flagged, behave as before.
   const _principal=S.candidates.find(c=>c&&c.is_principal);
   const _myRace=_principal?socRaceKey(_principal):null;
-  const races=(_myRace&&buckets[_myRace])?[_myRace]:order;
+  // A ward/council principal's silo stays focused on just their race. But a MAYORAL principal runs
+  // city-wide, so their silo covers the WHOLE municipality — show every race (Mayor + all wards +
+  // trustees), grouped, with the race dropdown. (Crombie: Mayor of Mississauga → full field.)
+  const races=(_myRace && _myRace!=="mayor" && buckets[_myRace])?[_myRace]:order;
   const visCands=races.reduce((a,g)=>a.concat(buckets[g]||[]),[]);
   const muni=(ACTIVE&&ACTIVE.muni)||"the race";
   const totalVids=S.videos.length;
