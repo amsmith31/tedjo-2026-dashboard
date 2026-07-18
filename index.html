@@ -1422,15 +1422,15 @@ async function renderReview(){
             || (vids.length?'<span class="faint" style="font-size:11.5px">▶ video source above</span>':(noLinkButCited(a)?'<span class="chip" style="color:#e0b84c;border-color:#e0b84c">⚠ locating source</span>':'<span class="chip faint" title="Analytical inference — no single citable source">analytical</span>'))}
         </span>
         <span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-          ${!IS_MASTER?`<span class="faint" style="font-size:11.5px">${dm?"Declined — your operator can recall it":"Awaiting your operator's approval"}</span>`
-            :dm?`<button class="rv-recall" data-rid="${esc(a.id)}" style="background:none;border:1px solid #2fae63;color:#2fae63;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px">↩ Recall to Review</button>`
-              :`<button class="rv-approve" data-rid="${esc(a.id)}" style="background:#1f8f4e;color:#fff;border:none;padding:7px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">✓ Approve → publish</button>
+          ${dm
+            ?`<button class="rv-recall" data-rid="${esc(a.id)}" style="background:none;border:1px solid #2fae63;color:#2fae63;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px">↩ Recall to Review</button>${IS_MASTER?`<button class="rv-delete" data-rid="${esc(a.id)}" title="Operator only — permanently delete this archived card (cannot be undone)" style="background:none;border:1px solid var(--red);color:var(--red);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px">🗑 Delete</button>`:""}`
+            :`<button class="rv-approve" data-rid="${esc(a.id)}" style="background:#1f8f4e;color:#fff;border:none;padding:7px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">✓ Approve → publish</button>
           <button class="rv-decline" data-rid="${esc(a.id)}" style="background:none;border:1px solid var(--red);color:var(--red);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px">✕ Decline</button>`}
         </span></div>
     </div>`; };
   const intro=dm
-    ? `<b>${declined.length}</b> declined finding${declined.length!==1?"s":""} for <b>${esc((ACTIVE&&ACTIVE.cand)||"this silo")}</b> — archived, never deleted. ${IS_MASTER?'<span style="color:#2fae63">Recall</span> sends any card back to the Pending queue if the client changes their mind.':'Your operator can recall any of these if the client changes their mind.'}`
-    : `<b>${pending.length}</b> finding${pending.length!==1?"s":""} awaiting review for <b>${esc((ACTIVE&&ACTIVE.cand)||"this silo")}</b>, each linked to its primary source. ${IS_MASTER?'<span style="color:#2fae63">Approve</span> publishes to the OPPO tab; <span style="color:var(--red)">Decline</span> archives it (recoverable in the Declined tab). Nothing is public until you approve it.':'Nothing here is public — your ROMULUS operator approves what gets published.'}`;
+    ? `<b>${declined.length}</b> declined finding${declined.length!==1?"s":""} for <b>${esc((ACTIVE&&ACTIVE.cand)||"this silo")}</b> — archived, never lost. <span style="color:#2fae63">Recall</span> sends any card back to the Pending queue if you change your mind.${IS_MASTER?' <span class="faint">(Permanent delete is operator-only.)</span>':''}`
+    : `<b>${pending.length}</b> finding${pending.length!==1?"s":""} awaiting review for <b>${esc((ACTIVE&&ACTIVE.cand)||"this silo")}</b>, each linked to its primary source. <span style="color:#2fae63">Approve</span> publishes it to the public OPPO tab; <span style="color:var(--red)">Decline</span> archives it (recoverable in the Declined tab). Nothing is public until it's approved.`;
   const toggle=`<div class="fbar" style="margin:10px 0">
     <button class="fbtn pick ${dm?"":"on"}" data-rvtab="pending">Pending (${pending.length})</button>
     <button class="fbtn pick ${dm?"on":""}" data-rvtab="declined">Declined · recoverable (${declined.length})</button></div>`;
@@ -1449,6 +1449,9 @@ async function renderReview(){
   box.querySelectorAll(".rv-recall").forEach(btn=>btn.onclick=async()=>{ btn.disabled=true; btn.textContent="…";
     const r=await patch(btn.dataset.rid,{is_active:false,is_approved:false});  // back to FF = pending
     if(r.ok){ drop(btn.dataset.rid); refreshReviewCount(); renderReview(); } else { btn.disabled=false; btn.textContent="↩ Recall to Review"; alert("Recall failed: HTTP "+r.status); } });
+  box.querySelectorAll(".rv-delete").forEach(btn=>btn.onclick=async()=>{ if(!confirm("Permanently DELETE this archived card? This cannot be undone. (Operator-only; the client can only Recall, never delete.)")) return; btn.disabled=true; btn.textContent="…";
+    const r=await authedFetch(REST+"/attack_messaging?id=eq."+encodeURIComponent(btn.dataset.rid),{method:"DELETE",headers:{"Prefer":"return=minimal"}});  // RLS: master-only
+    if(r.ok){ drop(btn.dataset.rid); renderReview(); } else { btn.disabled=false; btn.textContent="🗑 Delete"; alert("Delete failed: HTTP "+r.status); } });
 }
 function renderAttacks(){
   // Strategic-alliance flags: a target who is a known ally of a mayoral rival (name-keyed → scoped per silo).
