@@ -1460,6 +1460,7 @@ function renderAttacks(){
   const shown = _opCand ? [_opCand] : [];
   const raceOf=g=>groupLabel(g);
   const linked=S.attacks.filter(a=>firstUrl(a.source_citations)).length;
+  const pendingN=S.attacks.filter(noLinkButCited).length;
   const card=a=>{
     // A finding may cite several sources, and often cites the SAME video at more than one
     // moment. Show every one: video moments as thumbnail pins (deep-linked to the second),
@@ -1488,7 +1489,9 @@ function renderAttacks(){
         <span>Audience: ${esc(a.audience||"—")} · Tone: ${esc(a.delivery_tone||"—")}</span>
         <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
         ${docs.length?docs.map((u,i)=>`<a class="srcbtn" href="${esc(u)}" target="_blank" rel="noopener">📎 primary source${docs.length>1?" "+(i+1):""} ↗</a>`).join("")
-          :(vids.length?"":'<span class="chip faint" title="Analytical inference (e.g. an absence of record) — no single citable source">analytical</span>')}
+          :(vids.length?"":(noLinkButCited(a)
+            ?'<span class="chip" style="color:#e0b84c;border-color:#e0b84c" title="This finding names a source but has no clickable primary-source link yet — pending backfill. Not yet client-verifiable.">⚠ source pending</span>'
+            :'<span class="chip faint" title="Analytical inference (e.g. an absence of record) — no single citable source">analytical</span>'))}
         </span>
       </div>
     </div>`; };
@@ -1501,7 +1504,7 @@ function renderAttacks(){
     : (!_opCand ? `<div class="loading" style="padding:48px">Select a <b>candidate</b>${singleRace?"":" in "+esc(groupLabel(_opRace))} to load their file.</div>` : "");
 
   document.getElementById("view-attacks").innerHTML=
-    `<div class="pitch"><p style="margin:0"><b>${S.attacks.length}</b> opposition findings, organized by target and ranked strongest first (Very Strong → Weak). <b>${linked}</b> link to a primary source. ${singleRace?"Pick a rival":"Pick a race, then a rival"} to load their file.</p></div>`
+    `<div class="pitch"><p style="margin:0"><b>${S.attacks.length}</b> opposition findings, organized by target and ranked strongest first (Very Strong → Weak). <b>${linked}</b> link to a primary source${pendingN?` · <span style="color:#e0b84c">${pendingN} pending a source</span>`:""}. ${singleRace?"Pick a rival":"Pick a race, then a rival"} to load their file.</p></div>`
     + raceBar + candBar
     + prompt
     + shown.map(k=>{ const vs=buckets[k].filter(a=>tierRank(a.tier)<=1).length;
@@ -1759,6 +1762,17 @@ function allUrls(v){
     const m=String(x).match(/https?:\/\/[^\s'"\]\)}>]+/g); if(m) out.push(...m);
   })(v);
   return [...new Set(out)];
+}
+// A finding that NAMES a source (a label, a `brief:Section N` stub, an Order-in-Council #) but has no
+// clickable http(s) link is NOT verifiable — the client can't open it. Distinguish that ("⚠ source
+// pending", needs backfill) from a genuine analytical inference (no citation claimed at all). Strip the
+// JSON key names first so only cited VALUES count; if any value text remains with zero real URLs, it's
+// an unlinked citation. (Found 2026-07-18: 42 published Burton findings in this state.)
+function noLinkButCited(a){
+  const raw=a&&a.source_citations;
+  const flat=raw==null?"":(typeof raw==="string"?raw:JSON.stringify(raw));
+  const values=flat.replace(/"(?:url|label|quote|source|title|type|id|section)"\s*:/gi,"").replace(/https?:\/\/\S+/g,"");
+  return allUrls(raw).length===0 && /[A-Za-z0-9]/.test(values);
 }
 const ytId   = u => (String(u||"").match(/(?:[?&]v=|youtu\.be\/|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})/)||[])[1]||null;
 const ytTime = u => { const m=String(u||"").match(/[?&](?:t|start)=(\d+)/); return m?+m[1]:null; };
