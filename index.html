@@ -2324,7 +2324,7 @@ async function siloHealth(muni, cand, c){
   const signedIn=!!(SESS[siloKey(c.url)]||{}).access;
   const [candidates,oppo,staged,message,promises,evidence,votes,ads,news]=await Promise.all([
     siloCount(c,"candidates"), siloCount(c,"attack_messaging"), siloCount(c,"attack_messaging","is_active=eq.false"),
-    siloCount(c,"candidate_messaging"), siloCount(c,"promises"), siloCount(c,"council_evidence"),
+    siloCount(c,c.msgTable||"candidate_messaging"), siloCount(c,"promises"), siloCount(c,"council_evidence"),
     siloCount(c,"council_votes"), siloCount(c,"political_ads"), siloCount(c,"news") ]);
   const [fn,jobs]=await Promise.all([siloFnUp(c), siloJobs(c)]);
   const jobsBad=Array.isArray(jobs)?jobs.filter(j=>j.issues.length).length:0;
