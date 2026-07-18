@@ -1385,24 +1385,29 @@ function renderHome(){
 
 // Staged-card review. AI-generated OPPO findings land as is_active=false and are invisible on the
 // public OPPO tab until approved here. Shown to BOTH the operator and the client — the client
-// verifies each card against its primary source; only the operator (IS_MASTER) sees Approve/Discard,
-// and RLS enforces that server-side regardless. Approve -> is_active=true (publishes). Discard ->
-// deletes the staged row. Per-active-silo.
+// Review states use the two existing booleans — NO schema change, works on every silo:
+//   FF  is_active=false / is_approved≠true  = PENDING  (awaiting a decision — the Review queue)
+//   TT  is_active=true  / is_approved=true   = APPROVED (live on the client OPPO tab)
+//   FT  is_active=false / is_approved=true   = DECLINED/ARCHIVED — kept, hidden, RECALLABLE.
+//        (is_approved=true here is a SENTINEL meaning "a decline was recorded" — NOT "approved to
+//         publish"; only TT publishes, guarded by the OPPO fetch. Recall flips FT→FF.)
+// Decline never deletes (client can change their mind). Approve MUST set BOTH flags true, or the OPPO
+// render-guard (which requires is_approved=true) would hide the just-approved card. Only IS_MASTER
+// mutates; RLS enforces that server-side regardless. Per-active-silo.
+let _reviewTab="pending";
 async function refreshReviewCount(){
-  try{ const n=await count("attack_messaging","is_active=eq.false");
+  try{ const n=await count("attack_messaging","is_active=eq.false&is_approved=not.is.true");   // PENDING only, not declined
     const el=document.getElementById("ct-review"); if(el) el.textContent=n?("("+n+")"):""; }catch(e){}
 }
 async function renderReview(){
   const box=document.getElementById("view-review");
-  box.innerHTML=`<div class="loading"><div class="spinner"></div>Loading staged cards…</div>`;
-  let staged=[];
+  box.innerHTML=`<div class="loading"><div class="spinner"></div>Loading review queue…</div>`;
+  let pending=[], declined=[];
   // No DB-side order (silos differ on created_at/generated_at columns) — sort by tier client-side.
-  try{ staged=await api("/attack_messaging?is_active=eq.false&select=*&limit=500"); staged.sort((a,b)=>tierRank(a.tier)-tierRank(b.tier)); }catch(e){ staged=[]; }
+  try{ pending =await api("/attack_messaging?is_active=eq.false&is_approved=not.is.true&select=*&limit=500"); pending.sort((a,b)=>tierRank(a.tier)-tierRank(b.tier)); }catch(e){ pending=[]; }
+  try{ declined=await api("/attack_messaging?is_active=eq.false&is_approved=is.true&select=*&limit=500");      declined.sort((a,b)=>tierRank(a.tier)-tierRank(b.tier)); }catch(e){ declined=[]; }
   const idm={}; S.candidates.forEach(c=>idm[c.id]=c.name);
-  if(!staged.length){
-    box.innerHTML=`<div class="pitch"><p style="margin:0">Nothing awaiting review. When new OPPO findings are detected they land here <b>unpublished</b> for your approval before they ever appear on the public OPPO tab.</p></div>`;
-    return;
-  }
+  const dm=_reviewTab==="declined", list=dm?declined:pending;
   const card=a=>{ const tgt=idm[a.target_candidate_id]||"target"; const src=allUrls(a.source_citations); const vids=src.filter(u=>ytId(u)); const docs=src.filter(u=>!ytId(u));
     return `<div class="atk" data-rid="${esc(a.id)}">
       <div class="hd"><div style="flex:1"><h3>${esc(a.headline)}</h3>
@@ -1414,26 +1419,36 @@ async function renderReview(){
       <div class="foot">
         <span style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           ${docs.map((u,i)=>`<a class="srcbtn" href="${esc(u)}" target="_blank" rel="noopener">📎 primary source${docs.length>1?" "+(i+1):""} ↗</a>`).join("")
-            || (vids.length?'<span class="faint" style="font-size:11.5px">▶ video source above</span>':'<span class="chip faint" title="Analytical inference — no single citable source">analytical</span>')}
+            || (vids.length?'<span class="faint" style="font-size:11.5px">▶ video source above</span>':(noLinkButCited(a)?'<span class="chip" style="color:#e0b84c;border-color:#e0b84c">⚠ locating source</span>':'<span class="chip faint" title="Analytical inference — no single citable source">analytical</span>'))}
         </span>
         <span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-          ${IS_MASTER?`<button class="rv-approve" data-rid="${esc(a.id)}" style="background:#1f8f4e;color:#fff;border:none;padding:7px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">✓ Approve → publish</button>
-          <button class="rv-discard" data-rid="${esc(a.id)}" style="background:none;border:1px solid var(--red);color:var(--red);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px">✕ Discard</button>`
-            :`<span class="faint" style="font-size:11.5px">Awaiting your operator's approval</span>`}
+          ${!IS_MASTER?`<span class="faint" style="font-size:11.5px">${dm?"Declined — your operator can recall it":"Awaiting your operator's approval"}</span>`
+            :dm?`<button class="rv-recall" data-rid="${esc(a.id)}" style="background:none;border:1px solid #2fae63;color:#2fae63;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px">↩ Recall to Review</button>`
+              :`<button class="rv-approve" data-rid="${esc(a.id)}" style="background:#1f8f4e;color:#fff;border:none;padding:7px 16px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px">✓ Approve → publish</button>
+          <button class="rv-decline" data-rid="${esc(a.id)}" style="background:none;border:1px solid var(--red);color:var(--red);padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px">✕ Decline</button>`}
         </span></div>
     </div>`; };
-  box.innerHTML=`<div class="pitch"><p style="margin:0"><b>${staged.length}</b> staged finding${staged.length!==1?"s":""} for <b>${esc((ACTIVE&&ACTIVE.cand)||"this silo")}</b>, each linked to its primary source so you can verify it. ${IS_MASTER?`<span style="color:#2fae63">Approve</span> publishes to the public OPPO tab; <span style="color:var(--red)">Discard</span> deletes it. Nothing is public until you approve it.`:`Nothing here is public — your ROMULUS operator approves what gets published.`}</p></div>`
-    + staged.map(card).join("");
-  const patch=async (rid,method,body)=>authedFetch(REST+"/attack_messaging?id=eq."+encodeURIComponent(rid),
-    {method,headers:Object.assign({"Prefer":"return=minimal"}, body?{"Content-Type":"application/json"}:{}), body:body?JSON.stringify(body):undefined});
+  const intro=dm
+    ? `<b>${declined.length}</b> declined finding${declined.length!==1?"s":""} for <b>${esc((ACTIVE&&ACTIVE.cand)||"this silo")}</b> — archived, never deleted. ${IS_MASTER?'<span style="color:#2fae63">Recall</span> sends any card back to the Pending queue if the client changes their mind.':'Your operator can recall any of these if the client changes their mind.'}`
+    : `<b>${pending.length}</b> finding${pending.length!==1?"s":""} awaiting review for <b>${esc((ACTIVE&&ACTIVE.cand)||"this silo")}</b>, each linked to its primary source. ${IS_MASTER?'<span style="color:#2fae63">Approve</span> publishes to the OPPO tab; <span style="color:var(--red)">Decline</span> archives it (recoverable in the Declined tab). Nothing is public until you approve it.':'Nothing here is public — your ROMULUS operator approves what gets published.'}`;
+  const toggle=`<div class="fbar" style="margin:10px 0">
+    <button class="fbtn pick ${dm?"":"on"}" data-rvtab="pending">Pending (${pending.length})</button>
+    <button class="fbtn pick ${dm?"on":""}" data-rvtab="declined">Declined · recoverable (${declined.length})</button></div>`;
+  box.innerHTML=`<div class="pitch"><p style="margin:0">${intro}</p></div>`+toggle
+    +(list.length?list.map(card).join(""):`<div class="faint" style="padding:22px 4px">${dm?"No declined findings — nothing has been archived.":"Nothing awaiting review. New OPPO findings land here <b>unpublished</b> for your approval before they ever appear on the public OPPO tab."}</div>`);
+  box.querySelectorAll("[data-rvtab]").forEach(b=>b.onclick=()=>{ _reviewTab=b.dataset.rvtab; renderReview(); const m=document.querySelector(".main"); if(m) m.scrollTo(0,0); });
+  const patch=async (rid,body)=>authedFetch(REST+"/attack_messaging?id=eq."+encodeURIComponent(rid),
+    {method:"PATCH",headers:{"Prefer":"return=minimal","Content-Type":"application/json"}, body:JSON.stringify(body)});
+  const drop=rid=>{ const el=box.querySelector('.atk[data-rid="'+rid.replace(/"/g,'')+'"]'); if(el) el.remove(); };
   box.querySelectorAll(".rv-approve").forEach(btn=>btn.onclick=async()=>{ btn.disabled=true; btn.textContent="…";
-    const r=await patch(btn.dataset.rid,"PATCH",{is_active:true});
-    if(r.ok){ const el=box.querySelector('.atk[data-rid="'+btn.dataset.rid.replace(/"/g,'')+'"]'); if(el) el.remove(); refreshReviewCount(); }
-    else { btn.disabled=false; btn.textContent="✓ Approve → publish"; alert("Approve failed: HTTP "+r.status); } });
-  box.querySelectorAll(".rv-discard").forEach(btn=>btn.onclick=async()=>{ if(!confirm("Discard this staged card? It will be permanently deleted (the AI can regenerate it later).")) return; btn.disabled=true;
-    const r=await patch(btn.dataset.rid,"DELETE",null);
-    if(r.ok){ const el=box.querySelector('.atk[data-rid="'+btn.dataset.rid.replace(/"/g,'')+'"]'); if(el) el.remove(); refreshReviewCount(); }
-    else { btn.disabled=false; alert("Discard failed: HTTP "+r.status); } });
+    const r=await patch(btn.dataset.rid,{is_active:true,is_approved:true});   // BOTH — or the OPPO guard hides it
+    if(r.ok){ drop(btn.dataset.rid); refreshReviewCount(); } else { btn.disabled=false; btn.textContent="✓ Approve → publish"; alert("Approve failed: HTTP "+r.status); } });
+  box.querySelectorAll(".rv-decline").forEach(btn=>btn.onclick=async()=>{ if(!confirm("Decline this card? It's archived in the Declined tab — recoverable anytime, never deleted.")) return; btn.disabled=true; btn.textContent="…";
+    const r=await patch(btn.dataset.rid,{is_active:false,is_approved:true});   // FT = declined/archived
+    if(r.ok){ drop(btn.dataset.rid); refreshReviewCount(); renderReview(); } else { btn.disabled=false; btn.textContent="✕ Decline"; alert("Decline failed: HTTP "+r.status); } });
+  box.querySelectorAll(".rv-recall").forEach(btn=>btn.onclick=async()=>{ btn.disabled=true; btn.textContent="…";
+    const r=await patch(btn.dataset.rid,{is_active:false,is_approved:false});  // back to FF = pending
+    if(r.ok){ drop(btn.dataset.rid); refreshReviewCount(); renderReview(); } else { btn.disabled=false; btn.textContent="↩ Recall to Review"; alert("Recall failed: HTTP "+r.status); } });
 }
 function renderAttacks(){
   // Strategic-alliance flags: a target who is a known ally of a mayoral rival (name-keyed → scoped per silo).
@@ -2370,7 +2385,7 @@ async function siloJobs(silo){
 async function siloHealth(muni, cand, c){
   const signedIn=!!(SESS[siloKey(c.url)]||{}).access;
   const [candidates,oppo,staged,message,promises,evidence,votes,ads,news]=await Promise.all([
-    siloCount(c,"candidates"), siloCount(c,"attack_messaging"), siloCount(c,"attack_messaging","is_active=eq.false"),
+    siloCount(c,"candidates"), siloCount(c,"attack_messaging"), siloCount(c,"attack_messaging","is_active=eq.false&is_approved=not.is.true"),
     siloCount(c,c.msgTable||"candidate_messaging"), siloCount(c,"candidate_promises"), siloCount(c,"council_evidence"),
     siloCount(c,"council_votes"), siloCount(c,"political_ads"), siloCount(c,"news_items") ]);
   const [fn,jobs]=await Promise.all([siloFnUp(c), siloJobs(c)]);
