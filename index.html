@@ -2347,11 +2347,27 @@ async function siloHealth(muni, cand, c){
   const sev=flags.some(f=>f.sev==="red")?"red":flags.some(f=>f.sev==="amber")?"amber":"green";
   return {muni,cand,office:c.office||"",demo:!!c.demo,signedIn,metrics,flags,sev,jobs};
 }
-async function renderStatus(){
+let _statusTimer=null, _statusBusy=false;
+function stopStatusAuto(){ if(_statusTimer){ clearInterval(_statusTimer); _statusTimer=null; } }
+function startStatusAuto(){ stopStatusAuto();
+  // Refresh the board in place every 60s while it's the visible tab; skip a tick when the browser
+  // tab is backgrounded; stop entirely once the operator leaves the tab or signs out.
+  _statusTimer=setInterval(()=>{ if(document.hidden) return;
+    const v=document.getElementById("view-status");
+    if(!IS_MASTER || !v || v.classList.contains("hidden")){ stopStatusAuto(); return; }
+    renderStatus(true); }, 60000); }
+async function renderStatus(silent){
   const box=document.getElementById("view-status");
-  if(!IS_MASTER){ box.innerHTML='<div class="pitch"><p>Operator view only.</p></div>'; return; }
+  if(!IS_MASTER){ box.innerHTML='<div class="pitch"><p>Operator view only.</p></div>'; stopStatusAuto(); return; }
+  if(silent && _statusBusy) return;         // don't stack overlapping sweeps
+  _statusBusy=true;
+  try{
   const silos=[]; for(const m in CLIENTS) for(const cand in CLIENTS[m].candidates) silos.push([m,cand,CLIENTS[m].candidates[cand]]);
-  box.innerHTML='<div class="pitch"><h3>System Status — every silo, live</h3><p>Read-only health across all '+silos.length+' client silos: connection, data volume, ROMULUS chat, and anything needing a fix — with the next step. Re-checked each time you open this tab.</p></div><div id="st-body" class="muted" style="padding:14px 0">◷ Checking all silos…</div>';
+  // On a silent auto-refresh keep the current board visible (no "Checking…" flash); only paint the
+  // placeholder on the first open or if the body is somehow gone.
+  if(!silent || !document.getElementById("st-body")){
+    box.innerHTML='<div class="pitch"><h3>System Status — every silo, live</h3><p>Read-only health across all '+silos.length+' client silos: connection, data volume, ROMULUS chat, and anything needing a fix — with the next step. <span class="faint" id="st-live">● live · auto-refreshing every 60s</span></p></div><div id="st-body" class="muted" style="padding:14px 0">◷ Checking all silos…</div>';
+  }
   const results=await Promise.all(silos.map(([m,cand,c])=>siloHealth(m,cand,c).catch(e=>({muni:m,cand,office:(c&&c.office)||"",sev:"red",signedIn:false,metrics:[],flags:[{sev:"red",t:"Health check failed",fix:String(e&&e.message||e).slice(0,120)}]}))));
   const rank={red:0,amber:1,green:2};
   const col=s=>s==="green"?"var(--green)":s==="amber"?"#e0b84c":"var(--red)";
@@ -2370,12 +2386,15 @@ async function renderStatus(){
         +'</div>':'<div class="faint" style="font-size:12px">✓ No issues detected.</div>')
     +'</div>';
   const bodyEl=document.getElementById("st-body");
+  if(!bodyEl){ return; }   // operator navigated away mid-sweep
   bodyEl.classList.remove("muted"); bodyEl.style.padding="0";
   bodyEl.innerHTML='<div class="tiles" style="margin-bottom:14px">'
       +'<div class="tile"><div class="n" style="color:var(--green)">'+nG+'</div><div class="l">Healthy</div></div>'
       +'<div class="tile"><div class="n" style="color:#e0b84c">'+nA+'</div><div class="l">Minor gaps</div></div>'
       +'<div class="tile"><div class="n" style="color:var(--red)">'+nR+'</div><div class="l">Needs attention</div></div></div>'
     +results.sort((a,b)=>rank[a.sev]-rank[b.sev]).map(card).join("");
+  const live=document.getElementById("st-live"); if(live) live.textContent='● live · updated '+new Date().toLocaleTimeString("en-CA",{hour12:false})+' · refreshes every 60s';
+  } finally { _statusBusy=false; }
 }
 
 // ── ROMULUS chat ──
@@ -2435,7 +2454,7 @@ document.getElementById("nav").addEventListener("click",e=>{
   document.getElementById("viewTitle").textContent=titles[b.dataset.tab][0];
   document.getElementById("viewCrumb").textContent=titles[b.dataset.tab][1];
   if(b.dataset.tab==="review") renderReview();
-  if(b.dataset.tab==="status") renderStatus();
+  if(b.dataset.tab==="status"){ renderStatus(); startStatusAuto(); } else { stopStatusAuto(); }
   var ts=document.getElementById("tabscan"); if(ts){ ts.classList.remove("go"); void ts.offsetWidth; ts.classList.add("go"); }
   closeNav();   // close drawer after picking a tab (mobile)
   document.querySelector(".main").scrollTo(0,0);
