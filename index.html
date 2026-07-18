@@ -2325,8 +2325,19 @@ async function siloJobs(silo){
       // A job that dies mid-run never writes a terminal status — it just sits in `running` forever.
       if(b.lastStatus==="running"&&ageH!=null&&ageH>6)
         issues.push({sev:"red",t:"stuck in `running` for "+ago(ageH),fix:"Died without writing a terminal status — it's dead, not slow."});
-      if(b.lastStatus==="failed")
-        issues.push({sev:"red",t:"last run FAILED "+ago(ageH)+" ago",fix:"Check that workflow's log."});
+      // Hard failures the silo's health_check.py exits RED on. Match its vocabulary exactly
+      // (error / failed / failure / no_token) so the board never reads green while the watchdog is red.
+      const st=b.lastStatus;
+      if(st==="failed"||st==="failure"||st==="error"||st==="no_token")
+        issues.push({sev:"red",t:"last run "+(st==="no_token"?"had NO TOKEN":st.toUpperCase())+" "+ago(ageH)+" ago",fix:st==="no_token"?"Silo chat: the API token is missing or expired.":"Silo chat: check that workflow's log."});
+      // 'partial' (incl. partial_search_failed): the job RAN but some units failed — a candidate_web
+      // scraper hitting candidates with no website URL, a WAF block on a few sites, or a search-quota
+      // cap. health_check.py exits RED on ANY partial, so the board must not stay green — surface it as
+      // amber "degraded" so board-green == watchdog-green. THIS was the false-green gap (2026-07-18):
+      // Burton (oakville_candidate_web Errors=81) + Crombie (mississauga_candidate_web Errors=132) both
+      // showed green here while their watchdogs were red, because only "failed" was caught.
+      else if(st.indexOf("partial")===0)
+        issues.push({sev:"amber",t:"last run '"+st+"' "+ago(ageH)+" ago — some units failed",fix:"Silo chat: confirm it's benign (e.g. candidates with no website counted as errors) vs a real fetch failure; stop counting no-URL candidates as errors so status returns to success."});
       // 8-day threshold: many jobs are weekly (promise tracking, some council refreshes), so "no run
       // in 3 days" is normal. Only flag a job that hasn't run even once in over a week. (Per-cadence
       // precision is the silo's own health_check.py; this board is the coarse cross-silo view.)
