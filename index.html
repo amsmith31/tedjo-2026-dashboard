@@ -976,6 +976,7 @@
       <button data-tab="message"><span class="ico">★</span> My Message <span class="ct" id="ct-message"></span></button>
       <button data-tab="attacks"><span class="ico">⚑</span> OPPO <span class="ct" id="ct-attacks"></span></button>
       <button data-tab="review" id="rvBtn"><span class="ico">⧗</span> Review <span class="ct" id="ct-review"></span></button>
+      <button data-tab="documents"><span class="ico">📎</span> Documents <span class="ct" id="ct-docs"></span></button>
       <button data-tab="promises"><span class="ico">◎</span> Promises <span class="ct" id="ct-promises"></span></button>
       <button data-tab="council"><span class="ico">▤</span> Council Record <span class="ct" id="ct-council"></span></button>
       <button data-tab="evidence"><span class="ico">◈</span> Evidence <span class="ct" id="ct-evidence"></span></button>
@@ -1025,6 +1026,7 @@
     <section class="view hidden" id="view-mentions"></section>
     <section class="view hidden" id="view-status"></section>
     <section class="view hidden" id="view-billing"></section>
+    <section class="view hidden" id="view-documents"></section>
   </main>
 
 <script>
@@ -1338,7 +1340,7 @@ async function init(){
     document.getElementById("ct-social").textContent=social.length||"";
     const nmB=document.getElementById("nav-mentions");
     if(nmB){ nmB.style.display=(S.mentions.length)?"":"none"; document.getElementById("ct-mentions").textContent=S.mentions.length||""; }
-    renderHome(); renderAttacks(); renderCouncil(); renderEvidence(); renderCandidates(); renderWeb(); renderMessage(); renderPromises(); renderNews(); renderAds(); renderSocial(); renderMentions(); refreshReviewCount();
+    renderHome(); renderAttacks(); renderCouncil(); renderEvidence(); renderCandidates(); renderWeb(); renderMessage(); renderPromises(); renderNews(); renderAds(); renderSocial(); renderMentions(); refreshReviewCount(); refreshDocCount();
   }catch(e){
     document.getElementById("view-home").innerHTML='<div class="loading"><h2>Could not load data</h2><p class="muted">'+esc(e.message)+'</p></div>';
     document.getElementById("conn").innerHTML='<span style="color:var(--red)">● error</span>';
@@ -2532,6 +2534,73 @@ function wireChat(){
 }
 wireChat();
 
+// ── Client DOCUMENT UPLOADS — clients upload files (incl. off-the-record) into their OWN silo; the
+// operator reviews, then builds Review/OPPO/My-Message content. Isolated per silo (Supabase Storage
+// 'client-uploads' bucket + client_documents table, RLS-locked to that silo). ROMULUS chat is linked so
+// a client can say what a document is for. Uploads land 'pending' — nothing is used without approval.
+async function docSignedUrl(path){
+  try{ const r=await authedFetch(SUPABASE_URL+"/storage/v1/object/sign/client-uploads/"+path.split("/").map(encodeURIComponent).join("/"),
+      {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({expiresIn:3600})});
+    if(!r.ok) return null; const j=await r.json(); return SUPABASE_URL+"/storage/v1"+j.signedURL; }catch(e){ return null; }
+}
+async function docOpen(path){ const u=await docSignedUrl(path); if(u) window.open(u,"_blank","noopener"); else alert("Couldn't generate a secure link — try again."); }
+async function docSetStatus(id,status){ const r=await authedFetch(REST+"/client_documents?id=eq."+encodeURIComponent(id),
+  {method:"PATCH", headers:{"Content-Type":"application/json","Prefer":"return=minimal"}, body:JSON.stringify({status})}); if(r.ok) renderDocuments(); else alert("Update failed: HTTP "+r.status); }
+function docDiscuss(name){ const b=document.querySelector('button[data-tab="romulus"]'); if(b) b.click();
+  setTimeout(()=>{ const inp=document.getElementById("chatinput"); if(inp){ inp.value='About the document I uploaded, "'+name+'": I\'d like you to '; inp.focus(); } },120); }
+async function docUpload(file, purpose, btn){
+  if(file.size>26214400){ alert("That file is "+(file.size/1048576).toFixed(1)+" MB — the limit is 25 MB."); return; }
+  const safe=file.name.replace(/[^a-zA-Z0-9._-]/g,"_").slice(-90);
+  const path=((ACTIVE&&ACTIVE.cand)?ACTIVE.cand.replace(/[^a-z0-9]/gi,"_").toLowerCase():"silo")+"/"+Date.now()+"_"+safe;
+  if(btn){ btn.disabled=true; btn.textContent="Uploading…"; }
+  try{
+    const up=await authedFetch(SUPABASE_URL+"/storage/v1/object/client-uploads/"+path.split("/").map(encodeURIComponent).join("/"),
+      {method:"POST", headers:{"Content-Type":file.type||"application/octet-stream"}, body:file});
+    if(!up.ok){ const t=await up.text().catch(()=>""); alert("Upload failed: HTTP "+up.status+" "+t.slice(0,120)); return; }
+    const meta=await authedFetch(REST+"/client_documents", {method:"POST", headers:{"Content-Type":"application/json","Prefer":"return=minimal"},
+      body:JSON.stringify({file_name:file.name, storage_path:path, mime_type:file.type||null, size_bytes:file.size, purpose:(purpose||"").trim()||null, uploaded_by:(IS_MASTER?"operator":((ACTIVE&&ACTIVE.cand)||"client"))})});
+    if(!meta.ok){ alert("File uploaded, but saving its details failed: HTTP "+meta.status); }
+    renderDocuments();
+  } finally { if(btn){ btn.disabled=false; btn.textContent="⬆ Upload document"; } }
+}
+async function refreshDocCount(){ try{ const n=await count("client_documents","status=eq.pending"); const el=document.getElementById("ct-docs"); if(el) el.textContent=n?("("+n+")"):""; }catch(e){} }
+async function renderDocuments(){
+  const box=document.getElementById("view-documents"); if(!box) return;
+  box.innerHTML=`<div class="loading"><div class="spinner"></div>Loading documents…</div>`;
+  let docs=[]; try{ docs=await api("/client_documents?select=*&order=uploaded_at.desc&limit=300"); }catch(e){ docs=[]; }
+  const badge=s=>{ const m={pending:["#e0b84c","Pending review"],reviewed:["#5aa9ff","Reviewed"],used:["#2fae63","Used in content"],declined:["#e5534b","Declined"]}; const x=m[s]||m.pending;
+    return `<span style="font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:3px 9px;border-radius:20px;color:${x[0]};background:rgba(255,255,255,.04);border:1px solid ${x[0]}">${x[1]}</span>`; };
+  const fmtSize=b=>b>1048576?(b/1048576).toFixed(1)+" MB":Math.max(1,Math.round(b/1024))+" KB";
+  const upl=`<div class="card" style="border:1px dashed var(--gold-dim);margin-bottom:16px">
+    <div style="font-weight:700;font-size:14px;margin-bottom:4px">⬆ Upload a document</div>
+    <div class="faint" style="font-size:12.5px;margin-bottom:10px">Share files for your ROMULUS team to review — including material that isn't on the public record. Everything is reviewed first; nothing is published without approval. PDF, Word, images, text or CSV · up to 25 MB.</div>
+    <input type="file" id="docFile" style="font-size:13px;margin-bottom:9px;color:var(--muted)">
+    <textarea id="docPurpose" rows="2" placeholder="What is this, and how would you like us to use it?  (e.g. 'Use this memo to build an OPPO card on Parrish's spending', or 'background only — do not publish')" style="width:100%;box-sizing:border-box;background:#11161f;border:1px solid var(--line);border-radius:8px;color:var(--fg);padding:9px;font-size:13px;font-family:inherit;margin-bottom:9px"></textarea>
+    <button id="docUp" class="fbtn" style="background:var(--gold);color:#1a1206;font-weight:700;border:none;cursor:pointer">⬆ Upload document</button>
+  </div>`;
+  const card=d=>`<div class="card" style="margin-bottom:10px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:14.5px">${esc(d.file_name)}</b> ${badge(d.status)}
+      <span class="faint" style="font-size:12px">${fmtSize(d.size_bytes||0)} · ${fmtD(d.uploaded_at)}${d.uploaded_by?" · "+esc(d.uploaded_by):""}</span></div>
+    ${d.purpose?`<div class="muted" style="font-size:13px;line-height:1.5;margin-top:8px;border-left:2px solid var(--gold-dim);padding-left:9px">"${esc(d.purpose)}"</div>`:""}
+    ${d.review_notes?`<div class="faint" style="font-size:12px;margin-top:6px">Operator note: ${esc(d.review_notes)}</div>`:""}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">
+      <button class="fbtn" data-open="${esc(d.storage_path)}" style="cursor:pointer">⬇ Open / download</button>
+      <button class="fbtn" data-discuss="${esc(d.file_name)}" style="cursor:pointer;color:var(--gold)">💬 Discuss in ROMULUS</button>
+      ${IS_MASTER?`<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="fbtn" data-st="reviewed|${esc(d.id)}" style="cursor:pointer">Mark reviewed</button>
+        <button class="fbtn" data-st="used|${esc(d.id)}" style="cursor:pointer;color:#2fae63">Used ✓</button>
+        <button class="fbtn" data-st="declined|${esc(d.id)}" style="cursor:pointer;color:#e5534b">Decline</button></span>`:""}
+    </div></div>`;
+  box.innerHTML=`<div class="pitch"><p style="margin:0"><b>Documents</b> — upload files for your ROMULUS team, held securely in your own silo. Some material isn't on the public record; this is where it lives. Every upload is <b>reviewed</b> before anything is built from it, and nothing is published without your approval. Tell us what each file is for, or ask ROMULUS.</p></div>`
+    + upl
+    + (docs.length?docs.map(card).join(""):`<div class="faint" style="padding:18px 4px">No documents uploaded yet — use the box above to add the first.</div>`);
+  const up=document.getElementById("docUp"); if(up) up.onclick=()=>{ const f=document.getElementById("docFile"), p=document.getElementById("docPurpose");
+    if(!f||!f.files||!f.files[0]){ alert("Choose a file first."); return; } docUpload(f.files[0], p?p.value:"", up); };
+  box.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>docOpen(b.dataset.open));
+  box.querySelectorAll("[data-discuss]").forEach(b=>b.onclick=()=>docDiscuss(b.dataset.discuss));
+  box.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>{ const p=b.dataset.st.split("|"); docSetStatus(p[1],p[0]); });
+  refreshDocCount();
+}
 // ── Operator-only BILLING & RENEWALS tracker — live countdowns to every bill/renewal + credit pools.
 // Edit SUBS to add/update/remove a service (or just ask me to).  cycle:
 //   "monthly" — recurs on `day` of month (omit `day` = amount known, billing day TBD, no countdown)
@@ -2619,12 +2688,13 @@ document.getElementById("nav").addEventListener("click",e=>{
   b.classList.add("active");
   document.getElementById("view-"+b.dataset.tab).classList.remove("hidden");
   const _cand=(ACTIVE&&ACTIVE.cand)||"your candidate";
-  const titles={hq:["Municipality","Select a municipality → candidate silo"],status:["System Status","Live cross-silo health — what's live, what's broken, and the fix"],billing:["Billing & Renewals","Subscriptions, bills & credit levels — live countdowns · operator only"],home:["Overview",(ACTIVE&&ACTIVE.demo?"Demonstration dossier":"Intelligence dossier")+" · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message",_cand+"'s affirmative case — sourced"],promises:["Promises","Documented positions, tracked over time"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],review:["Review Queue","Staged AI cards — approve before they publish (operator only)"],council:["Council Record","Recorded votes, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","Every candidate in the race, grouped"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"],social:["Social Media","Candidates' own public posts — X, Instagram, Facebook"],mentions:["Community Watch","Unverified community-group chatter mentioning candidates"]};
+  const titles={hq:["Municipality","Select a municipality → candidate silo"],status:["System Status","Live cross-silo health — what's live, what's broken, and the fix"],billing:["Billing & Renewals","Subscriptions, bills & credit levels — live countdowns · operator only"],documents:["Documents","Upload files for review — incl. off-the-record material. We review, then build content from them"],home:["Overview",(ACTIVE&&ACTIVE.demo?"Demonstration dossier":"Intelligence dossier")+" · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message",_cand+"'s affirmative case — sourced"],promises:["Promises","Documented positions, tracked over time"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],review:["Review Queue","Staged AI cards — approve before they publish (operator only)"],council:["Council Record","Recorded votes, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","Every candidate in the race, grouped"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"],social:["Social Media","Candidates' own public posts — X, Instagram, Facebook"],mentions:["Community Watch","Unverified community-group chatter mentioning candidates"]};
   document.getElementById("viewTitle").textContent=titles[b.dataset.tab][0];
   document.getElementById("viewCrumb").textContent=titles[b.dataset.tab][1];
   if(b.dataset.tab==="review") renderReview();
   if(b.dataset.tab==="status"){ renderStatus(); startStatusAuto(); } else { stopStatusAuto(); }
   if(b.dataset.tab==="billing") renderBilling(); else stopBillClock();
+  if(b.dataset.tab==="documents") renderDocuments();
   var ts=document.getElementById("tabscan"); if(ts){ ts.classList.remove("go"); void ts.offsetWidth; ts.classList.add("go"); }
   closeNav();   // close drawer after picking a tab (mobile)
   document.querySelector(".main").scrollTo(0,0);
