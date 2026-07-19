@@ -1496,6 +1496,10 @@ function renderAttacks(){
       return `<a class="oppo-pin" href="${esc(u)}" target="_blank" rel="noopener" title="${t!=null?'Jump to '+mmss(t)+' in this video':'Watch the source video'}">
         <img loading="lazy" src="https://img.youtube.com/vi/${esc(ytId(u))}/mqdefault.jpg" alt="">
         <span>▶ ${t!=null?esc(mmss(t)):"watch"}</span></a>`; }).join("");
+    // An OPPO card may carry a data chart (config JSON in supporting_evidence) — e.g. a tax-hike attack.
+    // Reuses the same Chart.js engine as the Numbers tab (initChartsIn), drawn after innerHTML lands.
+    let chartCfg=null; try{ chartCfg=JSON.parse(a.supporting_evidence||"null"); }catch(e){}
+    const chartHtml=(chartCfg&&chartCfg.datasets)?`<div style="position:relative;height:260px;margin:12px 0 2px"><canvas id="oppochart_${esc(String(a.id||"c").replace(/[^a-z0-9]/gi,""))}" data-chart='${esc(JSON.stringify(chartCfg))}' role="img" aria-label="${esc(a.headline||"chart")}"></canvas></div>`:"";
     return `<div class="atk">
       <div class="hd"><div style="flex:1">
         <h3>${esc(a.headline)}</h3>
@@ -1506,6 +1510,7 @@ function renderAttacks(){
         <div>${esc(a.body||"")}</div>
         ${a.key_quote?`<div class="quote">"${esc(String(a.key_quote).slice(0,260))}…"</div>`:""}
       </div>
+      ${chartHtml}
       ${vids.length?`<div class="oppo-pins">${pins}</div>`:""}
       <div class="foot">
         <span>Audience: ${esc(a.audience||"—")} · Tone: ${esc(a.delivery_tone||"—")}</span>
@@ -1532,6 +1537,7 @@ function renderAttacks(){
     + shown.map(k=>{ const vs=buckets[k].filter(a=>tierRank(a.tier)<=1).length;
         return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${raceOf(grp[k])?` <span class="chip">${esc(raceOf(grp[k]))}</span>`:""}${ALLIES[k]?` <span class="chip" style="background:rgba(220,40,40,.16);color:var(--red);border-color:rgba(220,40,40,.35)" title="Strategic ally of a mayoral rival — damaging this target indirectly weakens ${esc(ALLIES[k])}">⚑ ${esc(ALLIES[k])} ally</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} findings · ${vs} strong+</span></div>`
           + buckets[k].map(card).join(""); }).join("");
+  initChartsIn(document.getElementById("view-attacks"));   // draw any OPPO chart-attack cards
   // Delegated once; innerHTML replaces the chips on every render.
   const vc=document.getElementById("view-attacks");
   if(vc && !vc.__opBound){ vc.__opBound=true; vc.addEventListener("click",function(e){
