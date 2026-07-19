@@ -162,15 +162,19 @@
   /* Live status dots — gentle "breathing" glow so the board reads as alive, not static.
      Tweak: --sp = pulse cadence (higher = slower/calmer) · the 13px in @stbreathe = glow size. */
   .stdot{position:relative;display:inline-block;width:11px;height:11px;border-radius:50%;flex:0 0 auto;vertical-align:middle;
-    background:radial-gradient(circle at 34% 30%,rgba(255,255,255,.55),var(--c) 60%);
-    box-shadow:0 0 7px rgba(var(--g),.85);animation:stbreathe var(--sp,2.6s) ease-in-out infinite}
-  .stdot::after{content:"";position:absolute;inset:0;border-radius:50%;animation:stemit var(--sp,2.6s) ease-out infinite}
-  @keyframes stbreathe{0%,100%{filter:brightness(.9);box-shadow:0 0 4px rgba(var(--g),.55)}50%{filter:brightness(1.18);box-shadow:0 0 13px rgba(var(--g),.95)}}
-  @keyframes stemit{0%{box-shadow:0 0 0 0 rgba(var(--g),.45)}70%{box-shadow:0 0 0 10px rgba(var(--g),0)}100%{box-shadow:0 0 0 0 rgba(var(--g),0)}}
+    background:radial-gradient(circle at 34% 30%,rgba(255,255,255,.85),var(--c) 62%);
+    /* Rich STATIC glow — this is the look when motion is reduced (many desktops), so it must stand on its
+       own; the breathing animation is only an enhancement on top. */
+    box-shadow:0 0 0 1px rgba(var(--g),.5),0 0 9px 1px rgba(var(--g),.95),0 0 18px 2px rgba(var(--g),.42);
+    animation:stbreathe var(--sp,2.6s) ease-in-out infinite}
+  .stdot::after{content:"";position:absolute;inset:-4px;border-radius:50%;box-shadow:0 0 0 1px rgba(var(--g),.32);animation:stemit var(--sp,2.6s) ease-out infinite}
+  @keyframes stbreathe{0%,100%{box-shadow:0 0 0 1px rgba(var(--g),.42),0 0 6px 1px rgba(var(--g),.72),0 0 12px 2px rgba(var(--g),.3)}50%{box-shadow:0 0 0 1px rgba(var(--g),.6),0 0 13px 2px rgba(var(--g),1),0 0 23px 3px rgba(var(--g),.52)}}
+  @keyframes stemit{0%{box-shadow:0 0 0 0 rgba(var(--g),.5)}70%{box-shadow:0 0 0 9px rgba(var(--g),0)}100%{box-shadow:0 0 0 0 rgba(var(--g),0)}}
   .stdot.green{--c:#3fb950;--g:63,185,80}
   .stdot.amber{--c:#e0b84c;--g:224,184,76}
   .stdot.red{--c:#e5534b;--g:229,83,75;--sp:1.9s}
-  @media (prefers-reduced-motion:reduce){.stdot,.stdot::after{animation:none}}
+  /* Reduce-motion: stop the pulse but KEEP the rich static glow (the .stdot/.stdot::after base box-shadows). */
+  @media (prefers-reduced-motion:reduce){.stdot{animation:none}.stdot::after{animation:none}}
   /* HQ (multi-tenant selector) */
   .hq-muni-h{font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin:18px 0 8px;font-weight:700}
   .hq-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
@@ -2436,25 +2440,34 @@ async function renderStatus(silent){
   const results=await Promise.all(silos.map(([m,cand,c])=>siloHealth(m,cand,c).catch(e=>({muni:m,cand,office:(c&&c.office)||"",sev:"red",signedIn:false,metrics:[],flags:[{sev:"red",t:"Health check failed",fix:String(e&&e.message||e).slice(0,120)}]}))));
   const rank={red:0,amber:1,green:2};
   const col=s=>s==="green"?"var(--green)":s==="amber"?"#e0b84c":"var(--red)";
+  const rgb={green:"63,185,80",amber:"224,184,76",red:"229,83,75"};
   const dot=s=>'<span class="stdot '+(s==="green"||s==="amber"||s==="red"?s:"amber")+'"></span>';
-  const pill=(k,v)=>'<span class="stpill'+(v===null?" na":v===0?" zero":"")+'">'+esc(k)+': <b>'+(v===null?"n/a":v)+'</b></span>';
-  const word={red:"needs attention",amber:"minor gaps",green:"healthy"};
+  const pill=(k,v)=>'<span class="stpill'+(v===null?" na":v===0?" zero":"")+'">'+esc(k)+' <b>'+(v===null?"n/a":v)+'</b></span>';
+  const word={red:"Needs attention",amber:"Minor gaps",green:"Operational"};
   const nG=results.filter(r=>r.sev==="green").length,nA=results.filter(r=>r.sev==="amber").length,nR=results.filter(r=>r.sev==="red").length;
-  const card=r=>'<div class="card" style="border-color:'+col(r.sev)+';margin-bottom:12px">'
-    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+dot(r.sev)
-    +' <b style="font-size:15px">'+esc(r.cand)+'</b>'
+  const ov=nR>0?{s:"red",t:nR+" silo"+(nR>1?"s":"")+" need attention"}:nA>0?{s:"amber",t:nA+" silo"+(nA>1?"s":"")+" with minor gaps · "+nG+" operational"}:{s:"green",t:"All systems operational"};
+  const badge=s=>'<span style="margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;padding:3px 10px;border-radius:20px;white-space:nowrap;color:'+col(s)+';background:rgba('+rgb[s]+',.13);border:1px solid rgba('+rgb[s]+',.42)">'+word[s]+'</span>';
+  const card=r=>'<div class="card" style="border:1px solid var(--line);border-left:3px solid '+col(r.sev)+';margin-bottom:10px">'
+    +'<div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap">'+dot(r.sev)
+    +'<b style="font-size:15px;letter-spacing:.2px">'+esc(r.cand)+'</b>'
     +'<span class="faint" style="font-size:12px">'+esc(r.muni)+(r.office?" · "+esc(r.office):"")+(r.demo?' · <span style="color:var(--gold)">DEMO</span>':"")+'</span>'
-    +'<span class="faint" style="margin-left:auto;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:'+col(r.sev)+'">'+word[r.sev]+'</span></div>'
-    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 '+(r.flags.length?"10px":"0")+'">'+r.metrics.map(mm=>pill(mm.k,mm.v)).join("")+'</div>'
-    +(r.flags.length?'<div style="border-top:1px solid var(--line);padding-top:9px;display:flex;flex-direction:column;gap:6px">'
-        +r.flags.map(f=>'<div style="font-size:12.5px"><span style="color:'+col(f.sev==="info"?"green":f.sev)+'">'+(f.sev==="info"?"⧗":f.sev==="red"?"✕":"▲")+'</span> <b>'+esc(f.t)+'</b> <span class="faint">— '+esc(f.fix)+'</span></div>').join("")
-        +'</div>':'<div class="faint" style="font-size:12px">✓ No issues detected.</div>')
+    +badge(r.sev)+'</div>'
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin:11px 0 '+(r.flags.length?"11px":"0")+'">'+r.metrics.map(mm=>pill(mm.k,mm.v)).join("")+'</div>'
+    +(r.flags.length?'<div style="border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:7px">'
+        +r.flags.map(f=>'<div style="font-size:12.5px;line-height:1.45"><span style="color:'+col(f.sev==="info"?"green":f.sev)+';font-weight:700">'+(f.sev==="info"?"⧗":f.sev==="red"?"✕":"▲")+'</span> <b>'+esc(f.t)+'</b> <span class="faint">— '+esc(f.fix)+'</span></div>').join("")
+        +'</div>':'<div class="faint" style="font-size:12px">✓ All checks passing</div>')
     +'</div>';
   const bodyEl=document.getElementById("st-body");
   if(!bodyEl){ return; }   // operator navigated away mid-sweep
   bodyEl.classList.remove("muted"); bodyEl.style.padding="0";
-  bodyEl.innerHTML='<div class="tiles" style="margin-bottom:14px">'
-      +'<div class="tile"><div class="n" style="color:var(--green)">'+nG+'</div><div class="l">Healthy</div></div>'
+  bodyEl.innerHTML=
+     '<div style="display:flex;align-items:center;gap:13px;padding:15px 18px;border-radius:12px;margin-bottom:15px;background:linear-gradient(135deg,rgba('+rgb[ov.s]+',.13),rgba('+rgb[ov.s]+',.025));border:1px solid rgba('+rgb[ov.s]+',.4)">'
+       +'<span class="stdot '+ov.s+'" style="width:14px;height:14px"></span>'
+       +'<b style="font-size:16px;letter-spacing:.2px">'+esc(ov.t)+'</b>'
+       +'<span class="faint" style="margin-left:auto;font-size:11.5px">'+nG+'/'+results.length+' operational</span>'
+     +'</div>'
+     +'<div class="tiles" style="margin-bottom:15px">'
+      +'<div class="tile"><div class="n" style="color:var(--green)">'+nG+'</div><div class="l">Operational</div></div>'
       +'<div class="tile"><div class="n" style="color:#e0b84c">'+nA+'</div><div class="l">Minor gaps</div></div>'
       +'<div class="tile"><div class="n" style="color:var(--red)">'+nR+'</div><div class="l">Needs attention</div></div></div>'
     +results.sort((a,b)=>rank[a.sev]-rank[b.sev]).map(card).join("");
