@@ -970,6 +970,7 @@
     <nav class="nav" id="nav">
       <button data-tab="hq" class="active"><span class="ico">⌂</span> Municipality</button>
       <button data-tab="status" id="stBtn"><span class="ico">❖</span> System Status <span class="ct" id="ct-status"></span></button>
+      <button data-tab="billing" id="billBtn"><span class="ico">◷</span> Billing</button>
       <button data-tab="home"><span class="ico">◆</span> Overview</button>
       <button data-tab="romulus"><span class="ico">✦</span> ROMULUS Chat</button>
       <button data-tab="message"><span class="ico">★</span> My Message <span class="ct" id="ct-message"></span></button>
@@ -1023,6 +1024,7 @@
     <section class="view hidden" id="view-social"></section>
     <section class="view hidden" id="view-mentions"></section>
     <section class="view hidden" id="view-status"></section>
+    <section class="view hidden" id="view-billing"></section>
   </main>
 
 <script>
@@ -1234,6 +1236,7 @@ window.romAfterSignIn = function(res){
   // Review IS shown to the client now (they verify staged cards + open primary sources); the
   // approve/discard actions inside it stay operator-only (gated on IS_MASTER in renderReview).
   const stBtn=document.getElementById("stBtn"); if(stBtn) stBtn.style.display="none";   // cross-silo system status is operator-only
+  const billBtn=document.getElementById("billBtn"); if(billBtn) billBtn.style.display="none";   // billing/renewals tracker is operator-only
   const hqView=document.getElementById("view-hq"); if(hqView) hqView.innerHTML="";
   connectClient(res.muni, res.cand);
 };
@@ -2529,6 +2532,85 @@ function wireChat(){
 }
 wireChat();
 
+// ── Operator-only BILLING & RENEWALS tracker — live countdowns to every bill/renewal + credit pools.
+// Edit SUBS to add/update/remove a service (or just ask me to).  cycle:
+//   "monthly" — recurs on `day` of month (omit `day` = amount known, billing day TBD, no countdown)
+//   "fixed"   — one-off/renewal on `date` (YYYY-MM-DD)   ·   "balance" — a credit pool (`balance` + `low`)
+//   "unknown" — details TBD (shown flagged).
+const SUBS=[
+  {name:"Claude Max",                 cat:"AI",    cycle:"monthly", day:29, amount:175,   cur:"USD", note:"Anthropic subscription (separate from the API credits below)"},
+  {name:"Anthropic API credits",      cat:"AI",    cycle:"balance", balance:60, low:20,   cur:"USD", note:"Fleet AI jobs · auto-reload ON · fix the declining card so it stays funded"},
+  {name:"Google One (AI Pro · 5 TB)", cat:"Cloud", cycle:"monthly", day:1,  amount:26.99, cur:"CAD", note:"currency assumed CAD — tell me if USD"},
+  {name:"YouTube Premium",            cat:"Media", cycle:"monthly", day:12, amount:12.99, cur:"CAD", note:"currency assumed CAD — tell me if USD"},
+  {name:"Perplexity Enterprise Pro",  cat:"AI",    cycle:"unknown", note:"⚠ confirm the cost + next billing date"},
+  {name:"GitHub Pro",                 cat:"Infra", cycle:"monthly", amount:4,  cur:"USD", note:"+ up to $15/mo Actions-overage budget · tell me your billing day for a countdown"},
+  {name:"Apify (Starter)",            cat:"Infra", cycle:"monthly", amount:29, cur:"USD", note:"variable under your $40 cap · tell me the billing day"},
+  {name:"Supabase Pro ×2",            cat:"Infra", cycle:"monthly", amount:50, cur:"USD", note:"Crombie + Monica Pro projects (~$25 each) · tell me the billing day"},
+  {name:"Meta Ad Library token",      cat:"Infra", cycle:"fixed",   date:"2026-09-14", amount:0, cur:"", note:"FREE — but RENEW before this or ad-tracking stops fleet-wide"},
+];
+function _dim(y,m){ return new Date(y,m+1,0).getDate(); }
+function subNextDue(s){
+  const now=new Date();
+  if(s.cycle==="fixed"&&s.date) return new Date(s.date+"T09:00:00");
+  if(s.cycle==="monthly"&&s.day){ const d=s.day; let y=now.getFullYear(), m=now.getMonth();
+    let due=new Date(y,m,Math.min(d,_dim(y,m)),9,0,0);
+    if(due<=now){ m++; if(m>11){m=0;y++;} due=new Date(y,m,Math.min(d,_dim(y,m)),9,0,0); }
+    return due; }
+  return null;   // monthly-without-day, unknown, or balance
+}
+function _cdFmt(ms){ if(ms<=0) return "due now"; let s=Math.floor(ms/1000);
+  const d=Math.floor(s/86400); s%=86400; const h=Math.floor(s/3600); s%=3600; const m=Math.floor(s/60); s%=60;
+  return (d>0?d+"d ":"")+String(h).padStart(2,"0")+"h "+String(m).padStart(2,"0")+"m "+String(s).padStart(2,"0")+"s"; }
+function _cdCol(ms){ const d=ms/86400000; return d<3?"var(--red)":d<10?"#e0b84c":"var(--green)"; }
+let _billTimer=null;
+function tickBills(){ const now=new Date();
+  document.querySelectorAll("#view-billing .bill-cd").forEach(el=>{ const ms=new Date(el.dataset.due)-now; el.textContent=_cdFmt(ms); el.style.color=_cdCol(ms); }); }
+function startBillClock(){ stopBillClock(); tickBills(); _billTimer=setInterval(tickBills,1000); }
+function stopBillClock(){ if(_billTimer){ clearInterval(_billTimer); _billTimer=null; } }
+function renderBilling(){
+  const box=document.getElementById("view-billing"); if(!box) return;
+  if(!IS_MASTER){ box.innerHTML='<div class="pitch"><p>Operator view only.</p></div>'; stopBillClock(); return; }
+  const rows=SUBS.map(s=>({s,due:subNextDue(s)}));
+  const dated=rows.filter(x=>x.due).sort((a,b)=>a.due-b.due);
+  const bal=rows.filter(x=>x.s.cycle==="balance");
+  const tbd=rows.filter(x=>!x.due&&x.s.cycle!=="balance");
+  const soon=dated[0];
+  const tot={}; SUBS.forEach(s=>{ if(s.cycle==="monthly"&&s.amount) tot[s.cur||"?"]=(tot[s.cur||"?"]||0)+s.amount; });
+  const totStr=Object.entries(tot).map(([c,v])=>"$"+v.toFixed(2)+" "+c).join("  +  ")||"—";
+  const b0=bal[0]?bal[0].s:null, low=b0&&b0.balance!=null&&b0.low!=null&&b0.balance<=b0.low;
+  const chip=t=>`<span class="chip">${esc(t)}</span>`;
+  const card=(s,due)=>{
+    if(s.cycle==="balance"){ const lo=s.balance!=null&&s.low!=null&&s.balance<=s.low;
+      return `<div class="card" style="border-left:3px solid ${lo?"var(--red)":"var(--green)"};margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">${esc(s.name)}</b>${chip(s.cat)}
+        <span style="margin-left:auto;font-weight:800;font-size:16px;color:${lo?"var(--red)":"var(--green)"}">$${s.balance} ${esc(s.cur||"")} left</span></div>
+        ${lo?'<div style="color:var(--red);font-size:12.5px;margin-top:8px;font-weight:700">▲ Low — top up</div>':""}
+        ${s.note?`<div class="faint" style="font-size:12px;margin-top:8px">${esc(s.note)}</div>`:""}</div>`; }
+    if(!due){ const amt=s.amount!=null?("$"+s.amount+(s.cur?" "+s.cur:"")):null;
+      const label=s.cycle==="monthly"?(amt?amt+" · monthly · day TBD":"monthly · TBD"):(amt?amt:"details TBD");
+      return `<div class="card" style="border-left:3px solid #e0b84c;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">${esc(s.name)}</b>${chip(s.cat)}
+        <span class="faint" style="margin-left:auto;font-size:12px">${esc(label)}</span></div>
+        ${s.note?`<div style="color:#e0b84c;font-size:12.5px;margin-top:8px">${esc(s.note)}</div>`:""}</div>`; }
+    const amt=s.amount!=null?("$"+s.amount+(s.cur?" "+s.cur:"")):"—";
+    return `<div class="card" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">${esc(s.name)}</b>${chip(s.cat)}
+      <span class="faint" style="font-size:12px">${esc(amt)}${s.cycle==="monthly"?" · monthly":s.cycle==="fixed"?" · one-time":""}</span>
+      <span class="bill-cd" data-due="${due.toISOString()}" style="margin-left:auto;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums"></span></div>
+      <div class="faint" style="font-size:12px;margin-top:7px">Next: ${esc(due.toLocaleDateString("en-CA",{weekday:"short",year:"numeric",month:"short",day:"numeric"}))}${s.note?" · "+esc(s.note):""}</div></div>`;
+  };
+  box.innerHTML=
+    `<div class="pitch"><p style="margin:0"><b>Billing & Renewals</b> — every subscription, bill and credit pool, with a live countdown. Operator-only. <span class="faint">Tell me anytime to add, edit, or remove a line.</span></p></div>`
+    +`<div class="tiles" style="margin:14px 0">
+       <div class="tile"><div class="n" style="font-size:18px">${soon?esc(soon.due.toLocaleDateString("en-CA",{month:"short",day:"numeric"})):"—"}</div><div class="l">Next bill${soon?" · "+esc(soon.s.name):""}</div></div>
+       <div class="tile"><div class="n" style="font-size:18px">${esc(totStr)}</div><div class="l">Monthly recurring</div></div>
+       <div class="tile"><div class="n" style="font-size:18px;color:${low?"var(--red)":"var(--green)"}">${b0&&b0.balance!=null?"$"+b0.balance:"—"}</div><div class="l">Anthropic credits</div></div>
+     </div>`
+    + bal.map(x=>card(x.s,x.due)).join("")
+    + dated.map(x=>card(x.s,x.due)).join("")
+    + tbd.map(x=>card(x.s,x.due)).join("");
+  startBillClock();
+}
 // nav + countdown
 document.getElementById("nav").addEventListener("click",e=>{
   const b=e.target.closest("button[data-tab]"); if(!b) return;
@@ -2537,11 +2619,12 @@ document.getElementById("nav").addEventListener("click",e=>{
   b.classList.add("active");
   document.getElementById("view-"+b.dataset.tab).classList.remove("hidden");
   const _cand=(ACTIVE&&ACTIVE.cand)||"your candidate";
-  const titles={hq:["Municipality","Select a municipality → candidate silo"],status:["System Status","Live cross-silo health — what's live, what's broken, and the fix"],home:["Overview",(ACTIVE&&ACTIVE.demo?"Demonstration dossier":"Intelligence dossier")+" · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message",_cand+"'s affirmative case — sourced"],promises:["Promises","Documented positions, tracked over time"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],review:["Review Queue","Staged AI cards — approve before they publish (operator only)"],council:["Council Record","Recorded votes, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","Every candidate in the race, grouped"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"],social:["Social Media","Candidates' own public posts — X, Instagram, Facebook"],mentions:["Community Watch","Unverified community-group chatter mentioning candidates"]};
+  const titles={hq:["Municipality","Select a municipality → candidate silo"],status:["System Status","Live cross-silo health — what's live, what's broken, and the fix"],billing:["Billing & Renewals","Subscriptions, bills & credit levels — live countdowns · operator only"],home:["Overview",(ACTIVE&&ACTIVE.demo?"Demonstration dossier":"Intelligence dossier")+" · primary-source verified"],romulus:["ROMULUS Chat","Grounded AI analyst · cites every claim"],message:["My Message",_cand+"'s affirmative case — sourced"],promises:["Promises","Documented positions, tracked over time"],attacks:["OPPO","Opposition research — tiered, sourced, verified"],review:["Review Queue","Staged AI cards — approve before they publish (operator only)"],council:["Council Record","Recorded votes, straight from the minutes"],evidence:["Evidence","Scored by political utility"],candidates:["Candidates","Every candidate in the race, grouped"],news:["News","Local coverage, auto-linked to candidates"],web:["Web Presence","Campaign sites auto-snapshotted each morning"],ads:["Political Ads","Meta Ad Library — spend, reach, targeting"],social:["Social Media","Candidates' own public posts — X, Instagram, Facebook"],mentions:["Community Watch","Unverified community-group chatter mentioning candidates"]};
   document.getElementById("viewTitle").textContent=titles[b.dataset.tab][0];
   document.getElementById("viewCrumb").textContent=titles[b.dataset.tab][1];
   if(b.dataset.tab==="review") renderReview();
   if(b.dataset.tab==="status"){ renderStatus(); startStatusAuto(); } else { stopStatusAuto(); }
+  if(b.dataset.tab==="billing") renderBilling(); else stopBillClock();
   var ts=document.getElementById("tabscan"); if(ts){ ts.classList.remove("go"); void ts.offsetWidth; ts.classList.add("go"); }
   closeNav();   // close drawer after picking a tab (mobile)
   document.querySelector(".main").scrollTo(0,0);
