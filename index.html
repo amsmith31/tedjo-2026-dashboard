@@ -2684,6 +2684,8 @@ function renderBilling(){
   const soon=dated[0];
   const tot={}; SUBS.forEach(s=>{ if(s.cycle==="monthly"&&s.amount) tot[s.cur||"?"]=(tot[s.cur||"?"]||0)+s.amount; });
   const totStr=Object.entries(tot).map(([c,v])=>"$"+v.toFixed(2)+" "+c).join("  +  ")||"—";
+  const totYr=Object.entries(tot).map(([c,v])=>"$"+(v*12).toLocaleString("en-US",{maximumFractionDigits:0})+" "+c).join("  +  ")||"—";
+  const nMonthly=SUBS.filter(s=>s.cycle==="monthly"&&s.amount).length;
   const b0=bal[0]?bal[0].s:null, low=b0&&b0.balance!=null&&b0.low!=null&&b0.balance<=b0.low;
   const chip=t=>`<span class="chip">${esc(t)}</span>`;
   const card=(s,due)=>{
@@ -2713,6 +2715,10 @@ function renderBilling(){
        <div class="tile"><div class="n" style="font-size:18px">${esc(totStr)}</div><div class="l">Monthly recurring</div></div>
        <div class="tile"><div class="n" style="font-size:18px;color:${low?"var(--red)":"var(--green)"}">${b0&&b0.balance!=null?"$"+b0.balance:"—"}</div><div class="l">Anthropic credits</div></div>
      </div>`
+    +`<div class="card" style="border-left:3px solid var(--gold);margin-bottom:12px;background:rgba(224,184,76,.05)">
+       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">💰 Total recurring cost</b>
+         <span style="margin-left:auto;font-weight:800;font-size:17px;color:var(--gold)">${esc(totStr)} <span style="font-size:12px;font-weight:600;color:var(--muted)">/ month</span></span></div>
+       <div class="faint" style="font-size:12px;margin-top:7px">≈ ${esc(totYr)} per year · ${nMonthly} monthly subscription${nMonthly!==1?"s":""}${b0&&b0.balance!=null?" · plus a $"+b0.balance+" "+esc(b0.cur||"")+" credit pool":""} <span style="opacity:.7">· USD & CAD shown separately (no FX blend)</span></div></div>`
     + bal.map(x=>card(x.s,x.due)).join("")
     + dated.map(x=>card(x.s,x.due)).join("")
     + tbd.map(x=>card(x.s,x.due)).join("");
