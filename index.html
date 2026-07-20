@@ -2654,6 +2654,13 @@ const SUBS=[
   {name:"Meta Ad Library token",      cat:"Infra", cycle:"fixed",   date:"2026-09-14", amount:0, cur:"", link:"https://developers.facebook.com/tools/accesstoken/", note:"FREE — but RENEW before this or ad-tracking stops fleet-wide"},
 ];
 function _money(a){ return a==null?null:("$"+(Number.isInteger(a)?a:a.toFixed(2))); }
+// Everything is displayed in CAD for a single clean currency. USD-billed items are converted at this
+// editable rate (they still charge in USD; the card's real rate on the day varies slightly).
+const USD_CAD=1.40;
+function _cadAmt(a,cur){ return a==null?null:(cur==="USD"?a*USD_CAD:a); }
+function _amtDisplay(s){ if(s.amount==null) return "—";
+  const cad="C$"+_cadAmt(s.amount,s.cur).toFixed(2);
+  return s.cur==="USD"?cad+" · US$"+(Number.isInteger(s.amount)?s.amount:s.amount.toFixed(2)):cad; }
 function _payLink(s){ return s.link?`<div style="margin-top:8px"><a href="${esc(s.link)}" target="_blank" rel="noopener" class="chip" style="color:var(--gold);cursor:pointer;text-decoration:none">💳 Pay / top up →</a></div>`:""; }
 function _dim(y,m){ return new Date(y,m+1,0).getDate(); }
 function subNextDue(s){
@@ -2682,9 +2689,9 @@ function renderBilling(){
   const bal=rows.filter(x=>x.s.cycle==="balance");
   const tbd=rows.filter(x=>!x.due&&x.s.cycle!=="balance");
   const soon=dated[0];
-  const tot={}; SUBS.forEach(s=>{ if(s.cycle==="monthly"&&s.amount) tot[s.cur||"?"]=(tot[s.cur||"?"]||0)+s.amount; });
-  const totStr=Object.entries(tot).map(([c,v])=>"$"+v.toFixed(2)+" "+c).join("  +  ")||"—";
-  const totYr=Object.entries(tot).map(([c,v])=>"$"+(v*12).toLocaleString("en-US",{maximumFractionDigits:0})+" "+c).join("  +  ")||"—";
+  const totCAD=SUBS.reduce((a,s)=>a+((s.cycle==="monthly"&&s.amount)?_cadAmt(s.amount,s.cur):0),0);
+  const totStr="C$"+totCAD.toFixed(2);
+  const totYr="C$"+(totCAD*12).toLocaleString("en-US",{maximumFractionDigits:0});
   const nMonthly=SUBS.filter(s=>s.cycle==="monthly"&&s.amount).length;
   const b0=bal[0]?bal[0].s:null, low=b0&&b0.balance!=null&&b0.low!=null&&b0.balance<=b0.low;
   const chip=t=>`<span class="chip">${esc(t)}</span>`;
@@ -2692,16 +2699,16 @@ function renderBilling(){
     if(s.cycle==="balance"){ const lo=s.balance!=null&&s.low!=null&&s.balance<=s.low;
       return `<div class="card" style="border-left:3px solid ${lo?"var(--red)":"var(--green)"};margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">${esc(s.name)}</b>${chip(s.cat)}
-        <span style="margin-left:auto;font-weight:800;font-size:16px;color:${lo?"var(--red)":"var(--green)"}">$${s.balance} ${esc(s.cur||"")} left</span></div>
+        <span style="margin-left:auto;font-weight:800;font-size:16px;color:${lo?"var(--red)":"var(--green)"}">C$${_cadAmt(s.balance,s.cur).toFixed(2)} left${s.cur==="USD"?" · US$"+s.balance:""}</span></div>
         ${lo?'<div style="color:var(--red);font-size:12.5px;margin-top:8px;font-weight:700">▲ Low — top up</div>':""}
         ${s.note?`<div class="faint" style="font-size:12px;margin-top:8px">${esc(s.note)}</div>`:""}${_payLink(s)}</div>`; }
-    if(!due){ const amt=s.amount!=null?(_money(s.amount)+(s.cur?" "+s.cur:"")):null;
+    if(!due){ const amt=s.amount!=null?_amtDisplay(s):null;
       const label=s.cycle==="monthly"?(amt?amt+" · monthly · day TBD":"monthly · TBD"):(amt?amt:"details TBD");
       return `<div class="card" style="border-left:3px solid #e0b84c;margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">${esc(s.name)}</b>${chip(s.cat)}
         <span class="faint" style="margin-left:auto;font-size:12px">${esc(label)}</span></div>
         ${s.note?`<div style="color:#e0b84c;font-size:12.5px;margin-top:8px">${esc(s.note)}</div>`:""}${_payLink(s)}</div>`; }
-    const amt=s.amount!=null?(_money(s.amount)+(s.cur?" "+s.cur:"")):"—";
+    const amt=_amtDisplay(s);
     return `<div class="card" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">${esc(s.name)}</b>${chip(s.cat)}
       <span class="faint" style="font-size:12px">${esc(amt)}${s.cycle==="monthly"?" · monthly":s.cycle==="fixed"?" · one-time":""}</span>
@@ -2713,12 +2720,12 @@ function renderBilling(){
     +`<div class="tiles" style="margin:14px 0">
        <div class="tile"><div class="n" style="font-size:18px">${soon?esc(soon.due.toLocaleDateString("en-CA",{month:"short",day:"numeric"})):"—"}</div><div class="l">Next bill${soon?" · "+esc(soon.s.name):""}</div></div>
        <div class="tile"><div class="n" style="font-size:18px">${esc(totStr)}</div><div class="l">Monthly recurring</div></div>
-       <div class="tile"><div class="n" style="font-size:18px;color:${low?"var(--red)":"var(--green)"}">${b0&&b0.balance!=null?"$"+b0.balance:"—"}</div><div class="l">Anthropic credits</div></div>
+       <div class="tile"><div class="n" style="font-size:18px;color:${low?"var(--red)":"var(--green)"}">${b0&&b0.balance!=null?"C$"+_cadAmt(b0.balance,b0.cur).toFixed(2):"—"}</div><div class="l">Anthropic credits</div></div>
      </div>`
     +`<div class="card" style="border-left:3px solid var(--gold);margin-bottom:12px;background:rgba(224,184,76,.05)">
        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">💰 Total recurring cost</b>
          <span style="margin-left:auto;font-weight:800;font-size:17px;color:var(--gold)">${esc(totStr)} <span style="font-size:12px;font-weight:600;color:var(--muted)">/ month</span></span></div>
-       <div class="faint" style="font-size:12px;margin-top:7px">≈ ${esc(totYr)} per year · ${nMonthly} monthly subscription${nMonthly!==1?"s":""}${b0&&b0.balance!=null?" · plus a $"+b0.balance+" "+esc(b0.cur||"")+" credit pool":""} <span style="opacity:.7">· USD & CAD shown separately (no FX blend)</span></div></div>`
+       <div class="faint" style="font-size:12px;margin-top:7px">≈ ${esc(totYr)} per year · ${nMonthly} monthly subscription${nMonthly!==1?"s":""}${b0&&b0.balance!=null?" · plus a C$"+_cadAmt(b0.balance,b0.cur).toFixed(2)+" credit pool":""} <span style="opacity:.7">· all in CAD · USD items converted at 1 USD = C$${USD_CAD} (billed in USD; card rate varies)</span></div></div>`
     + bal.map(x=>card(x.s,x.due)).join("")
     + dated.map(x=>card(x.s,x.due)).join("")
     + tbd.map(x=>card(x.s,x.due)).join("");
