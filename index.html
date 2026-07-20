@@ -1468,7 +1468,8 @@ async function renderReview(){
         <div class="meta"><span class="tier ${tierClass(a.tier)}">${esc(tierLabel(a.tier))}</span>
         <span class="chip">🎯 ${esc(tgt)}</span><span class="chip">${esc(a.issue_area||"")}</span></div></div></div>
       <div class="bd"><div>${esc(a.body||"")}</div>
-        ${a.key_quote?`<div class="quote">"${esc(String(a.key_quote).slice(0,280))}"</div>`:""}</div>
+        ${a.key_quote?`<div class="quote">"${esc(String(a.key_quote).slice(0,280))}"</div>`:""}
+        ${evidenceExcerpt(a,700)}</div>
       ${vids.length?`<div class="oppo-pins">${vids.map(u=>{const t=ytTime(u);return `<a class="oppo-pin" href="${esc(u)}" target="_blank" rel="noopener"><img loading="lazy" src="https://img.youtube.com/vi/${esc(ytId(u))}/mqdefault.jpg" alt=""><span>▶ ${t!=null?esc(mmss(t)):"watch"}</span></a>`;}).join("")}</div>`:""}
       <div class="foot">
         <span style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
@@ -1506,6 +1507,19 @@ async function renderReview(){
   box.querySelectorAll(".rv-delete").forEach(btn=>btn.onclick=async()=>{ if(!confirm("Permanently DELETE this archived card? This cannot be undone. (Operator-only; the client can only Recall, never delete.)")) return; btn.disabled=true; btn.textContent="…";
     const r=await authedFetch(REST+"/attack_messaging?id=eq."+encodeURIComponent(btn.dataset.rid),{method:"DELETE",headers:{"Prefer":"return=minimal"}});  // RLS: master-only
     if(r.ok){ drop(btn.dataset.rid); renderReview(); } else { btn.disabled=false; btn.textContent="🗑 Delete"; alert("Delete failed: HTTP "+r.status); } });
+}
+// Make bare URLs inside a text blob clickable (escapes the non-URL parts).
+function linkify(raw){ return String(raw||"").split(/(https?:\/\/[^\s]+)/g).map((seg,i)=> i%2
+  ? `<a href="${esc(seg)}" target="_blank" rel="noopener" style="color:var(--gold)">${esc(seg.length>52?seg.slice(0,52)+"…":seg)}</a>`
+  : esc(seg)).join(""); }
+// supporting_evidence doubles as chart-config JSON (tax charts) OR a transcript excerpt (council-clip
+// standard). Render the excerpt ONLY when it's prose — a reviewer must see the transcript that backs a
+// quote before approving. JSON (chart/structured) is skipped here (charts render separately).
+function evidenceExcerpt(a,maxlen){
+  const se=a&&a.supporting_evidence; if(!se||typeof se!=="string") return "";
+  const t=se.trim(); if(!t||t[0]==="{"||t[0]==="[") return "";
+  const shown=(maxlen&&t.length>maxlen)?t.slice(0,maxlen).trim()+"…":t;
+  return `<div style="margin-top:8px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.03);border-left:2px solid var(--gold-dim);padding:7px 10px;border-radius:5px"><span class="faint" style="font-weight:700">📄 Transcript / evidence</span><br>${linkify(shown)}</div>`;
 }
 function renderAttacks(){
   // Strategic-alliance flags: a target who is a known ally of a mayoral rival (name-keyed → scoped per silo).
@@ -1559,6 +1573,7 @@ function renderAttacks(){
       <div class="bd">
         <div>${esc(a.body||"")}</div>
         ${a.key_quote?`<div class="quote">"${esc(String(a.key_quote).slice(0,260))}…"</div>`:""}
+        ${evidenceExcerpt(a,300)}
       </div>
       ${chartHtml}
       ${vids.length?`<div class="oppo-pins">${pins}</div>`:""}
