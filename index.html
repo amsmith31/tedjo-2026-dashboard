@@ -2553,11 +2553,43 @@ function md(t){
 }
 function addMsg(cls,html){ const d=document.createElement('div'); d.className='msg '+cls; d.innerHTML=html;
   document.getElementById('chatlog').appendChild(d); d.scrollIntoView({behavior:'smooth',block:'end'}); return d; }
+// ── "What's new today" daily brief — answered deterministically from the already-loaded dossier (S),
+// so it always works (no LLM, no extra queries) and is uniform across every silo. Recency-type questions
+// are intercepted in askRomulus() and answered here with real, linked items.
+function _briefTs(o,cols){ for(const c of cols){ if(o&&o[c]){ const d=new Date(o[c]); if(!isNaN(d)) return d; } } return null; }
+const BRIEF_RE=/\b(what'?s new|whats new|new today|anything new|daily brief|brief me|catch me up|what'?s changed|whats changed|recap|update me|what'?s happening|whats happening)\b/i;
+function dailyBrief(){
+  const St=(typeof S!=="undefined")?S:{};
+  const cmap={}; (St.candidates||[]).forEach(c=>{ cmap[c.id]=c.name; });
+  const nm=id=>cmap[id]?(" · "+esc(cmap[id])):"";
+  const within=(arr,cols,days)=>{ const cut=Date.now()-days*86400000;
+    return (arr||[]).filter(o=>{ const t=_briefTs(o,cols); return t&&t.getTime()>=cut; }).sort((a,b)=>_briefTs(b,cols)-_briefTs(a,cols)); };
+  const build=d=>({
+    oppo: within(St.attacks,['generated_at','updated_at'],d),
+    news: within(St.news,['created_at','published_at'],d),
+    video: within(St.videos,['published_at','created_at'],d),
+    social: within(St.social,['posted_at','created_at'],d),
+    promises: within(St.promises,['created_at','ai_detected_at'],d) });
+  let days=2, b=build(days), total=Object.values(b).reduce((a,x)=>a+x.length,0);
+  if(!total){ days=7; b=build(days); total=Object.values(b).reduce((a,x)=>a+x.length,0); }
+  if(!total) return '<b>📋 Daily brief</b><br><span class="faint">It\'s been quiet — nothing new across OPPO, news, video or social in the last week. The full standing record is in the tabs above (OPPO, News, Social, Council Record).</span>';
+  const link=(u,t)=>u?`<a href="${esc(u)}" target="_blank" rel="noopener" style="color:var(--gold)">${esc(t||u)}</a>`:esc(t||'');
+  const val=o=>o.text||o.title||o.headline||'';
+  let h=`<b>📋 Here's what's landed in the last ${days} day${days>1?'s':''}:</b>`;
+  if(b.oppo.length) h+=`<br><br><b style="color:var(--gold)">🎯 ${b.oppo.length} new OPPO finding${b.oppo.length>1?'s':''}</b>`+b.oppo.slice(0,4).map(o=>`<br>• <b>${esc(o.tier||'')}</b> — ${esc(o.headline||'')}${nm(o.target_candidate_id)}`).join('');
+  if(b.news.length) h+=`<br><br><b style="color:var(--gold)">📰 ${b.news.length} news item${b.news.length>1?'s':''}</b>`+b.news.slice(0,4).map(o=>`<br>• ${link(o.url||o.link||o.article_url,o.title||o.headline||'(untitled)')}`).join('');
+  if(b.video.length) h+=`<br><br><b style="color:var(--gold)">🎥 ${b.video.length} new video${b.video.length>1?'s':''}</b>`+b.video.slice(0,4).map(o=>`<br>• ${link(o.video_url,o.title||'(video)')}${nm(o.candidate_id)}`).join('');
+  if(b.social.length) h+=`<br><br><b style="color:var(--gold)">📱 ${b.social.length} social post${b.social.length>1?'s':''}</b>`+b.social.slice(0,4).map(o=>{const t=(o.text||'').replace(/\s+/g,' ').slice(0,90); return `<br>• <b>${esc(o.platform||'')}</b>${nm(o.candidate_id)} — ${esc(t)}${(o.text||'').length>90?'…':''} ${o.post_url?link(o.post_url,'↗'):''}`;}).join('');
+  if(b.promises.length) h+=`<br><br><b style="color:var(--gold)">◎ ${b.promises.length} promise update${b.promises.length>1?'s':''}</b> <span class="faint">— see the Promises tab</span>`;
+  h+=`<br><br><span class="faint">Ask me about any of these for the full detail with sources — e.g. "what's the strongest new OPPO line?"</span>`;
+  return h;
+}
 async function askRomulus(){
   const inp=document.getElementById('chatinput'); const q=inp.value.trim(); if(!q) return;
   inp.value=''; inp.style.height='auto'; document.getElementById('chatsend').disabled=true;
   addMsg('user',esc(q)); chatHistory.push({role:'user',content:q});
   if(!ACTIVE){ addMsg('bot','<span class="faint">👈 First choose a municipality and candidate from the <b>Municipality</b> tab (top of the menu). Then ask ROMULUS anything about that race — vulnerabilities, contradictions, the strongest attack lines.</span>'); chatHistory.pop(); document.getElementById('chatsend').disabled=false; return; }
+  if(BRIEF_RE.test(q)){ addMsg('bot',dailyBrief()); chatHistory.push({role:'assistant',content:'[daily brief]'}); document.getElementById('chatsend').disabled=false; inp.focus(); return; }
   if(!ROMULUS_FN){ addMsg('bot','<span class="faint">The AI analyst isn\'t deployed for this client yet — check back soon. The council record, OPPO findings and candidate profiles are fully available in the tabs above.</span>'); chatHistory.pop(); document.getElementById('chatsend').disabled=false; return; }
   const think=addMsg('bot think','ROMULUS is analysing the dossier…');
   try{
@@ -2569,7 +2601,7 @@ async function askRomulus(){
   document.getElementById('chatsend').disabled=false; inp.focus();
 }
 function wireChat(){
-  const sug=["What are this candidate's strongest vulnerabilities?","Summarize the biggest contradiction, with sources.","What should this candidate lead their OWN campaign with?","Which circulating claims are NOT verifiable in the record?"];
+  const sug=["📋 What's new today?","What are this candidate's strongest vulnerabilities?","Summarize the biggest contradiction, with sources.","What should this candidate lead their OWN campaign with?","Which circulating claims are NOT verifiable in the record?"];
   document.getElementById('chatsug').innerHTML=sug.map(s=>`<button>${esc(s)}</button>`).join('');
   document.getElementById('chatsug').onclick=e=>{ const b=e.target.closest('button'); if(!b)return; document.getElementById('chatinput').value=b.textContent; askRomulus(); };
   document.getElementById('chatsend').onclick=askRomulus;
