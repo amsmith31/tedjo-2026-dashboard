@@ -2640,18 +2640,21 @@ async function renderDocuments(){
 // Edit SUBS to add/update/remove a service (or just ask me to).  cycle:
 //   "monthly" — recurs on `day` of month (omit `day` = amount known, billing day TBD, no countdown)
 //   "fixed"   — one-off/renewal on `date` (YYYY-MM-DD)   ·   "balance" — a credit pool (`balance` + `low`)
-//   "unknown" — details TBD (shown flagged).
+//   "unknown" — details TBD (shown flagged).   `link` — optional URL to that service's pay/top-up page.
 const SUBS=[
-  {name:"Claude Max",                 cat:"AI",    cycle:"monthly", day:29, amount:175,   cur:"USD", note:"Anthropic subscription (separate from the API credits below)"},
-  {name:"Anthropic API credits",      cat:"AI",    cycle:"balance", balance:60, low:20,   cur:"USD", note:"Fleet AI jobs · auto-reload ON · fix the declining card so it stays funded"},
-  {name:"Google One (AI Pro · 5 TB)", cat:"Cloud", cycle:"monthly", day:1,  amount:26.99, cur:"CAD", note:"currency assumed CAD — tell me if USD"},
-  {name:"YouTube Premium",            cat:"Media", cycle:"monthly", day:12, amount:12.99, cur:"CAD", note:"currency assumed CAD — tell me if USD"},
-  {name:"Perplexity Enterprise Pro",  cat:"AI",    cycle:"unknown", note:"⚠ confirm the cost + next billing date"},
-  {name:"GitHub Pro",                 cat:"Infra", cycle:"monthly", amount:4,  cur:"USD", note:"+ up to $15/mo Actions-overage budget · tell me your billing day for a countdown"},
-  {name:"Apify (Starter)",            cat:"Infra", cycle:"monthly", amount:29, cur:"USD", note:"variable under your $40 cap · tell me the billing day"},
-  {name:"Supabase Pro ×2",            cat:"Infra", cycle:"monthly", amount:50, cur:"USD", note:"Crombie + Monica Pro projects (~$25 each) · tell me the billing day"},
-  {name:"Meta Ad Library token",      cat:"Infra", cycle:"fixed",   date:"2026-09-14", amount:0, cur:"", note:"FREE — but RENEW before this or ad-tracking stops fleet-wide"},
+  {name:"Claude Max",                 cat:"AI",    cycle:"monthly", day:29, amount:175,   cur:"USD", link:"https://claude.ai/settings/billing", note:"Anthropic subscription (separate from the API credits below)"},
+  {name:"Anthropic API credits",      cat:"AI",    cycle:"balance", balance:60, low:20,   cur:"USD", link:"https://console.anthropic.com/settings/billing", note:"Fleet AI jobs · auto-reload ON · fix the declining card so it stays funded"},
+  {name:"Perplexity Enterprise Pro",  cat:"AI",    cycle:"monthly", day:5,  amount:45.20, cur:"USD", link:"https://www.perplexity.ai/settings/account", note:"next invoice $45.20 on Aug 5"},
+  {name:"Google One (AI Pro · 5 TB)", cat:"Cloud", cycle:"monthly", day:1,  amount:26.99, cur:"CAD", link:"https://one.google.com/", note:"currency assumed CAD — tell me if USD"},
+  {name:"YouTube Premium",            cat:"Media", cycle:"monthly", day:12, amount:12.99, cur:"CAD", link:"https://www.youtube.com/paid_memberships", note:"currency assumed CAD — tell me if USD"},
+  {name:"GitHub Pro",                 cat:"Infra", cycle:"monthly", day:21, amount:4,     cur:"USD", link:"https://github.com/settings/billing", note:"+ up to $15/mo Actions-overage budget"},
+  {name:"Apify",                      cat:"Infra", cycle:"monthly", day:7,  amount:69,    cur:"USD", link:"https://console.apify.com/billing", note:"⚠ $69 next invoice — above the $40 cap you wanted; worth checking usage in the console"},
+  {name:"Supabase Pro (org 1)",       cat:"Infra", cycle:"monthly", day:14, amount:33,    cur:"USD", link:"https://supabase.com/dashboard/org/_/billing", note:"one of two Pro orgs"},
+  {name:"Supabase Pro (org 2)",       cat:"Infra", cycle:"monthly", day:2,  amount:25,    cur:"USD", link:"https://supabase.com/dashboard/org/_/billing", note:"one of two Pro orgs"},
+  {name:"Meta Ad Library token",      cat:"Infra", cycle:"fixed",   date:"2026-09-14", amount:0, cur:"", link:"https://developers.facebook.com/tools/accesstoken/", note:"FREE — but RENEW before this or ad-tracking stops fleet-wide"},
 ];
+function _money(a){ return a==null?null:("$"+(Number.isInteger(a)?a:a.toFixed(2))); }
+function _payLink(s){ return s.link?`<div style="margin-top:8px"><a href="${esc(s.link)}" target="_blank" rel="noopener" class="chip" style="color:var(--gold);cursor:pointer;text-decoration:none">💳 Pay / top up →</a></div>`:""; }
 function _dim(y,m){ return new Date(y,m+1,0).getDate(); }
 function subNextDue(s){
   const now=new Date();
@@ -2689,19 +2692,19 @@ function renderBilling(){
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">${esc(s.name)}</b>${chip(s.cat)}
         <span style="margin-left:auto;font-weight:800;font-size:16px;color:${lo?"var(--red)":"var(--green)"}">$${s.balance} ${esc(s.cur||"")} left</span></div>
         ${lo?'<div style="color:var(--red);font-size:12.5px;margin-top:8px;font-weight:700">▲ Low — top up</div>':""}
-        ${s.note?`<div class="faint" style="font-size:12px;margin-top:8px">${esc(s.note)}</div>`:""}</div>`; }
-    if(!due){ const amt=s.amount!=null?("$"+s.amount+(s.cur?" "+s.cur:"")):null;
+        ${s.note?`<div class="faint" style="font-size:12px;margin-top:8px">${esc(s.note)}</div>`:""}${_payLink(s)}</div>`; }
+    if(!due){ const amt=s.amount!=null?(_money(s.amount)+(s.cur?" "+s.cur:"")):null;
       const label=s.cycle==="monthly"?(amt?amt+" · monthly · day TBD":"monthly · TBD"):(amt?amt:"details TBD");
       return `<div class="card" style="border-left:3px solid #e0b84c;margin-bottom:10px">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">${esc(s.name)}</b>${chip(s.cat)}
         <span class="faint" style="margin-left:auto;font-size:12px">${esc(label)}</span></div>
-        ${s.note?`<div style="color:#e0b84c;font-size:12.5px;margin-top:8px">${esc(s.note)}</div>`:""}</div>`; }
-    const amt=s.amount!=null?("$"+s.amount+(s.cur?" "+s.cur:"")):"—";
+        ${s.note?`<div style="color:#e0b84c;font-size:12.5px;margin-top:8px">${esc(s.note)}</div>`:""}${_payLink(s)}</div>`; }
+    const amt=s.amount!=null?(_money(s.amount)+(s.cur?" "+s.cur:"")):"—";
     return `<div class="card" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">${esc(s.name)}</b>${chip(s.cat)}
       <span class="faint" style="font-size:12px">${esc(amt)}${s.cycle==="monthly"?" · monthly":s.cycle==="fixed"?" · one-time":""}</span>
       <span class="bill-cd" data-due="${due.toISOString()}" style="margin-left:auto;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums"></span></div>
-      <div class="faint" style="font-size:12px;margin-top:7px">Next: ${esc(due.toLocaleDateString("en-CA",{weekday:"short",year:"numeric",month:"short",day:"numeric"}))}${s.note?" · "+esc(s.note):""}</div></div>`;
+      <div class="faint" style="font-size:12px;margin-top:7px">Next: ${esc(due.toLocaleDateString("en-CA",{weekday:"short",year:"numeric",month:"short",day:"numeric"}))}${s.note?" · "+esc(s.note):""}</div>${_payLink(s)}</div>`;
   };
   box.innerHTML=
     `<div class="pitch"><p style="margin:0"><b>Billing & Renewals</b> — every subscription, bill and credit pool, with a live countdown. Operator-only. <span class="faint">Tell me anytime to add, edit, or remove a line.</span></p></div>`
