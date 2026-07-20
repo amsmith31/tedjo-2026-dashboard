@@ -2565,6 +2565,20 @@ async function docUpload(file, purpose, btn, quiet){
   } finally { if(btn){ btn.disabled=false; btn.textContent="⬆ Upload document"; } }
 }
 async function refreshDocCount(){ try{ const n=await count("client_documents","status=eq.pending"); const el=document.getElementById("ct-docs"); if(el) el.textContent=n?("("+n+")"):""; }catch(e){} }
+// Repair "mojibake" — UTF-8 bytes that were mis-decoded as Windows-1252 (e.g. an em-dash "—" showing as
+// "â€"). SAFE by construction: it only rewrites a string when reinterpreting its chars as CP1252 bytes
+// yields VALID UTF-8 (fatal decode). A correctly-named file (real "—") fails that decode and is returned
+// untouched, so this can never corrupt a clean filename. Display-only; never mutates stored data.
+function demojibake(s){
+  if(!s || !/[Â-Ã-–—’“”€]/.test(s)) return s;
+  const CP={0x20AC:0x80,0x201A:0x82,0x0192:0x83,0x201E:0x84,0x2026:0x85,0x2020:0x86,0x2021:0x87,0x02C6:0x88,0x2030:0x89,0x0160:0x8A,0x2039:0x8B,0x0152:0x8C,0x017D:0x8E,0x2018:0x91,0x2019:0x92,0x201C:0x93,0x201D:0x94,0x2022:0x95,0x2013:0x96,0x2014:0x97,0x02DC:0x98,0x2122:0x99,0x0161:0x9A,0x203A:0x9B,0x0153:0x9C,0x017E:0x9E,0x0178:0x9F};
+  try{ const bytes=[];
+    for(const ch of s){ const c=ch.codePointAt(0);
+      if(c in CP) bytes.push(CP[c]); else if(c<=0xFF) bytes.push(c); else return s; }
+    const out=new TextDecoder("utf-8",{fatal:true}).decode(Uint8Array.from(bytes));
+    return /[�]/.test(out)?s:out;
+  }catch(e){ return s; }
+}
 async function renderDocuments(){
   const box=document.getElementById("view-documents"); if(!box) return;
   box.innerHTML=`<div class="loading"><div class="spinner"></div>Loading documents…</div>`;
@@ -2574,7 +2588,11 @@ async function renderDocuments(){
   const fmtSize=b=>b>1048576?(b/1048576).toFixed(1)+" MB":Math.max(1,Math.round(b/1024))+" KB";
   // Extraction status — tells the client whether ROMULUS can read the file yet (the #1 confusion point).
   const extChip=d=>{ let c,t;
-    if(d.extracted_at==null){ c="#e0b84c"; t="⏳ Reading your document… ROMULUS can analyze it shortly"; }
+    if(d.extracted_at==null){
+      const ageMin=(Date.now()-new Date(d.uploaded_at).getTime())/60000;
+      if(ageMin>4){ c="#e5834b"; t="⚠ We couldn't read this one yet — it may be a scanned, protected or unsupported file. Try re-uploading, or ask your ROMULUS team."; }
+      else { c="#e0b84c"; t="⏳ Reading your document… ROMULUS can analyze it shortly"; }
+    }
     else if((d.mime_type||"").indexOf("image/")===0){ c="#5aa9ff"; t="🖼 Image — ROMULUS reads this visually"; }
     else { c="#2fae63"; t="✅ Ready for ROMULUS"; }
     return `<div style="font-size:11.5px;font-weight:700;color:${c};margin-top:7px">${t}</div>`; };
@@ -2588,14 +2606,14 @@ async function renderDocuments(){
     <button id="docUp" class="fbtn" style="background:var(--gold);color:#1a1206;font-weight:700;border:none;cursor:pointer">⬆ Upload document</button>
   </div>`;
   const card=d=>`<div class="card" style="margin-bottom:10px">
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:14.5px">${esc(d.file_name)}</b> ${badge(d.status)}
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:14.5px">${esc(demojibake(d.file_name))}</b> ${badge(d.status)}
       <span class="faint" style="font-size:12px">${fmtSize(d.size_bytes||0)} · ${fmtD(d.uploaded_at)}${d.uploaded_by?" · "+esc(d.uploaded_by):""}</span></div>
     ${extChip(d)}
     ${d.purpose?`<div class="muted" style="font-size:13px;line-height:1.5;margin-top:8px;border-left:2px solid var(--gold-dim);padding-left:9px">"${esc(d.purpose)}"</div>`:""}
     ${d.review_notes?`<div class="faint" style="font-size:12px;margin-top:6px">Operator note: ${esc(d.review_notes)}</div>`:""}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">
       <button class="fbtn" data-open="${esc(d.storage_path)}" style="cursor:pointer">⬇ Open / download</button>
-      <button class="fbtn" data-discuss="${esc(d.file_name)}" style="cursor:pointer;color:var(--gold)">💬 Discuss in ROMULUS</button>
+      <button class="fbtn" data-discuss="${esc(demojibake(d.file_name))}" style="cursor:pointer;color:var(--gold)">💬 Discuss in ROMULUS</button>
       ${IS_MASTER?`<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
         <button class="fbtn" data-st="reviewed|${esc(d.id)}" style="cursor:pointer">Mark reviewed</button>
         <button class="fbtn" data-st="used|${esc(d.id)}" style="cursor:pointer;color:#2fae63">Used ✓</button>
