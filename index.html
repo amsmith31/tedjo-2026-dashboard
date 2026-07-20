@@ -2644,13 +2644,13 @@ async function renderDocuments(){
 const SUBS=[
   {name:"Claude Max",                 cat:"AI",    cycle:"monthly", day:29, amount:175,   cur:"USD", link:"https://claude.ai/settings/billing", note:"Anthropic subscription (separate from the API credits below)"},
   {name:"Anthropic API credits",      cat:"AI",    cycle:"balance", balance:60, low:20,   cur:"USD", link:"https://console.anthropic.com/settings/billing", note:"Fleet AI jobs · auto-reload ON · fix the declining card so it stays funded"},
-  {name:"Perplexity Enterprise Pro",  cat:"AI",    cycle:"monthly", day:5,  amount:45.20, cur:"USD", link:"https://www.perplexity.ai/settings/account", note:"next invoice $45.20 on Aug 5"},
+  {name:"Perplexity Enterprise Pro",  cat:"AI",    cycle:"monthly", day:5,  amount:45.20, cur:"USD", link:"https://www.perplexity.ai/settings/account", note:"next invoice $45.20 on Aug 5 · login-gated link (the Stripe portal session link is private — never put it in this public file)"},
   {name:"Google One (AI Pro · 5 TB)", cat:"Cloud", cycle:"monthly", day:1,  amount:26.99, cur:"CAD", link:"https://one.google.com/", note:"currency assumed CAD — tell me if USD"},
   {name:"YouTube Premium",            cat:"Media", cycle:"monthly", day:12, amount:12.99, cur:"CAD", link:"https://www.youtube.com/paid_memberships", note:"currency assumed CAD — tell me if USD"},
-  {name:"GitHub Pro",                 cat:"Infra", cycle:"monthly", day:21, amount:4,     cur:"USD", link:"https://github.com/settings/billing", note:"+ up to $15/mo Actions-overage budget"},
-  {name:"Apify",                      cat:"Infra", cycle:"monthly", day:7,  amount:69,    cur:"USD", link:"https://console.apify.com/billing", note:"⚠ $69 next invoice — above the $40 cap you wanted; worth checking usage in the console"},
-  {name:"Supabase Pro (org 1)",       cat:"Infra", cycle:"monthly", day:14, amount:33,    cur:"USD", link:"https://supabase.com/dashboard/org/_/billing", note:"one of two Pro orgs"},
-  {name:"Supabase Pro (org 2)",       cat:"Infra", cycle:"monthly", day:2,  amount:25,    cur:"USD", link:"https://supabase.com/dashboard/org/_/billing", note:"one of two Pro orgs"},
+  {name:"GitHub Pro",                 cat:"Infra", cycle:"monthly", day:21, amount:4,     cur:"USD", link:"https://github.com/account/billing/history", note:"+ up to $15/mo Actions-overage budget"},
+  {name:"Apify",                      cat:"Infra", cycle:"monthly", day:7,  amount:69,    cur:"USD", link:"https://console.apify.com/billing/subscription", note:"⚠ $69 next invoice — above the $40 cap you wanted; worth checking usage in the console"},
+  {name:"Supabase Pro (org 1)",       cat:"Infra", cycle:"monthly", day:14, amount:33,    cur:"USD", link:"https://supabase.com/dashboard/org/iqbsglqbuqpvgckpxlcw/billing", note:"one of two Pro orgs"},
+  {name:"Supabase Pro (org 2)",       cat:"Infra", cycle:"monthly", day:2,  amount:25,    cur:"USD", link:"https://supabase.com/dashboard/org/nrtqjzcgmnqwyyzlcuna/billing", note:"one of two Pro orgs"},
   {name:"Meta Ad Library token",      cat:"Infra", cycle:"fixed",   date:"2026-09-14", amount:0, cur:"", link:"https://developers.facebook.com/tools/accesstoken/", note:"FREE — but RENEW before this or ad-tracking stops fleet-wide"},
 ];
 function _money(a){ return a==null?null:("$"+(Number.isInteger(a)?a:a.toFixed(2))); }
