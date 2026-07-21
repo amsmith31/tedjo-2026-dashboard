@@ -1450,6 +1450,8 @@ function renderHome(){
 // render-guard (which requires is_approved=true) would hide the just-approved card. Only IS_MASTER
 // mutates; RLS enforces that server-side regardless. Per-active-silo.
 let _reviewTab="pending";
+let _rvRace="";   // Review tab: chosen race — "" = nothing picked (mirrors OPPO's _opRace)
+let _rvCand="";   // Review tab: chosen target candidate within the race ("" = show whole race)
 async function refreshReviewCount(){
   try{ const n=await count("attack_messaging","is_active=eq.false&is_approved=not.is.true");   // PENDING only, not declined
     const el=document.getElementById("ct-review"); if(el) el.textContent=n?("("+n+")"):""; }catch(e){}
@@ -1463,6 +1465,21 @@ async function renderReview(){
   try{ declined=await api("/attack_messaging?is_active=eq.false&is_approved=is.true&select=*&limit=500");      declined.sort((a,b)=>tierRank(a.tier)-tierRank(b.tier)); }catch(e){ declined=[]; }
   const idm={}; S.candidates.forEach(c=>idm[c.id]=c.name);
   const dm=_reviewTab==="declined", list=dm?declined:pending;
+  // ---- race → candidate cascade (mirrors the OPPO tab) so a long queue isn't one flat scroll ----
+  // socRaceKey (NOT office_group alone) so Mississauga's office-string-only mayoral rows group right.
+  const cinfo={}; S.candidates.forEach(c=>cinfo[c.id]={name:c.name, grp:socRaceKey(c)});
+  const buckets={}, grp={}, order=[];
+  list.forEach(a=>{ const c=cinfo[a.target_candidate_id]||{}; const k=c.name||"Unattributed";
+    if(!buckets[k]){ buckets[k]=[]; grp[k]=c.grp||"other"; order.push(k); } buckets[k].push(a); });
+  Object.keys(buckets).forEach(k=>buckets[k].sort((a,b)=>tierRank(a.tier)-tierRank(b.tier)));
+  order.sort((a,b)=>(GROUP_RANK[grp[a]]??45)-(GROUP_RANK[grp[b]]??45) || buckets[b].length-buckets[a].length);
+  const races=[...new Set(order.map(k=>grp[k]))].sort((a,b)=>(GROUP_RANK[a]??45)-(GROUP_RANK[b]??45));
+  const singleRace=races.length<=1;
+  if(singleRace) _rvRace=races[0]||"";                                 // one race → no race step
+  if(_rvRace && !races.includes(_rvRace)){ _rvRace=""; _rvCand=""; }    // stale after Pending↔Declined
+  const inRace=_rvRace ? order.filter(k=>grp[k]===_rvRace) : [];
+  if(_rvCand && !inRace.includes(_rvCand)) _rvCand="";                  // stale pick after race change
+  const shown=_rvRace ? (_rvCand?[_rvCand]:inRace) : [];               // whole race, or one candidate
   const card=a=>{ const tgt=idm[a.target_candidate_id]||"target"; const src=allUrls(a.source_citations); const vids=src.filter(u=>ytId(u)); const docs=src.filter(u=>!ytId(u));
     return `<div class="atk" data-rid="${esc(a.id)}">
       <div class="hd"><div style="flex:1"><h3>${esc(a.headline)}</h3>
@@ -1490,9 +1507,20 @@ async function renderReview(){
   const toggle=`<div class="fbar" style="margin:10px 0">
     <button class="fbtn pick ${dm?"":"on"}" data-rvtab="pending">Pending (${pending.length})</button>
     <button class="fbtn pick ${dm?"on":""}" data-rvtab="declined">Declined · recoverable (${declined.length})</button></div>`;
-  box.innerHTML=`<div class="pitch"><p style="margin:0">${intro}</p></div>`+toggle
-    +(list.length?list.map(card).join(""):`<div class="faint" style="padding:22px 4px">${dm?"No declined findings — nothing has been archived.":"Nothing awaiting review. New OPPO findings land here <b>unpublished</b> for your approval before they ever appear on the public OPPO tab."}</div>`);
+  const rchip=(k,n)=>`<button class="fbtn pick ${_rvRace===k?'on':''}" data-rvrace="${esc(k)}">${esc(groupLabel(k))} (${n})</button>`;
+  const cchip=(k,n)=>`<button class="fbtn pick ${_rvCand===k?'on':''}" data-rvcand="${esc(k)}">${esc(k)} (${n})</button>`;
+  const raceBar=(singleRace||!races.length)?"":`<div class="fbar" style="margin:6px 0">${races.map(g=>rchip(g,order.filter(k=>grp[k]===g).length)).join("")}</div>`;
+  const candBar=(_rvRace&&inRace.length>1)?`<div class="fbar" style="margin:6px 0"><button class="fbtn pick ${_rvCand===""?'on':''}" data-rvcand="">All ${esc(groupLabel(_rvRace))} (${inRace.reduce((n,k)=>n+buckets[k].length,0)})</button>${inRace.map(k=>cchip(k,buckets[k].length)).join("")}</div>`:"";
+  const prompt=(!list.length)?"":(!_rvRace?`<div class="loading" style="padding:40px">Select a <b>race</b> above to review its findings.</div>`:"");
+  const groupsHtml=shown.map(k=>{ const vs=buckets[k].filter(a=>tierRank(a.tier)<=1).length;
+      return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${groupLabel(grp[k])?` <span class="chip">${esc(groupLabel(grp[k]))}</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} finding${buckets[k].length!==1?"s":""} · ${vs} strong+</span></div>`
+        + buckets[k].map(card).join(""); }).join("");
+  const emptyMsg=`<div class="faint" style="padding:22px 4px">${dm?"No declined findings — nothing has been archived.":"Nothing awaiting review. New OPPO findings land here <b>unpublished</b> for your approval before they ever appear on the public OPPO tab."}</div>`;
+  box.innerHTML=`<div class="pitch"><p style="margin:0">${intro}</p></div>`+toggle+raceBar+candBar
+    +(list.length?(prompt+groupsHtml):emptyMsg);
   box.querySelectorAll("[data-rvtab]").forEach(b=>b.onclick=()=>{ _reviewTab=b.dataset.rvtab; renderReview(); const m=document.querySelector(".main"); if(m) m.scrollTo(0,0); });
+  box.querySelectorAll("[data-rvrace]").forEach(b=>b.onclick=()=>{ _rvRace=b.dataset.rvrace; _rvCand=""; renderReview(); const m=document.querySelector(".main"); if(m) m.scrollTo(0,0); });
+  box.querySelectorAll("[data-rvcand]").forEach(b=>b.onclick=()=>{ _rvCand=b.dataset.rvcand; renderReview(); const m=document.querySelector(".main"); if(m) m.scrollTo(0,0); });
   const patch=async (rid,body)=>authedFetch(REST+"/attack_messaging?id=eq."+encodeURIComponent(rid),
     {method:"PATCH",headers:{"Prefer":"return=minimal","Content-Type":"application/json"}, body:JSON.stringify(body)});
   const drop=rid=>{ const el=box.querySelector('.atk[data-rid="'+rid.replace(/"/g,'')+'"]'); if(el) el.remove(); };
@@ -2966,7 +2994,7 @@ function connectClient(muni, cand){
   ACTIVE={muni,cand,office:c.office,msgTable:c.msgTable||"candidate_messaging",council:c.council||COUNCIL_DEFAULT,demo:!!c.demo};
   document.getElementById("activeClient").innerHTML=(c.demo?'<span style="color:var(--gold)">DEMONSTRATION</span><br>':'')+"Client: <b>"+esc(cand)+"</b><br>"+esc(muni)+" · "+esc(c.office||"");
   document.getElementById("conn").textContent="connecting…";
-  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="all"; _cg="all"; _ev="all"; _msgSec="all"; _pr="all"; _ward="All"; _chartSel=""; _opRace=""; _opCand="";
+  for(const k in S){ if(Array.isArray(S[k])) S[k]=[]; } S.counts={}; _cf="all"; _cg="all"; _ev="all"; _msgSec="all"; _pr="all"; _ward="All"; _chartSel=""; _opRace=""; _opCand=""; _rvRace=""; _rvCand=""; _reviewTab="pending";
   chatHistory.length=0; const cl=document.getElementById("chatlog"); if(cl) cl.innerHTML="";
   document.querySelector('button[data-tab="home"]').click();
   init();
