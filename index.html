@@ -1515,6 +1515,14 @@ function linkify(raw){ return String(raw||"").split(/(https?:\/\/[^\s]+)/g).map(
 // supporting_evidence doubles as chart-config JSON (tax charts) OR a transcript excerpt (council-clip
 // standard). Render the excerpt ONLY when it's prose — a reviewer must see the transcript that backs a
 // quote before approving. JSON (chart/structured) is skipped here (charts render separately).
+// supporting_evidence is `text` on some silos, `jsonb` on others — so PostgREST hands it back as either a
+// JSON string (needs parsing) or an already-parsed object. Return a chart config from either shape, or null.
+function seChart(se){
+  if(se==null) return null;
+  let cfg=se;
+  if(typeof se==="string"){ try{ cfg=JSON.parse(se); }catch(e){ return null; } }
+  return (cfg&&typeof cfg==="object"&&Array.isArray(cfg.datasets))?cfg:null;
+}
 function evidenceExcerpt(a,maxlen){
   const se=a&&a.supporting_evidence; if(!se||typeof se!=="string") return "";
   const t=se.trim(); if(!t||t[0]==="{"||t[0]==="[") return "";
@@ -1562,7 +1570,7 @@ function renderAttacks(){
         <span>▶ ${t!=null?esc(mmss(t)):"watch"}</span></a>`; }).join("");
     // An OPPO card may carry a data chart (config JSON in supporting_evidence) — e.g. a tax-hike attack.
     // Reuses the same Chart.js engine as the Numbers tab (initChartsIn), drawn after innerHTML lands.
-    let chartCfg=null; try{ chartCfg=JSON.parse(a.supporting_evidence||"null"); }catch(e){}
+    const chartCfg=seChart(a.supporting_evidence);
     const chartHtml=(chartCfg&&chartCfg.datasets)?`<div style="position:relative;height:260px;margin:12px 0 2px"><canvas id="oppochart_${esc(String(a.id||"c").replace(/[^a-z0-9]/gi,""))}" data-chart='${esc(JSON.stringify(chartCfg))}' role="img" aria-label="${esc(a.headline||"chart")}"></canvas></div>`:"";
     return `<div class="atk">
       <div class="hd"><div style="flex:1">
