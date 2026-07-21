@@ -1512,8 +1512,12 @@ async function renderReview(){
   const raceBar=(singleRace||!races.length)?"":`<div class="fbar" style="margin:6px 0">${races.map(g=>rchip(g,order.filter(k=>grp[k]===g).length)).join("")}</div>`;
   const candBar=(_rvRace&&inRace.length>1)?`<div class="fbar" style="margin:6px 0"><button class="fbtn pick ${_rvCand===""?'on':''}" data-rvcand="">All ${esc(groupLabel(_rvRace))} (${inRace.reduce((n,k)=>n+buckets[k].length,0)})</button>${inRace.map(k=>cchip(k,buckets[k].length)).join("")}</div>`:"";
   const prompt=(!list.length)?"":(!_rvRace?`<div class="loading" style="padding:40px">Select a <b>race</b> above to review its findings.</div>`:"");
-  const groupsHtml=shown.map(k=>{ const vs=buckets[k].filter(a=>tierRank(a.tier)<=1).length;
-      return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${groupLabel(grp[k])?` <span class="chip">${esc(groupLabel(grp[k]))}</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} finding${buckets[k].length!==1?"s":""} · ${vs} strong+</span></div>`
+  const groupsHtml=shown.map(k=>{
+      const strongIds=buckets[k].filter(a=>tierRank(a.tier)<=1).map(a=>a.id);   // Very Strong + Strong only
+      const vs=strongIds.length;
+      // Pending only: approve this candidate's Strong+ set in one click (still a deliberate, confirmed action).
+      const bulkBtn=(!dm && vs)?`<button class="rv-bulk" data-ids='${esc(JSON.stringify(strongIds))}' data-cand="${esc(k)}" style="margin-left:10px;background:#1f8f4e;color:#fff;border:none;padding:5px 12px;border-radius:6px;font-weight:700;cursor:pointer;font-size:12px;vertical-align:middle">✓ Approve ${vs} Strong+ →</button>`:"";
+      return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${groupLabel(grp[k])?` <span class="chip">${esc(groupLabel(grp[k]))}</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} finding${buckets[k].length!==1?"s":""} · ${vs} strong+</span>${bulkBtn}</div>`
         + buckets[k].map(card).join(""); }).join("");
   const emptyMsg=`<div class="faint" style="padding:22px 4px">${dm?"No declined findings — nothing has been archived.":"Nothing awaiting review. New OPPO findings land here <b>unpublished</b> for your approval before they ever appear on the public OPPO tab."}</div>`;
   box.innerHTML=`<div class="pitch"><p style="margin:0">${intro}</p></div>`+toggle+raceBar+candBar
@@ -1527,6 +1531,16 @@ async function renderReview(){
   box.querySelectorAll(".rv-approve").forEach(btn=>btn.onclick=async()=>{ btn.disabled=true; btn.textContent="…";
     const r=await patch(btn.dataset.rid,{is_active:true,is_approved:true});   // BOTH — or the OPPO guard hides it
     if(r.ok){ drop(btn.dataset.rid); refreshReviewCount(); } else { btn.disabled=false; btn.textContent="✓ Approve → publish"; alert("Approve failed: HTTP "+r.status); } });
+  box.querySelectorAll(".rv-bulk").forEach(btn=>btn.onclick=async()=>{
+    let ids; try{ ids=JSON.parse(btn.dataset.ids); }catch(e){ ids=[]; }
+    if(!ids.length) return;
+    if(!confirm(`Approve and publish ${ids.length} Strong+ finding${ids.length!==1?"s":""} for ${btn.dataset.cand} to the public OPPO tab?\n\nThey go live immediately — you can Decline any of them later.`)) return;
+    btn.disabled=true; btn.textContent="Approving…";
+    let ok=0, fail=0;
+    for(const id of ids){ const r=await patch(id,{is_active:true,is_approved:true}); r.ok?ok++:fail++; }   // BOTH flags — same as single approve
+    refreshReviewCount();
+    if(fail) alert(`Approved ${ok} of ${ids.length}. ${fail} failed — reopen the candidate and retry.`);
+    renderReview(); });
   box.querySelectorAll(".rv-decline").forEach(btn=>btn.onclick=async()=>{ if(!confirm("Decline this card? It's archived in the Declined tab — recoverable anytime, never deleted.")) return; btn.disabled=true; btn.textContent="…";
     const r=await patch(btn.dataset.rid,{is_active:false,is_approved:true});   // FT = declined/archived
     if(r.ok){ drop(btn.dataset.rid); refreshReviewCount(); renderReview(); } else { btn.disabled=false; btn.textContent="✕ Decline"; alert("Decline failed: HTTP "+r.status); } });
