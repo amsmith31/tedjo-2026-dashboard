@@ -1594,7 +1594,10 @@ function renderAttacks(){
   if(_opRace && !races.includes(_opRace)){ _opRace=""; _opCand=""; }         // silo has no such race
   const inRace = _opRace ? order.filter(k=>grp[k]===_opRace) : [];
   if(_opCand && !inRace.includes(_opCand)) _opCand="";                       // stale pick after race change
-  const shown = _opCand ? [_opCand] : [];
+  // Default view = the WHOLE field, grouped by race then candidate (no click-gate). Chips just filter:
+  // pick a race → that race's candidates; pick a candidate → just them. Nothing picked → everything.
+  const shown = _opCand ? [_opCand] : (_opRace ? inRace : order);
+  const showRaceHdrs = !_opCand && !singleRace;                              // race section headers only in the multi-race grouped view
   const raceOf=g=>groupLabel(g);
   const linked=S.attacks.filter(a=>firstUrl(a.source_citations)).length;
   const pendingN=S.attacks.filter(noLinkButCited).length;
@@ -1640,19 +1643,21 @@ function renderAttacks(){
     </div>`; };
   const rchip=(k,l,n)=>`<button class="fbtn pick ${_opRace===k?'on':''}" data-oprace="${esc(k)}">${esc(l)}${n!=null?' ('+n+')':''}</button>`;
   const cchip=(k,n)=>`<button class="fbtn pick ${_opCand===k?'on':''}" data-opcand="${esc(k)}">${esc(k)} (${n})</button>`;
-  const raceBar = singleRace ? "" : `<div class="fbar">${races.map(g=>rchip(g,groupLabel(g),order.filter(k=>grp[k]===g).length)).join("")}</div>`;
-  const candBar = _opRace ? `<div class="fbar">${inRace.map(k=>cchip(k,buckets[k].length)).join("")}</div>` : "";
-  const prompt = !_opRace
-    ? `<div class="loading" style="padding:48px">Select a <b>race</b> above to begin.</div>`
-    : (!_opCand ? `<div class="loading" style="padding:48px">Select a <b>candidate</b>${singleRace?"":" in "+esc(groupLabel(_opRace))} to load their file.</div>` : "");
-
+  // Chips are FILTERS, not gates: an "All races" chip clears the filter and shows the whole field grouped.
+  const allRaceChip=`<button class="fbtn pick ${_opRace===''?'on':''}" data-oprace="">All races (${order.length})</button>`;
+  const raceBar = singleRace ? "" : `<div class="fbar">${allRaceChip}${races.map(g=>rchip(g,groupLabel(g),order.filter(k=>grp[k]===g).length)).join("")}</div>`;
+  const candBar = _opRace ? `<div class="fbar"><button class="fbtn pick ${_opCand===''?'on':''}" data-opcand="">All ${esc(groupLabel(_opRace))} (${inRace.reduce((n,k)=>n+buckets[k].length,0)})</button>${inRace.map(k=>cchip(k,buckets[k].length)).join("")}</div>` : "";
+  const empty = !S.attacks.length ? `<div class="loading" style="padding:48px">No approved opposition findings yet. Approve findings in the <b>Review</b> tab and they appear here, grouped by race and candidate.</div>` : "";
+  let lastRace=null;
+  const groups = shown.map(k=>{ const vs=buckets[k].filter(a=>tierRank(a.tier)<=1).length;
+      let raceHdr="";
+      if(showRaceHdrs && grp[k]!==lastRace){ lastRace=grp[k];
+        raceHdr=`<div style="margin:26px 0 2px;font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid #2a3140;padding-bottom:6px">${esc(groupLabel(grp[k]))}</div>`; }
+      return raceHdr + `<div class="sect-title" style="margin:16px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${(!showRaceHdrs&&raceOf(grp[k]))?` <span class="chip">${esc(raceOf(grp[k]))}</span>`:""}${ALLIES[k]?` <span class="chip" style="background:rgba(220,40,40,.16);color:var(--red);border-color:rgba(220,40,40,.35)" title="Strategic ally of a mayoral rival — damaging this target indirectly weakens ${esc(ALLIES[k])}">⚑ ${esc(ALLIES[k])} ally</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} findings · ${vs} strong+</span></div>`
+        + buckets[k].map(card).join(""); }).join("");
   document.getElementById("view-attacks").innerHTML=
-    `<div class="pitch"><p style="margin:0"><b>${S.attacks.length}</b> opposition findings, organized by target and ranked strongest first (Very Strong → Weak). <b>${linked}</b> link to a primary source${pendingN?` · <span style="color:#e0b84c">${pendingN} locating a source</span>`:""}. ${singleRace?"Pick a rival":"Pick a race, then a rival"} to load their file.</p></div>`
-    + raceBar + candBar
-    + prompt
-    + shown.map(k=>{ const vs=buckets[k].filter(a=>tierRank(a.tier)<=1).length;
-        return `<div class="sect-title" style="margin:22px 0 10px;font-size:15px;color:var(--gold)">🎯 ${esc(k)}${raceOf(grp[k])?` <span class="chip">${esc(raceOf(grp[k]))}</span>`:""}${ALLIES[k]?` <span class="chip" style="background:rgba(220,40,40,.16);color:var(--red);border-color:rgba(220,40,40,.35)" title="Strategic ally of a mayoral rival — damaging this target indirectly weakens ${esc(ALLIES[k])}">⚑ ${esc(ALLIES[k])} ally</span>`:""} <span class="faint" style="font-weight:400;font-size:12px">· ${buckets[k].length} findings · ${vs} strong+</span></div>`
-          + buckets[k].map(card).join(""); }).join("");
+    `<div class="pitch"><p style="margin:0"><b>${S.attacks.length}</b> opposition findings, organized by race and candidate, ranked strongest first (Very Strong → Weak). <b>${linked}</b> link to a primary source${pendingN?` · <span style="color:#e0b84c">${pendingN} locating a source</span>`:""}.${singleRace?"":" Filter by race or rival above, or scroll the full field."}</p></div>`
+    + raceBar + candBar + empty + groups;
   initChartsIn(document.getElementById("view-attacks"));   // draw any OPPO chart-attack cards
   // Delegated once; innerHTML replaces the chips on every render.
   const vc=document.getElementById("view-attacks");
