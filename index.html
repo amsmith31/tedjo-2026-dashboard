@@ -1090,6 +1090,17 @@ const COUNCIL_DEFAULT = {
     date:m.motion_date, item:m.agenda_item||"", topic:m.topic||"", doc:"",
     council:m.outcome||"", myVote:r.vote, minutes:r.source_url||m.source_url }; }
 };
+// Crombie's council_votes are candidate_id-based (no candidate_name_raw column), and her FULL record is
+// ~4,650 votes across 2014→2024 — far beyond the 1,500 default cap. So: filter to HER votes and page
+// through ALL of them (`paged:true`), ordered by a stable top-level column for clean pagination. Client
+// sorts by date. This is why the tab used to bottom out ~April 2024 despite the data going back to 2014.
+const COUNCIL_CROMBIE = {
+  paged: true,
+  q: "/council_votes?candidate_id=eq.ff500205-5c96-48f7-9534-36f8c8aa0ba2&select=vote,source_url,council_motions(motion_date,agenda_item,topic,motion_text,outcome,source_url)&order=id.asc",
+  map: r => { const m=r.council_motions||{}; return {
+    date:m.motion_date, item:m.agenda_item||"", topic:m.topic||"", doc:"",
+    council:m.outcome||"", myVote:r.vote, minutes:r.source_url||m.source_url }; }
+};
 const COUNCIL_BURTON = {
   q: "/council_votes?candidate_name_raw=eq.rob-burton&select=vote,council_motions(item_number,motion_type,title,description,outcome,vote_for_count,vote_against_count,vote_abstain_count,source_url,council_meetings(meeting_date,minutes_html_url,minutes_pdf_url))&limit=1500",
   map: r => { const m=r.council_motions||{}, mt=m.council_meetings||{};
@@ -1135,7 +1146,7 @@ const COUNCIL_IJAZ = {
                council:r.result||"", myVote:r.vote, minutes:r.source_url, issue:r.issue_area||"" }) };
 const CLIENTS = {
   "Mississauga": { candidates: {
-    "Bonnie Crombie": { office:"Mayor · 2026", status:"live", fn:"romulus", login:"crombie@romulus.vote",
+    "Bonnie Crombie": { office:"Mayor · 2026", status:"live", fn:"romulus", login:"crombie@romulus.vote", council:COUNCIL_CROMBIE,
       url:"https://lblxjbomfusfhsnwehez.supabase.co",
       key:"sb_publishable_aDVuWrjpxpn1Zo4Dyix3mw_nkTtxipb",
       note:"Repurposed from the Alvin Tedjo demo 2026-07-17 — now a live client (Bonnie Crombie, Mayor of Mississauga). Tedjo is a rival in her race." }
@@ -1372,6 +1383,7 @@ async function init(){
       await Promise.all(_cfg.candidates.filter(cc=>!cc.motions).map(async cc=>{ S.councilSummary[cc.raw]=await candSummary(cc.raw); }));
       const dflt=await apiPaged(_cfg.q(_councilCand), (S.councilSummary[_councilCand]||{}).total);
       S.dissents=dflt.map(_cfg.map); }
+    else if(_cfg.paged){ const _full=await apiPaged(_cfg.q, 8000); if(_full&&_full.length) S.dissents=_full.map(_cfg.map); }  // non-perCandidate but full-record (Crombie): page past the 1,500 cap
     const _dissCount=_cfg.perCandidate ? Object.values(S.councilSummary).reduce((a,s)=>a+(s.NO||0),0) : S.dissents.filter(d=>posCat(d.myVote)==="NO").length;
     S.counts={meetings, votes, dissents:_dissCount, attacks:attacks.length, evidence:evidence.length, candidates:candidates.length,
               vulns:evidence.filter(e=>String(e.source_type||"").includes("vulnerability")).length};
@@ -1812,7 +1824,7 @@ function renderCouncil(){
     <tbody id="ctbody"></tbody></table>`;
   const draw=()=>{ const q=(document.getElementById("csearch").value||"").toLowerCase();
     const list=all.filter(sets[_cf]).filter(r=>!q||String(r.topic||"").toLowerCase().includes(q)||String(r.item||"").toLowerCase().includes(q));
-    document.getElementById("ctbody").innerHTML=list.slice(0,600).map(r=>councilRow(r,who,perC)).join("")
+    document.getElementById("ctbody").innerHTML=list.slice(0,6000).map(r=>councilRow(r,who,perC)).join("")
       ||'<tr><td colspan="5" class="muted" style="padding:16px">No matching votes.</td></tr>'; };
   document.getElementById("csearch").oninput=draw;
   const csc=document.getElementById("ccandsel"); if(csc) csc.onchange=e=>{ _cf="all"; _cissue="all"; loadCouncilCand(e.target.value); };
