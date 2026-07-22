@@ -2546,6 +2546,35 @@ async function siloCount(silo, table, q){
     if(!r.ok) return null; const cr=r.headers.get("content-range"); return cr?(parseInt(cr.split("/")[1])||0):0;
   }catch(e){ return null; }
 }
+// ── DATA-FRESHNESS: the SECOND detection layer ──────────────────────────────────────────────────
+// records_added (the output grade in siloJobs) can be GAMED: a scraper that upserts the same N rows
+// reports "productive" forever — Meta ads and YouTube do exactly this (always "+5"/"+20"), so a
+// dead-but-green Meta/YouTube scraper is invisible to the output grade alone. This layer ignores what
+// the run CLAIMS and checks the ACTUAL newest-row age per content table. Two independent detectors →
+// a silent failure has to beat BOTH to hide. Recess-safe: only always-on sources flag (news/web/social);
+// council/ads/videos/mentions lull legitimately and are never checked here.
+const FRESH_TABLES = [
+  {t:"news_items",    cols:["created_at","published_at"],               maxH:60,  label:"News"},
+  {t:"web_snapshots", cols:["retrieved_at","created_at","captured_at"], maxH:60,  label:"Web"},
+  {t:"social_posts",  cols:["posted_at","created_at"],                  maxH:150, label:"Social"},
+];
+async function siloFreshness(silo){
+  const now=Date.now();
+  return Promise.all(FRESH_TABLES.map(async f=>{
+    for(const col of f.cols){
+      try{
+        const r=await siloFetch(silo, "/"+f.t+"?select="+encodeURIComponent(col)+"&order="+encodeURIComponent(col)+".desc.nullslast&limit=1");
+        if(!r.ok){ if(r.status===400||r.status===404) continue; return {label:f.label, unknown:true}; }  // col/table absent → try next
+        const rows=await r.json();
+        if(!Array.isArray(rows)) return {label:f.label, unknown:true};
+        if(!rows.length) return {label:f.label, ageH:null, stale:true, empty:true};  // exists but 0 rows = stale for an always-on source
+        const v=rows[0][col];
+        if(v){ const ageH=(now-Date.parse(v))/36e5; if(!isNaN(ageH)) return {label:f.label, ageH, stale:ageH>f.maxH, maxH:f.maxH}; }
+      }catch(e){}
+    }
+    return {label:f.label, unknown:true};   // no usable timestamp column — don't guess, don't false-alarm
+  }));
+}
 // Is the silo's ROMULUS chat edge function deployed + responding? OPTIONS is the CORS
 // preflight, so it never runs the model. null = no fn configured; false = configured but down.
 async function siloFnUp(silo){
@@ -2623,14 +2652,21 @@ async function siloHealth(muni, cand, c){
     siloCount(c,"candidates"), siloCount(c,"attack_messaging"), siloCount(c,"attack_messaging","is_active=eq.false&is_approved=not.is.true"),
     siloCount(c,c.msgTable||"candidate_messaging"), siloCount(c,"candidate_promises"), siloCount(c,"council_evidence"),
     siloCount(c,"council_votes"), siloCount(c,"political_ads"), siloCount(c,"news_items") ]);
-  const [fn,jobs]=await Promise.all([siloFnUp(c), siloJobs(c)]);
+  const [fn,jobs,fresh]=await Promise.all([siloFnUp(c), siloJobs(c), siloFreshness(c)]);
   const jobsBad=Array.isArray(jobs)?jobs.filter(j=>j.issues.length).length:0;
+  const freshBad=Array.isArray(fresh)?fresh.filter(x=>x.stale).length:0;
   const metrics=[{k:"Candidates",v:candidates},{k:"OPPO",v:oppo},{k:"My Message",v:message},{k:"Promises",v:promises},
     {k:"Evidence",v:evidence},{k:"Council votes",v:votes},{k:"Political ads",v:ads},{k:"News",v:news},
-    {k:"Pipelines",v:Array.isArray(jobs)?((jobs.length-jobsBad)+"/"+jobs.length):null}];
+    {k:"Pipelines",v:Array.isArray(jobs)?((jobs.length-jobsBad)+"/"+jobs.length):null},
+    {k:"Fresh",v:Array.isArray(fresh)?((fresh.filter(x=>!x.stale&&!x.unknown).length)+"/"+fresh.filter(x=>!x.unknown).length):null}];
   const flags=[];
   // Pipeline failures rank above data gaps: a count can look healthy while nothing new is arriving.
   if(Array.isArray(jobs)) jobs.forEach(j=>j.issues.forEach(i=>flags.push({sev:i.sev,t:j.name+" — "+i.t,fix:i.fix})));
+  // Data-freshness layer: an always-on content table with no fresh rows = a silent failure the output
+  // grade can miss (upsert-inflation). Amber — a stale content table is worth a look, not a hard outage.
+  if(Array.isArray(fresh)) fresh.filter(x=>x.stale).forEach(x=>flags.push({sev:"amber",
+    t:x.label+" data stale — "+(x.empty?"table empty":Math.round(x.ageH)+"h old, no fresh rows"),
+    fix:"Scraper likely runs green but isn't adding fresh rows (WAF/403/empty, or records_added counts upserts not inserts). Check the source/proxy — this is exactly what a green exit code hides."}));
   if(!signedIn) flags.push({sev:"red",t:"No session for this silo",fix:"Sign out and back in as master, or confirm the master login exists in this project."});
   if(candidates===null) flags.push({sev:"red",t:"candidates unreachable",fix:"Silo down or RLS mis-set — this client's whole dashboard will be empty."});
   else if(candidates===0) flags.push({sev:"amber",t:"No candidates loaded",fix:"Silo chat: load the race's candidates."});
