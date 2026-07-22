@@ -1097,6 +1097,14 @@ const COUNCIL_DEFAULT = {
 const COUNCIL_CROMBIE = {
   paged: true,
   tenureNote: "Bonnie Crombie was Mayor of Mississauga from December 2014 to January 12, 2024 — so this is her <b>complete</b> recorded voting record (2014–2024), and it correctly ends there. The current council (2024→) is still monitored for opposition research: Carolyn Parrish and Alvin Tedjo have votes on file through June 2026.",
+  // Candidate-id picker (Crombie's votes are candidate_id-based). Lets the tab span the whole council
+  // continuum: Crombie's complete record AND the current council (her rivals) through 2026.
+  picker: [
+    {id:"ff500205-5c96-48f7-9534-36f8c8aa0ba2", name:"Bonnie Crombie", note:"your client · Mayor 2014–Jan 2024"},
+    {id:"db39bb20-e854-4170-af84-bb83c821400c", name:"Carolyn Parrish", note:"current Mayor 2024→ · rival"},
+    {id:"326b8475-7ca0-478b-845b-4a7e04f822ae", name:"Alvin Tedjo", note:"Councillor 2022→ · rival"}
+  ],
+  qFor: id => "/council_votes?candidate_id=eq."+id+"&select=vote,source_url,council_motions(motion_date,agenda_item,topic,motion_text,outcome,source_url)&order=id.asc",
   q: "/council_votes?candidate_id=eq.ff500205-5c96-48f7-9534-36f8c8aa0ba2&select=vote,source_url,council_motions(motion_date,agenda_item,topic,motion_text,outcome,source_url)&order=id.asc",
   // Show the actual agenda-item TITLE (motion_text) — not just "General Committee"/a bare item number.
   map: r => { const m=r.council_motions||{}; return {
@@ -1385,7 +1393,10 @@ async function init(){
       await Promise.all(_cfg.candidates.filter(cc=>!cc.motions).map(async cc=>{ S.councilSummary[cc.raw]=await candSummary(cc.raw); }));
       const dflt=await apiPaged(_cfg.q(_councilCand), (S.councilSummary[_councilCand]||{}).total);
       S.dissents=dflt.map(_cfg.map); }
-    else if(_cfg.paged){ const _full=await apiPaged(_cfg.q, 8000); if(_full&&_full.length) S.dissents=_full.map(_cfg.map); }  // non-perCandidate but full-record (Crombie): page past the 1,500 cap
+    else if(_cfg.paged){  // non-perCandidate but full-record (Crombie): page past the 1,500 cap
+      if(_cfg.picker){ if(!_cfg.picker.some(p=>p.id===_councilPick)) _councilPick=_cfg.picker[0].id; }
+      const _pq=(_cfg.picker&&_cfg.qFor)?_cfg.qFor(_councilPick):_cfg.q;
+      const _full=await apiPaged(_pq, 8000); if(_full&&_full.length) S.dissents=_full.map(_cfg.map); }
     const _dissCount=_cfg.perCandidate ? Object.values(S.councilSummary).reduce((a,s)=>a+(s.NO||0),0) : S.dissents.filter(d=>posCat(d.myVote)==="NO").length;
     S.counts={meetings, votes, dissents:_dissCount, attacks:attacks.length, evidence:evidence.length, candidates:candidates.length,
               vulns:evidence.filter(e=>String(e.source_type||"").includes("vulnerability")).length};
@@ -1743,6 +1754,7 @@ let _msgSec="all";
 let _pr="all";
 let _ward="All";
 let _councilCand="";
+let _councilPick="";   // Council Record candidate-id picker (Crombie silo: Crombie / Parrish / Tedjo)
 let _cissue="all";
 let _social="all";
 let _socRace="all";
@@ -1773,10 +1785,16 @@ async function loadCouncilCand(raw){ const cf=ACTIVE&&ACTIVE.council; if(!cf||!c
   if(sel&&sel.motions&&cf.motionsQ){ const rows=await apiPaged(cf.motionsQ, 1500); S.dissents=(rows||[]).map(cf.motionsMap); renderCouncil(); return; }
   const tot=((S.councilSummary||{})[raw]||{}).total||2000;
   const rows=await apiPaged(cf.q(raw), tot); S.dissents=(rows||[]).map(cf.map); renderCouncil(); }
+// Candidate-id picker (Crombie silo): swap whose full council record is shown, page all their votes.
+async function loadCouncilPick(id){ const cf=ACTIVE&&ACTIVE.council; if(!cf||!cf.picker||!cf.qFor) return;
+  _councilPick=id; _cf="all"; _cissue="all";
+  const box=document.getElementById("view-council"); if(box) box.innerHTML='<div class="loading"><div class="spinner"></div>Loading council record…</div>';
+  const rows=await apiPaged(cf.qFor(id), 8000); S.dissents=(rows||[]).map(cf.map); renderCouncil(); }
 function renderCouncil(){
   const cf=ACTIVE&&ACTIVE.council, perC=cf&&cf.perCandidate;
-  const selCand=perC?(cf.candidates.find(x=>x.raw===_councilCand)||cf.candidates[0]):null;
-  const who= perC ? selCand.name.split(" ").slice(-1)[0] : ((ACTIVE&&ACTIVE.cand)||"Candidate").split(" ").slice(-1)[0];
+  const pickCand=(cf&&cf.picker)?(cf.picker.find(p=>p.id===_councilPick)||cf.picker[0]):null;
+  const selCand=perC?(cf.candidates.find(x=>x.raw===_councilCand)||cf.candidates[0]):pickCand;
+  const who= (selCand?selCand.name:((ACTIVE&&ACTIVE.cand)||"Candidate")).split(" ").slice(-1)[0];
   let all=S.dissents.map(d=>({...d, cat:posCat(d.myVote)}))
     .sort((a,b)=>(b.date||"").localeCompare(a.date||""));
   if(perC && _cissue!=="all") all=all.filter(r=>(r.issue||"")===_cissue);
@@ -1792,6 +1810,12 @@ function renderCouncil(){
       <select id="ccandsel" style="background:#141821;color:#e8edf5;border:1px solid #2a3140;border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600">${cf.candidates.map(x=>`<option value="${esc(x.raw)}" ${x.raw===_councilCand?"selected":""}>${esc(x.name)} — ${esc(x.note||"")}</option>`).join("")}</select>`:""}
       <label class="faint" style="font-size:12px${showCandPicker?';margin-left:6px':''}">Issue</label>
       <select id="cissuesel" style="background:#141821;color:#e8edf5;border:1px solid #2a3140;border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600"><option value="all">All issues</option>${issueOpts.map(([k,n])=>`<option value="${esc(k)}" ${k===_cissue?"selected":""}>${esc(k)} (${n})</option>`).join("")}</select>
+    </div>` : "";
+  // Council-record candidate picker (non-perCandidate, id-based — Crombie silo): switch whose full
+  // record is shown so the tab spans Crombie AND the current council (Parrish/Tedjo) as a continuum.
+  const pickerSel = (cf&&cf.picker&&!perC) ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+      <label class="faint" style="font-size:12px">Whose record</label>
+      <select id="cpicksel" style="background:#141821;color:#e8edf5;border:1px solid #2a3140;border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600">${cf.picker.map(p=>`<option value="${esc(p.id)}" ${p.id===_councilPick?"selected":""}>${esc(p.name)} — ${esc(p.note||"")}</option>`).join("")}</select>
     </div>` : "";
   // Pre-Rod all-council record: a different shape (no per-candidate vote) — render the motions with
   // their outcome + vote split instead of the dissent view. candSel (the councillor dropdown) is
@@ -1818,7 +1842,7 @@ function renderCouncil(){
     return;
   }
   const srcHdr = perC ? "Source" : "Minutes";
-  document.getElementById("view-council").innerHTML=candSel+`
+  document.getElementById("view-council").innerHTML=candSel+pickerSel+`
     ${cf&&cf.tenureNote?`<div class="pitch" style="border-color:var(--gold);margin-bottom:11px"><p style="margin:0">⏱ ${cf.tenureNote}</p></div>`:""}
     <div class="pitch"><p style="margin:0">Every recorded <b>${esc(selCand?selCand.name:who)}</b> vote, matched to how council ruled and linked to the primary source — <b>${c.NO}</b> dissents (NO) · <b>${c.ABSENT}</b> absences · <b>${c.YES}</b> supported (YES). Two columns: the council result, and ${esc(who)}'s own position.</p></div>
     <div class="fbar">${chip('notable','★ Notable ('+(c.NO+c.ABSENT)+')')}${chip('NO','Dissents ('+c.NO+')')}${chip('ABSENT','Absences ('+c.ABSENT+')')}${chip('YES','Supported ('+c.YES+')')}${chip('all','All ('+all.length+')')}</div>
@@ -1832,6 +1856,7 @@ function renderCouncil(){
   document.getElementById("csearch").oninput=draw;
   const csc=document.getElementById("ccandsel"); if(csc) csc.onchange=e=>{ _cf="all"; _cissue="all"; loadCouncilCand(e.target.value); };
   const cis=document.getElementById("cissuesel"); if(cis) cis.onchange=e=>{ _cissue=e.target.value; renderCouncil(); };
+  const cps=document.getElementById("cpicksel"); if(cps) cps.onchange=e=>{ loadCouncilPick(e.target.value); };
   const cvc=document.getElementById("view-council");
   if(cvc && !cvc.__cfBound){ cvc.__cfBound=true; cvc.addEventListener("click",function(e){ const b=e.target.closest("button[data-f]"); if(!b) return; _cf=b.dataset.f; renderCouncil(); var m=document.querySelector(".main"); if(m) m.scrollTo(0,0); }); }
   draw();
@@ -1851,7 +1876,9 @@ function renderEvidence(){
   const idm={}; S.candidates.forEach(c=>idm[c.id]={name:c.name, group:c.office_group||"", principal:c.is_principal});
   // scored, actionable findings only — the noise (unscored) is excluded from the display
   const items=S.evidence.filter(e=>e.political_utility_score!=null).map(e=>{ const c=idm[e.candidate_id]||{};
-    return Object.assign({}, e, {target:e.councillor_label||c.name||"Unattributed", grp:c.group||"other", principal:c.principal}); });
+    // Group by the candidate's CANONICAL name when linked (c.name), not the free-text councillor_label —
+    // else the same person splits into buckets ("Alvin Tedjo" vs "Tedjo", same candidate_id).
+    return Object.assign({}, e, {target:c.name||e.councillor_label||"Unattributed", grp:c.group||"other", principal:c.principal}); });
   const buckets={}, order=[];
   items.forEach(e=>{ const k=e.target; if(!buckets[k]){buckets[k]=[]; order.push(k);} buckets[k].push(e); });
   order.sort((a,b)=>{ const ga=GROUP_RANK[(buckets[a][0]||{}).grp]??45, gb=GROUP_RANK[(buckets[b][0]||{}).grp]??45;
