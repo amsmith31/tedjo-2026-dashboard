@@ -1097,8 +1097,9 @@ const COUNCIL_DEFAULT = {
 const COUNCIL_CROMBIE = {
   paged: true,
   q: "/council_votes?candidate_id=eq.ff500205-5c96-48f7-9534-36f8c8aa0ba2&select=vote,source_url,council_motions(motion_date,agenda_item,topic,motion_text,outcome,source_url)&order=id.asc",
+  // Show the actual agenda-item TITLE (motion_text) — not just "General Committee"/a bare item number.
   map: r => { const m=r.council_motions||{}; return {
-    date:m.motion_date, item:m.agenda_item||"", topic:m.topic||"", doc:"",
+    date:m.motion_date, item:m.agenda_item||"", topic:m.motion_text||m.topic||"", doc:"",
     council:m.outcome||"", myVote:r.vote, minutes:r.source_url||m.source_url }; }
 };
 const COUNCIL_BURTON = {
