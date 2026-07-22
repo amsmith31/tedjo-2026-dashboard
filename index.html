@@ -1096,6 +1096,7 @@ const COUNCIL_DEFAULT = {
 // sorts by date. This is why the tab used to bottom out ~April 2024 despite the data going back to 2014.
 const COUNCIL_CROMBIE = {
   paged: true,
+  tenureNote: "Bonnie Crombie was Mayor of Mississauga from December 2014 to January 12, 2024 — so this is her <b>complete</b> recorded voting record (2014–2024), and it correctly ends there. The current council (2024→) is still monitored for opposition research: Carolyn Parrish and Alvin Tedjo have votes on file through June 2026.",
   q: "/council_votes?candidate_id=eq.ff500205-5c96-48f7-9534-36f8c8aa0ba2&select=vote,source_url,council_motions(motion_date,agenda_item,topic,motion_text,outcome,source_url)&order=id.asc",
   // Show the actual agenda-item TITLE (motion_text) — not just "General Committee"/a bare item number.
   map: r => { const m=r.council_motions||{}; return {
@@ -1818,6 +1819,7 @@ function renderCouncil(){
   }
   const srcHdr = perC ? "Source" : "Minutes";
   document.getElementById("view-council").innerHTML=candSel+`
+    ${cf&&cf.tenureNote?`<div class="pitch" style="border-color:var(--gold);margin-bottom:11px"><p style="margin:0">⏱ ${cf.tenureNote}</p></div>`:""}
     <div class="pitch"><p style="margin:0">Every recorded <b>${esc(selCand?selCand.name:who)}</b> vote, matched to how council ruled and linked to the primary source — <b>${c.NO}</b> dissents (NO) · <b>${c.ABSENT}</b> absences · <b>${c.YES}</b> supported (YES). Two columns: the council result, and ${esc(who)}'s own position.</p></div>
     <div class="fbar">${chip('notable','★ Notable ('+(c.NO+c.ABSENT)+')')}${chip('NO','Dissents ('+c.NO+')')}${chip('ABSENT','Absences ('+c.ABSENT+')')}${chip('YES','Supported ('+c.YES+')')}${chip('all','All ('+all.length+')')}</div>
     <div class="searchbar"><input id="csearch" placeholder="Filter by agenda item…"></div>
