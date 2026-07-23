@@ -1599,7 +1599,7 @@ function evidenceExcerpt(a,maxlen){
   // Skip bare internal-pointer lists ("evidence:<uuid>; motion:<uuid>; brief:Section") — those are
   // citation pointers, not readable transcript prose, and rendering them raw looks broken. Strip the
   // pointer tokens; if little real text remains, it's a pointer list → show nothing.
-  const _prose=t.replace(/\b(?:evidence|motion|finding|brief|source|snapshot)\s*:\s*[^\s;,]+/gi,"").replace(/[\s;,]+/g," ").trim();
+  const _prose=t.replace(/\[[A-Za-z][A-Za-z0-9_-]{1,24}\s*:[^\]]*\]/gi,"").replace(/\b(?:evidence|motion|finding|brief|source|snapshot|angle)\s*:\s*[^\s;,]+/gi,"").replace(/[\s;,]+/g," ").trim();
   if(_prose.length<25) return "";
   const shown=(maxlen&&t.length>maxlen)?t.slice(0,maxlen).trim()+"…":t;
   return `<div style="margin-top:8px;font-size:12px;color:var(--muted);background:rgba(255,255,255,.03);border-left:2px solid var(--gold-dim);padding:7px 10px;border-radius:5px"><span class="faint" style="font-weight:700">📄 Transcript / evidence</span><br>${linkify(shown)}</div>`;
