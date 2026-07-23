@@ -2546,6 +2546,24 @@ async function siloCount(silo, table, q){
     if(!r.ok) return null; const cr=r.headers.get("content-range"); return cr?(parseInt(cr.split("/")[1])||0):0;
   }catch(e){ return null; }
 }
+// ── REVIEW DELIVERY: the THIRD detection layer ──────────────────────────────────────────────────
+// The product promise is that every client opens Review to NEW sourced material each day. Collection
+// can be perfectly healthy — scrapers green (layer 1), content tables fresh (layer 2) — while CARD
+// GENERATION is dead: the generator workflow lost its cron, or only ever runs when a human prompts it.
+// The client then wakes up to nothing new and both existing layers report all-clear, because they
+// grade INTAKE, not DELIVERY. This layer counts cards actually staged to Review, which is the thing
+// the client experiences. (Ijaz, 2026-07-23: analyze-changes.yml was workflow_dispatch-only for ~6
+// days — every scraper green the whole time.)
+const CARD_TS_COLS=["created_at","inserted_at","generated_at"];
+async function siloNewCards(silo, hours){
+  const since=new Date(Date.now()-hours*3600e3).toISOString();
+  for(const col of CARD_TS_COLS){                       // silos differ on the stamp column
+    const n=await siloCount(silo,"attack_messaging",col+"=gte."+encodeURIComponent(since));
+    if(n!==null) return n;                              // null = column absent → try the next
+  }
+  return null;
+}
+
 // ── DATA-FRESHNESS: the SECOND detection layer ──────────────────────────────────────────────────
 // records_added (the output grade in siloJobs) can be GAMED: a scraper that upserts the same N rows
 // reports "productive" forever — Meta ads and YouTube do exactly this (always "+5"/"+20"), so a
@@ -2652,13 +2670,15 @@ async function siloHealth(muni, cand, c){
     siloCount(c,"candidates"), siloCount(c,"attack_messaging"), siloCount(c,"attack_messaging","is_active=eq.false&is_approved=not.is.true"),
     siloCount(c,c.msgTable||"candidate_messaging"), siloCount(c,"candidate_promises"), siloCount(c,"council_evidence"),
     siloCount(c,"council_votes"), siloCount(c,"political_ads"), siloCount(c,"news_items") ]);
-  const [fn,jobs,fresh]=await Promise.all([siloFnUp(c), siloJobs(c), siloFreshness(c)]);
+  const [fn,jobs,fresh,new24,new48]=await Promise.all([siloFnUp(c), siloJobs(c), siloFreshness(c),
+    siloNewCards(c,24), siloNewCards(c,48)]);
   const jobsBad=Array.isArray(jobs)?jobs.filter(j=>j.issues.length).length:0;
   const freshBad=Array.isArray(fresh)?fresh.filter(x=>x.stale).length:0;
   const metrics=[{k:"Candidates",v:candidates},{k:"OPPO",v:oppo},{k:"My Message",v:message},{k:"Promises",v:promises},
     {k:"Evidence",v:evidence},{k:"Council votes",v:votes},{k:"Political ads",v:ads},{k:"News",v:news},
     {k:"Pipelines",v:Array.isArray(jobs)?((jobs.length-jobsBad)+"/"+jobs.length):null},
-    {k:"Fresh",v:Array.isArray(fresh)?((fresh.filter(x=>!x.stale&&!x.unknown).length)+"/"+fresh.filter(x=>!x.unknown).length):null}];
+    {k:"Fresh",v:Array.isArray(fresh)?((fresh.filter(x=>!x.stale&&!x.unknown).length)+"/"+fresh.filter(x=>!x.unknown).length):null},
+    {k:"New in Review 24h",v:new24}];
   const flags=[];
   // Pipeline failures rank above data gaps: a count can look healthy while nothing new is arriving.
   if(Array.isArray(jobs)) jobs.forEach(j=>j.issues.forEach(i=>flags.push({sev:i.sev,t:j.name+" — "+i.t,fix:i.fix})));
@@ -2676,7 +2696,12 @@ async function siloHealth(muni, cand, c){
   else if(ads===0) flags.push({sev:"amber",t:"No political ads captured",fix:"Silo chat: run the ad backfill (token is live in shared.env through 2026-09-14)."});
   if(message===null||message===0) flags.push({sev:"amber",t:"My Message empty",fix:"Silo chat: populate candidate_messaging (brand / record / numbers)."});
   if(oppo===null||oppo===0) flags.push({sev:"amber",t:"No OPPO findings",fix:"Silo chat: run the OPPO generator."});
-  if(typeof staged==="number"&&staged>0) flags.push({sev:"info",t:staged+" finding"+(staged===1?"":"s")+" awaiting Review",fix:"Enter this silo → Review tab → approve or discard."});
+  // DELIVERY, not backlog: staged cards are the client's own decision surface — they approve/decline
+  // in their silo. A big number is inventory delivered, NOT an operator to-do. What IS an operator
+  // problem is card generation going quiet: nothing new staged = the client opens Review to nothing.
+  if(new48===0) flags.push({sev:"amber",t:"No new Review cards in 48h",
+    fix:"Card generation has stalled while collection looks healthy. Silo chat: confirm the generator workflow (oppo-drip / analyze-changes / contradiction drip) still has a live `schedule:` cron — a workflow_dispatch-only generator produces nothing until a human runs it."});
+  if(typeof staged==="number"&&staged>0) flags.push({sev:"info",t:staged+" sourced finding"+(staged===1?"":"s")+" staged in the client's Review tab",fix:"Delivered — the client approves or declines these themselves in their own silo. No action needed from you."});
   const sev=flags.some(f=>f.sev==="red")?"red":flags.some(f=>f.sev==="amber")?"amber":"green";
   return {muni,cand,office:c.office||"",demo:!!c.demo,signedIn,metrics,flags,sev,jobs};
 }
