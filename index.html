@@ -2998,6 +2998,7 @@ const SUBS=[
   {name:"Apify",                      cat:"Infra", cycle:"monthly", day:7,  amount:69,    cur:"USD", link:"https://console.apify.com/billing/subscription", note:"⚠ $69 next invoice — above the $40 cap you wanted; worth checking usage in the console"},
   {name:"Supabase Pro (org 1)",       cat:"Infra", cycle:"monthly", day:14, amount:33,    cur:"USD", link:"https://supabase.com/dashboard/org/iqbsglqbuqpvgckpxlcw/billing", note:"one of two Pro orgs"},
   {name:"Supabase Pro (org 2)",       cat:"Infra", cycle:"monthly", day:2,  amount:25,    cur:"USD", link:"https://supabase.com/dashboard/org/nrtqjzcgmnqwyyzlcuna/billing", note:"one of two Pro orgs"},
+  {name:"Namecheap — romulus.vote",   cat:"Infra", cycle:"monthly", day:2,  amount:41.88, cur:"USD", link:"https://ap.www.namecheap.com/billing", note:"the domain the whole public site runs on · next invoice Aug 2 2026 · ⚠ $41.88/mo = ~$503/yr, high for one domain (a .vote renewal is typically ~$130/yr) — worth opening the invoice to see what else is bundled in"},
   {name:"Meta Ad Library token",      cat:"Infra", cycle:"fixed",   date:"2026-09-14", amount:0, cur:"", link:"https://developers.facebook.com/tools/accesstoken/", note:"FREE — but RENEW before this or ad-tracking stops fleet-wide"},
 ];
 function _money(a){ return a==null?null:("$"+(Number.isInteger(a)?a:a.toFixed(2))); }
