@@ -1371,7 +1371,10 @@ async function init(){
       safeApi("/candidates?select=*"),
       safeApi((()=>{const cf=(ACTIVE&&ACTIVE.council?ACTIVE.council:COUNCIL_DEFAULT); return cf.perCandidate?cf.q(cf.candidates[0].raw):cf.q;})()),
       safeApi("/web_snapshots?select=*&order=retrieved_at.desc"),
-      safeApi("/"+((ACTIVE&&ACTIVE.msgTable)||"candidate_messaging")+"?select=*&is_active=eq.true&order=priority_order.asc"),
+      // No is_active filter server-side any more: inactive rows are DRAFTS staged for the client to
+      // approve (split at the assignment below). Live rows stay strictly is_active===true, so a
+      // null-flagged row is neither live nor a draft — exactly as it was when this filtered in the URL.
+      safeApi("/"+((ACTIVE&&ACTIVE.msgTable)||"candidate_messaging")+"?select=*&order=priority_order.asc"),
       safeApi("/candidate_promises?select=*&is_active=eq.true"),
       safeApi("/news_items?select=*&order=published_at.desc.nullslast&limit=120"),
       safeApi("/news_item_candidates?select=news_item_id,candidate_id"),
@@ -1383,7 +1386,9 @@ async function init(){
       safeCount("council_meetings"),
       safeCount("council_votes"),
     ]);
-    S.attacks=attacks; S.evidence=evidence; S.web=web; S.message=message; S.promises=promises;
+    S.attacks=attacks; S.evidence=evidence; S.web=web; S.promises=promises;
+    S.message=(message||[]).filter(m=>m.is_active===true);        // live — what the client publishes from
+    S.msgDrafts=(message||[]).filter(m=>m.is_active===false);      // staged — awaiting the client's call
     S.news=news; S.newsLinks=newsLinks; S.sources=sources; S.ads=ads; S.videos=vids; S.social=social; S.mentions=mentions||[];
     const rank=c=>(c.is_principal?0:1);
     S.candidates=candidates.sort((a,b)=>rank(a)-rank(b)||(b.is_incumbent?1:0)-(a.is_incumbent?1:0)||(a.name||"").localeCompare(b.name||""));
@@ -2282,9 +2287,26 @@ function renderMessage(){
     return `<div class="card">${head}${stat}${src}</div>`;
   };
   const sourced=S.message.filter(m=>isUrl(m.source_url)).length;
+  // ── DRAFTS: the client's approval surface for My Message ────────────────────────────────────────
+  // Messaging drafts stage INACTIVE (is_active=false), exactly as OPPO cards stage pending in Review —
+  // nothing auto-publishes, the client decides. Without this block a draft would be written to the silo
+  // and seen by nobody: the loader used to filter is_active=eq.true server-side, so staged rows were
+  // invisible by construction. Same self-serve model as Review: approve → live, discard → stays staged.
+  const drafts=S.msgDrafts||[];
+  const draftHtml = drafts.length ? `<div class="pitch" style="border-color:var(--gold)">
+      <h3>✎ ${drafts.length} new draft${drafts.length===1?"":"s"} awaiting your call</h3>
+      <p>Drafted from this week's news, recorded votes and rival activity — every claim carries its source. <b>Nothing here is live until you approve it.</b></p></div>`
+    + drafts.map(m=>`<div class="msdraft" data-mid="${esc(m.id)}" style="border-left:3px solid var(--gold);padding-left:10px;margin-bottom:12px">`
+        + card(m)
+        + `<div style="display:flex;gap:8px;margin:-4px 0 4px 0">
+             <button class="fbtn ms-approve" data-mid="${esc(m.id)}">✓ Approve → publish</button>
+             <button class="fbtn ms-discard" data-mid="${esc(m.id)}">✕ Discard</button>
+           </div></div>`).join("")
+    : "";
   document.getElementById("view-message").innerHTML=
     `<div class="pitch"><h3>The affirmative case for ${esc(cand)}</h3>
       <p>${esc(cand)}'s brand, record, accomplishments and platform — the message to lead with, organized by theme. <b>${sourced}</b> of ${S.message.length} claims link to a primary source.</p></div>`
+    + draftHtml
     + `<div class="fbar">${order.map(l=>chip(l,shortOf[l]||l,buckets[l].length)).join("")}</div>`
     + shown.map(l=>{
         const isNums=(l==="The Numbers");
@@ -2329,6 +2351,22 @@ function renderMessage(){
       }).join("");
   const fb=document.querySelector("#view-message .fbar");
   if(fb) fb.onclick=e=>{ const b=e.target.closest("button[data-ms]"); if(!b)return; _msgSec=b.dataset.ms; renderMessage(); document.querySelector(".main").scrollTo(0,0); };
+  // Draft approve/discard — client self-serve, same permission model as the Review tab. Approve flips
+  // is_active true (it goes live in its section); discard leaves the row staged rather than deleting,
+  // so a discarded draft is recoverable and nothing is ever destroyed from this screen.
+  const _msgTbl=(ACTIVE&&ACTIVE.msgTable)||"candidate_messaging";
+  const _mpatch=(mid,body)=>authedFetch(REST+"/"+_msgTbl+"?id=eq."+encodeURIComponent(mid),
+    {method:"PATCH",headers:{"Prefer":"return=minimal","Content-Type":"application/json"},body:JSON.stringify(body)});
+  document.querySelectorAll("#view-message .ms-approve").forEach(btn=>btn.onclick=async()=>{
+    btn.disabled=true; btn.textContent="…";
+    const r=await _mpatch(btn.dataset.mid,{is_active:true});
+    if(r.ok){ const m=(S.msgDrafts||[]).find(x=>String(x.id)===String(btn.dataset.mid));
+      if(m){ m.is_active=true; S.msgDrafts=S.msgDrafts.filter(x=>x!==m); S.message.push(m); }
+      renderMessage(); }
+    else { btn.disabled=false; btn.textContent="✓ Approve → publish"; alert("Approve failed: HTTP "+r.status); } });
+  document.querySelectorAll("#view-message .ms-discard").forEach(btn=>btn.onclick=()=>{
+    const el=btn.closest(".msdraft"); if(el) el.remove();   // stays staged in the silo — recoverable
+  });
   const wsel=document.getElementById("wardsel");
   if(wsel) wsel.onchange=e=>{ _ward=e.target.value; renderMessage(); };
   const csel=document.getElementById("chartsel");
