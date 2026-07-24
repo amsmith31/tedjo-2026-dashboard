@@ -2654,9 +2654,9 @@ async function siloJobs(silo){
     const now=Date.now(), by={};
     rows.forEach(x=>{
       const k=x.scraper_name||"(unnamed)";
-      const b=by[k]=by[k]||{name:k,runs:0,added:0,ok:0,last:null,lastStatus:"",recent:[]};
+      const b=by[k]=by[k]||{name:k,runs:0,added:0,ok:0,last:null,lastStatus:"",recent:[],recentT:[]};
       b.runs++; b.added+=(+x.records_added||0); if(String(x.status||"").toLowerCase()==="success") b.ok++;
-      if(b.recent.length<3) b.recent.push(+x.records_added||0);   // rows are started_at.desc → the most-recent 3 runs' output
+      if(b.recent.length<3){ b.recent.push(+x.records_added||0); b.recentT.push(x.started_at?Date.parse(x.started_at):NaN); }  // rows are started_at.desc → the most-recent 3 runs' output AND when they ran
       const t=x.started_at?Date.parse(x.started_at):NaN;
       if(!isNaN(t)&&(b.last===null||t>b.last)){ b.last=t; b.lastStatus=String(x.status||"").toLowerCase(); }
     });
@@ -2696,8 +2696,17 @@ async function siloJobs(silo){
       // rows is likely silently blocked (WAF/403/empty) while still exiting 0/green. Conservative on
       // purpose — needs 3 consecutive dry runs + prior output + recent activity — so it won't fire on a
       // change-detection monitor's healthy idle or a summer-recess lull.
-      if(b.added>10 && b.recent.length>=3 && b.recent.every(x=>x===0) && ageH!=null && ageH<192)
-        issues.push({sev:"amber",t:"last 3 runs added 0 rows (usually productive — "+b.added+" total)",fix:"Silent failure? Runs green but collected nothing lately — verify its actual output / Supabase data-freshness, not the exit code."});
+      // The dry streak must also SPAN real time. "3 runs" is a proxy for "a while", and that proxy
+      // breaks on high-frequency scrapers: at 4x/day, 3 runs is a few hours, and a news feed with no
+      // new stories for a few hours is a Tuesday, not a failure. Measured 2026-07-23 — every amber on
+      // the board was this false positive: Ijaz reddit_community 3 runs in 0.2h (twelve minutes, all
+      // retries), Opitz reddit 6.8h, Burton oakville_news_feeds 3.4h. Requiring a 48h span keeps the
+      // detector honest for the case it was built for (a daily scraper dry for 3 days spans 72h and
+      // still fires) while it stops crying wolf over a quiet morning.
+      const _dryH=(b.recentT.length>=3 && !isNaN(b.recentT[0]) && !isNaN(b.recentT[b.recentT.length-1]))
+        ? (b.recentT[0]-b.recentT[b.recentT.length-1])/36e5 : null;
+      if(b.added>10 && b.recent.length>=3 && b.recent.every(x=>x===0) && ageH!=null && ageH<192 && _dryH!=null && _dryH>=48)
+        issues.push({sev:"amber",t:"added 0 rows across "+Math.round(_dryH/24)+"d of runs (usually productive — "+b.added+" total)",fix:"Silent failure? Runs green but collected nothing over a multi-day window — verify its actual output / Supabase data-freshness, not the exit code."});
       return {name:b.name,runs:b.runs,added:b.added,ageH,ago:ago(ageH),lastStatus:b.lastStatus,issues};
     }).sort((x,y)=>y.issues.length-x.issues.length||x.name.localeCompare(y.name));
   }catch(e){ return null; }
